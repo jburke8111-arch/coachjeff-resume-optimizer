@@ -198,6 +198,12 @@ function _newId() { return Math.random().toString(36).slice(2, 10); }
 function normalizeImportedResumeText(rawText) {
   let t = String(rawText || "").replace(/\r/g, "\n");
 
+  // Word/PDF exports are full of non-breaking spaces, narrow spaces, and
+  // "fancy" dashes. Normalize them to plain ASCII so downstream regexes that
+  // assume ordinary spaces/hyphens match reliably (e.g. "Cypress,\u00a0CA").
+  t = t.replace(/[\u00a0\u2007\u202f\u2009\u200a\u2002\u2003]/g, " ");
+  t = t.replace(/[\u2013\u2014\u2212]/g, "–");
+
   // Split common contact fields only at boundaries, not inside emails.
   t = t.replace(/(https?:\/\/[^\s]+)\s*[–—-]\s*([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})/gi, "$1\n$2");
   t = t.replace(/([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})\s*[–—-]\s*(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/gi, "$1\n$2");
@@ -585,21 +591,55 @@ function _parseEducation(lines) {
   // things like "SQL" can't be mistaken for a state.
   const STATE_ABBRS = "AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY";
   const STATE_NAMES = "Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming";
-  // City = one capitalized word, plus at most one more (covers "San Diego",
-  // "New York"). Kept deliberately short so a long institution name like
-  // "Trident University International" can't be absorbed into the location.
-  const CITY = "[A-Z][a-zA-Z.'-]+(?:\\s+[A-Z][a-zA-Z.'-]+)?";
-  const locRe = new RegExp(CITY + ",\\s*(?:" + STATE_NAMES + ")(?![a-z])|" + CITY + ",\\s*(?:" + STATE_ABBRS + ")\\b", "g");
-  // Use the LAST City, ST match on the line; everything before it is the school.
-  const locMatches = schoolLine.match(locRe) || [];
-  const rawLoc = locMatches.length ? locMatches[locMatches.length - 1] : "";
+  // The school and its location arrive glued together when Word/PDF flattens a
+  // two-column line (e.g. "Trident University International Cypress, CA"). We
+  // must peel a trailing "City, ST" off the END without swallowing the trailing
+  // word of a multi-word institution name. A greedy two-word city used to eat
+  // "International" and delete it from the school name.
+  const INSTITUTION_RE = /(university|college|institute|school|academy|polytechnic|seminary)/i;
+  // Words that commonly trail an institution name and must not become a city's
+  // first token.
+  const INST_TAIL = /^(International|University|College|Institute|School|State|Tech|Technology|Technical|Global|Online|America|American|Health|Sciences|Business|Law|Arts|Engineering)$/i;
+  const STATE_ALT = "(?:" + STATE_NAMES + "|" + STATE_ABBRS + ")";
+  const CITY_ONE = "[A-Z][a-zA-Z.'-]+";
+  const CITY_TWO = "[A-Z][a-zA-Z.'-]+\\s+[A-Z][a-zA-Z.'-]+";
+
+  const matchLoc = (cityPat) => {
+    const re = new RegExp("(?:^|[\\s,|])(" + cityPat + "),\\s*(" + STATE_ALT + ")(?![a-z])\\s*$");
+    const m = schoolLine.match(re);
+    if (!m) return null;
+    const idx = schoolLine.lastIndexOf(m[1] + ",");
+    return { city: m[1], st: m[2], school: schoolLine.slice(0, idx).replace(/[|,]\s*$/, "").trim() };
+  };
+  const dupTail = (r) => {
+    if (!r) return false;
+    const w = r.school.split(/\s+/);
+    const last = (w[w.length - 1] || "").toLowerCase();
+    return r.city.split(/\s+/)[0].toLowerCase() === last;
+  };
+
+  // Prefer a two-word city (San Diego, Boca Raton); fall back to one word when
+  // the two-word form's first token is an institution tail (International) or
+  // duplicates the school's trailing word.
+  let loc = matchLoc(CITY_TWO);
+  if (loc && (INST_TAIL.test(loc.city.split(/\s+/)[0]) || dupTail(loc))) loc = matchLoc(CITY_ONE);
+  if (!loc) loc = matchLoc(CITY_ONE);
+
+  // Fail-safe: if we can't split confidently, keep the WHOLE line as the school
+  // (recoverable in the editor) rather than silently deleting a real word.
+  if (loc) {
+    const words = loc.school.split(/\s+/);
+    const lastWord = words[words.length - 1] || "";
+    if (!INSTITUTION_RE.test(loc.school)) loc = null;
+    else if (/^(College|Institute|School|Tech|State)$/i.test(lastWord) && words.length > 1) loc = null;
+    else if (dupTail(loc)) loc = null;
+  }
+
+  let rawLoc = loc ? (loc.city + ", " + loc.st) : "";
   let location = rawLoc;
   if (location && typeof abbreviateState === "function") location = abbreviateState(location);
 
-  let school = schoolLine;
-  // Remove the matched location text (in its original spelled form) from the school name.
-  if (rawLoc && school.includes(rawLoc)) school = school.replace(rawLoc, "").trim();
-  school = school.replace(/[|,]\s*$/,"").trim();
+  let school = (loc ? loc.school : schoolLine).replace(/[|,]\s*$/, "").trim();
 
   const degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
   const gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
@@ -833,6 +873,32 @@ function _looksLikeProjectContinuation(line) {
 // Split a project's bullets into: context/subtitle line, tools line, and real
 // accomplishment bullets. Used at render time so these display correctly
 // (context first, then tools, then bullets) instead of as accomplishment bullets.
+// Conservative, mechanical bullet cleanup applied at render/export time.
+// Intentionally does NOT rewrite wording or invent content — it only fixes
+// things that are unambiguously formatting errors: leading lowercase, collapsed
+// duplicate phrases ("...compliance and ... compliance"), stray double spaces,
+// and a doubled article ("Produced and audit" -> only when clearly "an").
+function tidyBullet(s) {
+  let t = String(s || "").replace(/\u00a0/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!t) return t;
+
+  // Capitalize the first letter so every bullet starts sentence-case.
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+
+  // Collapse an immediately repeated phrase of 2+ words:
+  //   "...mission readiness and regulatory compliance and regulatory compliance"
+  //   -> "...mission readiness and regulatory compliance"
+  t = t.replace(/\b([\w][\w'-]*(?:\s+[\w'-]+){1,5})\s+(?:and\s+)?\1\b/gi, "$1");
+
+  // Common OCR/typo: "Produced and audit summary" -> "Produced an audit summary".
+  // Only fix "and" directly before a vowel-initial singular noun where it reads
+  // as a mistyped "an"; keep it narrow to avoid touching real conjunctions.
+  t = t.replace(/\b(Produced|Created|Developed|Built|Delivered|Wrote|Drafted)\s+and\s+(audit|analysis|assessment|overview|evaluation|inventory|application|initiative)\b/gi,
+    (m, verb, noun) => verb + " an " + noun);
+
+  return t;
+}
+
 function splitProjectLines(bullets) {
   const isTools = s => /^\s*(tools?|tech|technologies|stack|built with|tools?\s*&\s*technologies|skills used|methods?)\s*[:|]/i.test(String(s || "").trim());
   const isContext = s => {
@@ -2255,7 +2321,8 @@ function App() {
   ], { tabRight: true, after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
   const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "1F3864" }), { border: true, before: 240, after: 120, keepNext: true });
   const xBullet = (t) => {
-    const clean = String(t).replace(/^([••\-\*]\s*)+/, "").replace(/^\s*•\s*/, "");
+    const stripped = String(t).replace(/^([••\-\*]\s*)+/, "").replace(/^\s*•\s*/, "");
+    const clean = tidyBullet(stripped);
     const pPr = '<w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:hanging="360"/></w:pPr>';
     return '<w:p>' + pPr + '<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">•\t</w:t></w:r>' + xRun(clean, { size: 11 }) + '</w:p>';
   };
