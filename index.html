@@ -3129,23 +3129,66 @@ function App() {
       return null;
     }
 
-    // A line worth demonstrating a "tighten" note on: real, substantial, and NOT already quantified.
+    // Build a SPECIFIC "tighten" note for a real line by inspecting what the line already
+    // contains and naming the concrete detail that's missing. Returns null when the line is
+    // already strong enough that a generic prompt would be noise.
     function tightenNote(section, raw) {
       const b = cleanBullet(raw);
-      if (!b || b.length < 20 || hasNumber(b)) return null;
-      const note = section === "Projects"
-        ? "Add the result — what this produced, improved, or enabled — so it reads as evidence, not a task."
-        : "Add scope or outcome — how many, how often, or what changed — so it lands as a result, not a duty.";
+      if (!b || b.length < 20) return null;
+      if (hasNumber(b)) return null;                 // already quantified — leave it alone
+      const low = b.toLowerCase();
+
+      // Pull a short, human anchor phrase from the line so the note points at THIS bullet.
+      const anchor = (() => {
+        const m = low.match(/\b(dashboard|report|training|curriculum|audit|inventory|schedul\w*|onboard\w*|complianc\w*|social media|campaign|event|model|analysis|records|documentation|process|workflow|budget|inspection|presentation)\b/);
+        return m ? m[1].replace(/\bschedul\w*/, "scheduling").replace(/\bonboard\w*/, "onboarding").replace(/\bcomplianc\w*/, "compliance") : null;
+      })();
+
+      // Decide what kind of specific detail would strengthen THIS line.
+      // Order matters: check the more specific intents (analysis, teaching, delivery) before
+      // the generic "built/created" bucket, since strong lines often contain several verbs.
+      let note = null;
+      const namesAudience = /\bto\b[^.]*\b(team|teams|leadership|manager|management|stakeholder|client|department|staff|executives?)\b/.test(low);
+      const namesCadence = /\b(daily|weekly|monthly|quarterly|annual\w*|per (day|week|month|quarter|year)|each (day|week|month|quarter))\b/.test(low);
+      if (/\b(identif\w*|analyz\w*|audit\w*|review\w*|assess\w*|evaluat\w*)\b/.test(low)) {
+        note = "Add the outcome — how many items you covered and what changed as a result (issues fixed, risk reduced, time saved).";
+      } else if (/\b(train\w*|mentor\w*|onboard\w*|taught|coach\w*)\b/.test(low)) {
+        note = "Add how many people and the effect — how many you trained, and whether ramp-up time or errors improved.";
+      } else if (/\b(present\w*|report\w*|deliver\w*|communicat\w*)\b/.test(low) && !(namesAudience && namesCadence)) {
+        note = namesCadence
+          ? "Name who received it (which team or level) so the audience is as concrete as the timing."
+          : "Say who saw it and how often — e.g. \"to leadership monthly\" — so audience and cadence are concrete.";
+      } else if (/\b(coordinat\w*|schedul\w*|manag\w*|organiz\w*|oversaw|support\w*|process\w*)\b/.test(low)) {
+        note = anchor
+          ? "Add the volume behind the " + anchor + " — how many, how often, or across how many teams."
+          : "Add the volume — how many, how often, or across how many people or teams.";
+      } else if (/\b(built|created|developed|designed|produced|maintain\w*)\b/.test(low)) {
+        note = anchor
+          ? "Add the scale or payoff of the " + anchor + " — how big it was, how often it was used, or what it saved."
+          : "Add the scale or payoff — how big it was, how often it was used, or what it saved.";
+      } else if (/\b(generate\w*|insight|utiliz\w*|used?|leverag\w*)\b/.test(low)) {
+        note = "Tie this to a result — what decision, saving, or improvement the " + (anchor || "work") + " actually drove.";
+      } else {
+        note = "Add one concrete detail to this line — a number, frequency, or the result — so it reads as evidence, not a task.";
+      }
       return { weak: cap(b), note };
     }
 
     const examples = [];
     const seen = new Set();
+    const usedNotes = new Set();
+    const sectionCount = {};
     const addCard = (card) => {
       if (!card || examples.length >= 4) return;
       const key = (card.weak || "").slice(0, 45).toLowerCase();
       if (!key || seen.has(key)) return;
+      // Don't repeat the same note text across cards, and cap 2 cards per section
+      // so the panel doesn't stack three near-identical items from one project.
+      if (card.note && usedNotes.has(card.note)) return;
+      if ((sectionCount[card.section] || 0) >= 2) return;
       seen.add(key);
+      if (card.note) usedNotes.add(card.note);
+      sectionCount[card.section] = (sectionCount[card.section] || 0) + 1;
       if (card.weak) card.weak = trunc(card.weak, 160);
       if (card.better) card.better = trunc(card.better, 190);
       examples.push(card);
@@ -3177,12 +3220,18 @@ function App() {
       }
     }
 
-    // Pass 2 — if we still have room, add real "tighten" cards from unquantified lines.
-    if (examples.length < 3) {
-      for (const e of expList) { for (const raw of (e.bullets || [])) { const t = tightenNote("Experience", raw); if (t) { addCard({ kind: "tighten", section: "Experience", ...t }); break; } } if (examples.length >= 3) break; }
-    }
-    if (examples.length < 3) {
-      for (const p of projList) { for (const raw of (p.bullets || [])) { const t = tightenNote("Projects", raw); if (t) { addCard({ kind: "tighten", section: "Projects", ...t }); break; } } if (examples.length >= 3) break; }
+    // Pass 2 — real "tighten" cards from unquantified lines. Interleave Experience and
+    // Projects so we don't stack multiple cards from a single section/project.
+    const tightenPool = [];
+    for (const e of expList) for (const raw of (e.bullets || [])) { const t = tightenNote("Experience", raw); if (t) tightenPool.push({ kind: "tighten", section: "Experience", ...t }); }
+    for (const p of projList) for (const raw of (p.bullets || [])) { const t = tightenNote("Projects", raw); if (t) tightenPool.push({ kind: "tighten", section: "Projects", ...t }); }
+    // Alternate sections when adding.
+    const expTight = tightenPool.filter(c => c.section === "Experience");
+    const projTight = tightenPool.filter(c => c.section === "Projects");
+    let ei = 0, pi = 0;
+    while (examples.length < 3 && (ei < expTight.length || pi < projTight.length)) {
+      if (ei < expTight.length) { addCard(expTight[ei++]); }
+      if (examples.length < 3 && pi < projTight.length) { addCard(projTight[pi++]); }
     }
 
     // Pass 3 — lowest-value but still real: formatting-consistency (capitalization) cards.
