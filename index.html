@@ -2717,7 +2717,9 @@ function App() {
     hasEducation ? "Education information is included." : "",
     atsScore >= 90 ? "Resume appears generally ATS-friendly from the current builder checks." : ""
   ].filter(Boolean).slice(0,3);
+  const linkedInMissing = !(data.contact && (data.contact.linkedin || data.contact.portfolio));
   const snapshotOpportunities = [
+    linkedInMissing ? "Add a LinkedIn URL to your header — it's missing, and recruiters expect it for verification and outreach." : "",
     !hasSummary ? "Strengthen the professional summary so the target role is clear." : "",
     expBulletCount && resumeStrength && resumeStrength.exp && resumeStrength.exp.quantified < Math.ceil(expBulletCount / 3) ? "Add more measurable results to experience bullets where accurate." : "",
     hasProjects && projectBulletCount < Math.max(2, projectCount * 2) ? "Add more project details: problem, tools, actions, and outcome." : "",
@@ -3068,12 +3070,112 @@ function App() {
     roadmap.push("Final Review");
 
     // ---- Before / After coaching examples ----
-    const examples = [
+    // Personalized: pull the user's OWN lines and demonstrate the coaching edit on them.
+    // We only ever REPHRASE what's already there — no invented numbers, employers, or tools.
+    const examplesFallback = [
       { section: "Experience", weak: "Worked on dashboards.", better: "Built 4 Power BI dashboards used weekly by a 12-person analytics team." },
       { section: "Experience", weak: "Responsible for social media.", better: "Grew Instagram engagement 38% over one semester by testing weekly content themes." },
       { section: "Projects", weak: "Made a machine learning project.", better: "Built a churn-prediction model in Python (scikit-learn) reaching 86% accuracy on test data." },
       { section: "Summary", weak: "Hard-working graduate seeking opportunities.", better: "Data analyst focused on SQL and Python, with two internship projects turning raw data into decisions." }
     ];
+
+    const WEAK_OPENERS = /^(worked on|responsible for|helped( with)?|assisted( with)?|duties included|tasked with|in charge of|handled|involved in|participated in|part of|dealt with)\b/i;
+    const STRONG_VERBS = ["Led","Built","Delivered","Coordinated","Managed","Directed","Drove","Owned","Streamlined","Improved","Executed","Oversaw","Analyzed","Developed","Trained","Processed","Administered","Resolved","Established","Produced","Audited"];
+    const hasNumber = (s) => /\d/.test(String(s || ""));
+    const firstWord = (s) => String(s || "").trim().split(/\s+/)[0] || "";
+    const cleanBullet = (s) => String(s || "").replace(/^[•\-\u2013\u2014\s]+/, "").replace(/\s+/g, " ").trim();
+    const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    const trunc = (s, n) => (s && s.length > n ? s.slice(0, n).replace(/\s+\S*$/, "") + "…" : s);
+
+    // Rewrite a weak bullet without inventing facts:
+    //   - swap a weak opener for a strong action verb
+    //   - otherwise, if it opens with a plain -ing/-ed verb, capitalize and firm it up
+    function coachBullet(raw) {
+      let b = cleanBullet(raw);
+      if (!b) return null;
+      const lower = b.toLowerCase();
+      if (WEAK_OPENERS.test(b)) {
+        const rest = b.replace(WEAK_OPENERS, "").replace(/^\s*(the|a|an)\s+/i, "").trim();
+        // pick a verb that fits the sentence loosely; default to a safe general one
+        let verb = "Led";
+        if (/train|mentor|onboard|coach/i.test(rest)) verb = "Trained";
+        else if (/schedul|coordinat|calendar|appointment/i.test(rest)) verb = "Coordinated";
+        else if (/record|document|complianc|audit|file/i.test(rest)) verb = "Managed";
+        else if (/report|dashboard|analy|data|metric/i.test(rest)) verb = "Analyzed";
+        else if (/prepar|cook|meal|serve/i.test(rest)) verb = "Prepared";
+        return { weak: cap(b), better: verb + " " + rest.charAt(0).toLowerCase() + rest.slice(1) };
+      }
+      return null; // no confident rewrite available
+    }
+
+    const examples = [];
+    const seen = new Set();
+    const pushEx = (section, weak, better) => {
+      if (!weak || !better) return;
+      if (examples.length >= 4) return;
+      const key = weak.slice(0, 40).toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      examples.push({ section, weak: trunc(weak, 150), better: trunc(better, 180) });
+    };
+
+    // 1) Summary: if it opens with a filler/objective phrase, show a tighter version.
+    const sumRaw = String(data.summary || "").trim();
+    if (sumRaw) {
+      if (/\b(seeking|looking for|hard[- ]?working|responsible for|to obtain|motivated (individual|professional))\b/i.test(sumRaw)) {
+        const firstSentence = sumRaw.split(/(?<=[.!?])\s/)[0];
+        const target = String(data.field || "").trim();
+        const better = (target ? target + " professional" : "Professional")
+          + " — lead your summary with the role you're targeting and one or two proof points, not with what you're seeking.";
+        pushEx("Summary", firstSentence, better);
+      }
+    }
+
+    // 2) Experience: find weak-opener or unquantified bullets and rewrite conservatively.
+    const expList = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+    outer:
+    for (const e of expList) {
+      for (const raw of (e.bullets || [])) {
+        const b = cleanBullet(raw);
+        if (!b) continue;
+        const edit = coachBullet(b);
+        if (edit) { pushEx("Experience", edit.weak, edit.better); if (examples.length >= 3) break outer; }
+      }
+    }
+    // If no weak openers, demonstrate the "add a number" edit on a real unquantified bullet.
+    if (examples.filter(x => x.section === "Experience").length === 0) {
+      for (const e of expList) {
+        for (const raw of (e.bullets || [])) {
+          const b = cleanBullet(raw);
+          if (b && !hasNumber(b) && b.length > 25) {
+            pushEx("Experience", b, cap(b) + " — add scope here (how many people, how often, or the result) so it reads as an outcome, not a duty.");
+            break;
+          }
+        }
+        if (examples.some(x => x.section === "Experience")) break;
+      }
+    }
+
+    // 3) Projects: same conservative treatment.
+    const projList = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
+    for (const p of projList) {
+      for (const raw of (p.bullets || [])) {
+        const b = cleanBullet(raw);
+        if (!b) continue;
+        const edit = coachBullet(b);
+        if (edit) { pushEx("Projects", edit.weak, edit.better); break; }
+        if (!hasNumber(b) && b.length > 25) {
+          pushEx("Projects", b, cap(b) + " — name the tool and the result (what it produced or improved) to turn this into evidence.");
+          break;
+        }
+      }
+      if (examples.some(x => x.section === "Projects")) break;
+    }
+
+    // Fill any remaining slots with illustrative examples so the panel is never empty,
+    // but real, resume-derived edits always come first.
+    for (const f of examplesFallback) { if (examples.length >= 4) break; pushEx(f.section, f.weak, f.better); }
+    const examplesPersonalized = examples.some(x => !examplesFallback.some(f => f.weak === x.weak));
 
     // ---- Quick wins (<10 min) ----
     const quickWins = [];
@@ -3117,6 +3219,7 @@ function App() {
       improvements: improvementsFinal,
       roadmap,
       examples,
+      examplesPersonalized,
       quickWins: quickWinsFinal,
       bigger,
       together,
@@ -3303,6 +3406,7 @@ function App() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 7, fontSize: 12 }}>
                 {[
                   ["Contact Information", data.name && data.contact && data.contact.email ? "✓" : "✕"],
+                  ["LinkedIn / Portfolio Link", data.contact && (data.contact.linkedin || data.contact.portfolio) ? "✓" : "✕"],
                   ["Professional Summary", hasSummary ? "✓" : "○"],
                   ["Technical Skills", hasSkills ? "✓" : "✕"],
                   ["Work Experience", hasExperience ? "✓" : "○"],
@@ -3554,7 +3658,9 @@ function App() {
           {/* 6. Before / After Examples */}
           <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
             <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>✍️ Before → After: Coaching Examples</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>This is the kind of edit I'd make with you, line by line. Same facts — clearer, stronger, more specific.</p>
+            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>{coachReview.examplesPersonalized
+              ? "These come straight from your resume. Same facts — I've just made the wording clearer and stronger, the way I would working through it with you line by line."
+              : "This is the kind of edit I'd make with you, line by line. Same facts — clearer, stronger, more specific."}</p>
             {coachReview.examples.map((ex, i) => (
               <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".05em", background: "#f8fafc", padding: "6px 14px", borderBottom: "1px solid #e2e8f0" }}>{ex.section}</div>
@@ -3568,7 +3674,9 @@ function App() {
                 </div>
               </div>
             ))}
-            <div style={{ fontSize: 11.5, color: "#94a3b8", lineHeight: 1.5 }}>These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you.</div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", lineHeight: 1.5 }}>{coachReview.examplesPersonalized
+              ? "The \"Better\" versions never add facts you didn't provide — where a number would help, they point to where you should add one truthfully. Only ever use details that are true for you."
+              : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
 
           {/* 7 + 8. Quick Wins and Bigger Projects */}
