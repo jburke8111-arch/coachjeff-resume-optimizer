@@ -3070,112 +3070,133 @@ function App() {
     roadmap.push("Final Review");
 
     // ---- Before / After coaching examples ----
-    // Personalized: pull the user's OWN lines and demonstrate the coaching edit on them.
-    // We only ever REPHRASE what's already there — no invented numbers, employers, or tools.
-    const examplesFallback = [
-      { section: "Experience", weak: "Worked on dashboards.", better: "Built 4 Power BI dashboards used weekly by a 12-person analytics team." },
-      { section: "Experience", weak: "Responsible for social media.", better: "Grew Instagram engagement 38% over one semester by testing weekly content themes." },
-      { section: "Projects", weak: "Made a machine learning project.", better: "Built a churn-prediction model in Python (scikit-learn) reaching 86% accuracy on test data." },
-      { section: "Summary", weak: "Hard-working graduate seeking opportunities.", better: "Data analyst focused on SQL and Python, with two internship projects turning raw data into decisions." }
+    // RULE: every card shown here must come from the user's OWN resume. We never mix in
+    // generic/illustrative lines. Cards are one of two honest types:
+    //   kind:"rewrite"  — we can safely rewrite the line WITHOUT inventing facts (verb swap,
+    //                     de-passivize, capitalize). Shown as WEAK → BETTER.
+    //   kind:"tighten"  — the line is real but a genuine rewrite would require facts we don't
+    //                     have. Shown as the real line → a labeled instruction (not a fake quote).
+    // Only if we find ZERO real lines do we fall back to clearly-labeled illustrative examples.
+    const illustrativeFallback = [
+      { kind: "rewrite", section: "Experience", weak: "Worked on dashboards.", better: "Built 4 Power BI dashboards used weekly by a 12-person analytics team." },
+      { kind: "rewrite", section: "Experience", weak: "Responsible for social media.", better: "Grew Instagram engagement 38% over one semester by testing weekly content themes." },
+      { kind: "rewrite", section: "Projects", weak: "Made a machine learning project.", better: "Built a churn-prediction model in Python (scikit-learn) reaching 86% accuracy on test data." }
     ];
 
-    const WEAK_OPENERS = /^(worked on|responsible for|helped( with)?|assisted( with)?|duties included|tasked with|in charge of|handled|involved in|participated in|part of|dealt with)\b/i;
-    const STRONG_VERBS = ["Led","Built","Delivered","Coordinated","Managed","Directed","Drove","Owned","Streamlined","Improved","Executed","Oversaw","Analyzed","Developed","Trained","Processed","Administered","Resolved","Established","Produced","Audited"];
+    const WEAK_OPENERS = /^(worked on|responsible for|helped( to| with)?|assisted( in| with)?|duties included|tasked with|in charge of|handled|involved in|participated in|was part of|part of|dealt with|contributed to|supported|aided( in| with)?)\b/i;
     const hasNumber = (s) => /\d/.test(String(s || ""));
-    const firstWord = (s) => String(s || "").trim().split(/\s+/)[0] || "";
-    const cleanBullet = (s) => String(s || "").replace(/^[•\-\u2013\u2014\s]+/, "").replace(/\s+/g, " ").trim();
+    const cleanBullet = (s) => String(s || "").replace(/^[•\-\u2013\u2014\s]+/, "").replace(/\s+/g, " ").replace(/[.;]+$/, "").trim();
     const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    const lc1 = (s) => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
     const trunc = (s, n) => (s && s.length > n ? s.slice(0, n).replace(/\s+\S*$/, "") + "…" : s);
 
-    // Rewrite a weak bullet without inventing facts:
-    //   - swap a weak opener for a strong action verb
-    //   - otherwise, if it opens with a plain -ing/-ed verb, capitalize and firm it up
-    function coachBullet(raw) {
-      let b = cleanBullet(raw);
-      if (!b) return null;
-      const lower = b.toLowerCase();
+    // Choose a strong verb that fits the content, without changing meaning.
+    const pickVerb = (text) => {
+      if (/train|mentor|onboard|coach|taught|instruct/i.test(text)) return "Trained";
+      if (/schedul|coordinat|calendar|appointment|logistic/i.test(text)) return "Coordinated";
+      if (/record|document|complianc|audit|file|paperwork/i.test(text)) return "Managed";
+      if (/report|dashboard|analy|data|metric|track/i.test(text)) return "Analyzed";
+      if (/prepar|cook|meal|serve|food/i.test(text)) return "Prepared";
+      if (/inventor|stock|supply|material/i.test(text)) return "Oversaw";
+      if (/plan|event|program|initiativ/i.test(text)) return "Led";
+      if (/build|built|creat|develop|design/i.test(text)) return "Built";
+      return "Led";
+    };
+
+    // Try to produce a REAL, substantive rewrite from a line, inventing nothing.
+    // Returns a {weak, better} rewrite (green card), or null if no meaningful rewrite exists.
+    // NOTE: pure capitalization fixes are NOT returned here — they're handled as consistency
+    // cards below, so the green "Better" column always shows a genuinely different sentence.
+    function tryRewrite(raw) {
+      const b = cleanBullet(raw);
+      if (!b || b.length < 12) return null;
       if (WEAK_OPENERS.test(b)) {
-        const rest = b.replace(WEAK_OPENERS, "").replace(/^\s*(the|a|an)\s+/i, "").trim();
-        // pick a verb that fits the sentence loosely; default to a safe general one
-        let verb = "Led";
-        if (/train|mentor|onboard|coach/i.test(rest)) verb = "Trained";
-        else if (/schedul|coordinat|calendar|appointment/i.test(rest)) verb = "Coordinated";
-        else if (/record|document|complianc|audit|file/i.test(rest)) verb = "Managed";
-        else if (/report|dashboard|analy|data|metric/i.test(rest)) verb = "Analyzed";
-        else if (/prepar|cook|meal|serve/i.test(rest)) verb = "Prepared";
-        return { weak: cap(b), better: verb + " " + rest.charAt(0).toLowerCase() + rest.slice(1) };
+        const rest = b.replace(WEAK_OPENERS, "").replace(/^\s*(the|a|an|for|in|with|to)\s+/i, "").trim();
+        if (rest.length < 6) return null;
+        const better = pickVerb(rest) + " " + lc1(rest);
+        // Only count it if the wording actually changed (not just casing).
+        if (better.toLowerCase() !== cap(b).toLowerCase()) return { weak: cap(b), better };
       }
-      return null; // no confident rewrite available
+      return null;
+    }
+
+    // A real line that only needs its opener capitalized for consistency.
+    function capNote(raw) {
+      const b = cleanBullet(raw);
+      if (!b || b.length < 12) return null;
+      if (WEAK_OPENERS.test(b)) return null; // that's a rewrite case, handled above
+      if (/^[a-z]/.test(b)) return { weak: b, note: "Start with a capital letter to match your other bullets — small, but recruiters notice inconsistent formatting." };
+      return null;
+    }
+
+    // A line worth demonstrating a "tighten" note on: real, substantial, and NOT already quantified.
+    function tightenNote(section, raw) {
+      const b = cleanBullet(raw);
+      if (!b || b.length < 20 || hasNumber(b)) return null;
+      const note = section === "Projects"
+        ? "Add the result — what this produced, improved, or enabled — so it reads as evidence, not a task."
+        : "Add scope or outcome — how many, how often, or what changed — so it lands as a result, not a duty.";
+      return { weak: cap(b), note };
     }
 
     const examples = [];
     const seen = new Set();
-    const pushEx = (section, weak, better) => {
-      if (!weak || !better) return;
-      if (examples.length >= 4) return;
-      const key = weak.slice(0, 40).toLowerCase();
-      if (seen.has(key)) return;
+    const addCard = (card) => {
+      if (!card || examples.length >= 4) return;
+      const key = (card.weak || "").slice(0, 45).toLowerCase();
+      if (!key || seen.has(key)) return;
       seen.add(key);
-      examples.push({ section, weak: trunc(weak, 150), better: trunc(better, 180) });
+      if (card.weak) card.weak = trunc(card.weak, 160);
+      if (card.better) card.better = trunc(card.better, 190);
+      examples.push(card);
     };
 
-    // 1) Summary: if it opens with a filler/objective phrase, show a tighter version.
-    const sumRaw = String(data.summary || "").trim();
-    if (sumRaw) {
-      if (/\b(seeking|looking for|hard[- ]?working|responsible for|to obtain|motivated (individual|professional))\b/i.test(sumRaw)) {
-        const firstSentence = sumRaw.split(/(?<=[.!?])\s/)[0];
-        const target = String(data.field || "").trim();
-        const better = (target ? target + " professional" : "Professional")
-          + " — lead your summary with the role you're targeting and one or two proof points, not with what you're seeking.";
-        pushEx("Summary", firstSentence, better);
-      }
-    }
-
-    // 2) Experience: find weak-opener or unquantified bullets and rewrite conservatively.
+    // Gather candidate lines per section, in resume order.
     const expList = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
-    outer:
+    const projList = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
+    const sumRaw = String(data.summary || "").trim();
+
+    // Pass 1 — prefer real REWRITES (most convincing, clearly "same facts, better wording").
+    // Summary objective-style opener:
+    if (sumRaw && /\b(seeking|looking for|hard[- ]?working|to obtain|motivated (individual|professional)|results[- ]driven)\b/i.test(sumRaw)) {
+      const firstSentence = cleanBullet(sumRaw.split(/(?<=[.!?])\s/)[0]);
+      const target = String(data.field || "").trim();
+      addCard({ kind: "tighten", section: "Summary", weak: firstSentence,
+        note: "Open with the role you're targeting" + (target ? " (" + target + ")" : "") + " and one or two proof points — not with what you're seeking." });
+    }
     for (const e of expList) {
       for (const raw of (e.bullets || [])) {
-        const b = cleanBullet(raw);
-        if (!b) continue;
-        const edit = coachBullet(b);
-        if (edit) { pushEx("Experience", edit.weak, edit.better); if (examples.length >= 3) break outer; }
+        const r = tryRewrite(raw);
+        if (r) addCard({ kind: "rewrite", section: "Experience", ...r });
       }
     }
-    // If no weak openers, demonstrate the "add a number" edit on a real unquantified bullet.
-    if (examples.filter(x => x.section === "Experience").length === 0) {
-      for (const e of expList) {
-        for (const raw of (e.bullets || [])) {
-          const b = cleanBullet(raw);
-          if (b && !hasNumber(b) && b.length > 25) {
-            pushEx("Experience", b, cap(b) + " — add scope here (how many people, how often, or the result) so it reads as an outcome, not a duty.");
-            break;
-          }
-        }
-        if (examples.some(x => x.section === "Experience")) break;
-      }
-    }
-
-    // 3) Projects: same conservative treatment.
-    const projList = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
     for (const p of projList) {
       for (const raw of (p.bullets || [])) {
-        const b = cleanBullet(raw);
-        if (!b) continue;
-        const edit = coachBullet(b);
-        if (edit) { pushEx("Projects", edit.weak, edit.better); break; }
-        if (!hasNumber(b) && b.length > 25) {
-          pushEx("Projects", b, cap(b) + " — name the tool and the result (what it produced or improved) to turn this into evidence.");
-          break;
-        }
+        const r = tryRewrite(raw);
+        if (r) addCard({ kind: "rewrite", section: "Projects", ...r });
       }
-      if (examples.some(x => x.section === "Projects")) break;
     }
 
-    // Fill any remaining slots with illustrative examples so the panel is never empty,
-    // but real, resume-derived edits always come first.
-    for (const f of examplesFallback) { if (examples.length >= 4) break; pushEx(f.section, f.weak, f.better); }
-    const examplesPersonalized = examples.some(x => !examplesFallback.some(f => f.weak === x.weak));
+    // Pass 2 — if we still have room, add real "tighten" cards from unquantified lines.
+    if (examples.length < 3) {
+      for (const e of expList) { for (const raw of (e.bullets || [])) { const t = tightenNote("Experience", raw); if (t) { addCard({ kind: "tighten", section: "Experience", ...t }); break; } } if (examples.length >= 3) break; }
+    }
+    if (examples.length < 3) {
+      for (const p of projList) { for (const raw of (p.bullets || [])) { const t = tightenNote("Projects", raw); if (t) { addCard({ kind: "tighten", section: "Projects", ...t }); break; } } if (examples.length >= 3) break; }
+    }
+
+    // Pass 3 — lowest-value but still real: formatting-consistency (capitalization) cards.
+    if (examples.length < 3) {
+      for (const e of expList) { for (const raw of (e.bullets || [])) { const c = capNote(raw); if (c) { addCard({ kind: "tighten", section: "Experience", ...c }); break; } } if (examples.length >= 3) break; }
+    }
+    if (examples.length < 3) {
+      for (const p of projList) { for (const raw of (p.bullets || [])) { const c = capNote(raw); if (c) { addCard({ kind: "tighten", section: "Projects", ...c }); break; } } if (examples.length >= 3) break; }
+    }
+
+    // Did we get ANY real, resume-derived card?
+    const examplesPersonalized = examples.length > 0;
+    // Only if we found nothing real do we show clearly-labeled illustrative examples.
+    if (!examplesPersonalized) { for (const f of illustrativeFallback) addCard(f); }
 
     // ---- Quick wins (<10 min) ----
     const quickWins = [];
@@ -3659,23 +3680,30 @@ function App() {
           <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
             <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>✍️ Before → After: Coaching Examples</h3>
             <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>{coachReview.examplesPersonalized
-              ? "These come straight from your resume. Same facts — I've just made the wording clearer and stronger, the way I would working through it with you line by line."
-              : "This is the kind of edit I'd make with you, line by line. Same facts — clearer, stronger, more specific."}</p>
+              ? "These are pulled straight from your resume. Where I could tighten the wording without changing the facts, I did. Where a line needs a detail only you have, I've flagged what to add."
+              : "Your lines already read cleanly, so here are illustrative examples showing the pattern I'd coach toward."}</p>
             {coachReview.examples.map((ex, i) => (
               <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".05em", background: "#f8fafc", padding: "6px 14px", borderBottom: "1px solid #e2e8f0" }}>{ex.section}</div>
                 <div style={{ padding: "12px 14px", borderLeft: "4px solid #f87171", background: "#fef2f2" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 900, color: "#b91c1c", textTransform: "uppercase", marginBottom: 3 }}>Weak</div>
+                  <div style={{ fontSize: 10.5, fontWeight: 900, color: "#b91c1c", textTransform: "uppercase", marginBottom: 3 }}>{ex.kind === "tighten" ? "Your line" : "Weak"}</div>
                   <div style={{ fontSize: 13.5, color: "#7f1d1d", fontStyle: "italic" }}>"{ex.weak}"</div>
                 </div>
-                <div style={{ padding: "12px 14px", borderLeft: "4px solid #16a34a", background: "#f0fdf4" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 900, color: "#15803d", textTransform: "uppercase", marginBottom: 3 }}>Better</div>
-                  <div style={{ fontSize: 13.5, color: "#14532d", fontWeight: 600 }}>"{ex.better}"</div>
-                </div>
+                {ex.kind === "tighten" ? (
+                  <div style={{ padding: "12px 14px", borderLeft: "4px solid #f59e0b", background: "#fffbeb" }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 900, color: "#b45309", textTransform: "uppercase", marginBottom: 3 }}>Tighten this</div>
+                    <div style={{ fontSize: 13.5, color: "#78350f", fontWeight: 600 }}>{ex.note}</div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "12px 14px", borderLeft: "4px solid #16a34a", background: "#f0fdf4" }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 900, color: "#15803d", textTransform: "uppercase", marginBottom: 3 }}>Better</div>
+                    <div style={{ fontSize: 13.5, color: "#14532d", fontWeight: 600 }}>"{ex.better}"</div>
+                  </div>
+                )}
               </div>
             ))}
             <div style={{ fontSize: 11.5, color: "#94a3b8", lineHeight: 1.5 }}>{coachReview.examplesPersonalized
-              ? "The \"Better\" versions never add facts you didn't provide — where a number would help, they point to where you should add one truthfully. Only ever use details that are true for you."
+              ? "I never add facts you didn't provide. Where a number would help, I point to where you should add one truthfully — only ever use details that are true for you."
               : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
 
