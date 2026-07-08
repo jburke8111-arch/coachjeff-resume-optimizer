@@ -544,9 +544,9 @@ function cleanEducationEntries(entries) {
     let coursework = String(ed.coursework || "").trim();
 
     if (grad) {
-      degree = degree.replace(new RegExp("\\\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\\\s*$", "i"), "").trim();
-      school = school.replace(new RegExp("\\\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\\\s*$", "i"), "").trim();
-      coursework = coursework.replace(new RegExp("\\\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\\\s*$", "i"), "").trim();
+      degree = degree.replace(new RegExp("\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i"), "").trim();
+      school = school.replace(new RegExp("\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i"), "").trim();
+      coursework = coursework.replace(new RegExp("\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i"), "").trim();
     }
     // Generic duplicate expected date cleanup.
     degree = degree.replace(/\s*(Expected|Graduating|Anticipated)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)?\.?\s*20\d{2}\s*$/i, "").trim();
@@ -585,13 +585,19 @@ function _parseEducation(lines) {
   // things like "SQL" can't be mistaken for a state.
   const STATE_ABBRS = "AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY";
   const STATE_NAMES = "Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming";
-  const locRe = new RegExp("[A-Z][a-zA-Z .'-]+,\\s*(?:" + STATE_NAMES + ")(?![a-z])|[A-Z][a-zA-Z .'-]+,\\s*(?:" + STATE_ABBRS + ")\\b");
-  let location = (schoolLine.match(locRe) || [""])[0];
+  // City = one capitalized word, plus at most one more (covers "San Diego",
+  // "New York"). Kept deliberately short so a long institution name like
+  // "Trident University International" can't be absorbed into the location.
+  const CITY = "[A-Z][a-zA-Z.'-]+(?:\\s+[A-Z][a-zA-Z.'-]+)?";
+  const locRe = new RegExp(CITY + ",\\s*(?:" + STATE_NAMES + ")(?![a-z])|" + CITY + ",\\s*(?:" + STATE_ABBRS + ")\\b", "g");
+  // Use the LAST City, ST match on the line; everything before it is the school.
+  const locMatches = schoolLine.match(locRe) || [];
+  const rawLoc = locMatches.length ? locMatches[locMatches.length - 1] : "";
+  let location = rawLoc;
   if (location && typeof abbreviateState === "function") location = abbreviateState(location);
 
   let school = schoolLine;
   // Remove the matched location text (in its original spelled form) from the school name.
-  const rawLoc = (schoolLine.match(locRe) || [""])[0];
   if (rawLoc && school.includes(rawLoc)) school = school.replace(rawLoc, "").trim();
   school = school.replace(/[|,]\s*$/,"").trim();
 
@@ -605,7 +611,7 @@ function _parseEducation(lines) {
     degree: degreeLine || "",
     school: school || schoolLine || "",
     location,
-    grad: (gradLine.match(/(?:expected\s*)?(?:[A-Za-z]+\s*)?20\d{2}/i) || [""])[0],
+    grad: (gradLine.match(/(?:expected\s*)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}/i) || [""])[0],
     gpa: (gpaLine.match(/\b[0-4]\.\d{1,2}\s*\/\s*[0-4]\.\d{1,2}\b|\b[0-4]\.\d{1,2}\b/) || [""])[0],
     coursework: courseworkLine.replace(/relevant coursework\s*:?/i, "").trim()
   }];
@@ -940,6 +946,33 @@ function _parsePublicationEntries(lines) {
   }) : [emptyPub()];
 }
 
+// Rank a date string for reverse-chronological sorting. "Present"/"Current"
+// sort newest; otherwise use the latest year (and month, if present) found.
+// Returns null when no year is detectable so callers can skip uncertain rows.
+function _endDateRank(entry) {
+  const raw = String((entry && (entry.end || entry.start)) || "");
+  if (/present|current/i.test(raw)) return Number.MAX_SAFE_INTEGER;
+  const year = (raw.match(/20\d{2}|19\d{2}/g) || []).map(Number).sort((a, b) => b - a)[0];
+  if (!year) return null;
+  const MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, sept:9, oct:10, nov:11, dec:12 };
+  const mm = (raw.toLowerCase().match(/jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec/) || [])[0];
+  return year * 100 + (mm ? MONTHS[mm] : 1);
+}
+
+// Stable reverse-chronological sort. Only reorders when EVERY entry has a
+// readable date, so entries the parser can't date are left in source order
+// rather than being shuffled unpredictably.
+function _sortEntriesByRecency(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (list.length < 2) return list;
+  const ranks = list.map(_endDateRank);
+  if (ranks.some(r => r === null)) return list;
+  return list
+    .map((e, i) => ({ e, i, r: ranks[i] }))
+    .sort((a, b) => (b.r - a.r) || (a.i - b.i))
+    .map(x => x.e);
+}
+
 function mapImportedResumeToBuilder(rawText) {
   const sections = _splitResume(rawText);
   const contact = _parseContact(sections.header || []);
@@ -948,7 +981,7 @@ function mapImportedResumeToBuilder(rawText) {
     contact: contact.contact,
     summary: (sections.summary || []).join(" "),
     skills: (sections.skills && sections.skills.length) ? _parseSkills(sections.skills || []) : inferSkillsFromResumeText(rawText),
-    experience: _parseExperienceEntries(sections.experience || []).map(e => ({ ...e, location: abbreviateState(e.location) })),
+    experience: _sortEntriesByRecency(_parseExperienceEntries(sections.experience || []).map(e => ({ ...e, location: abbreviateState(e.location) }))),
     projects: _parseProjectEntries(sections.projects || []),
     education: cleanEducationEntries(_parseEducation(sections.education || [])).map(ed => ({ ...ed, location: abbreviateState(ed.location) })),
     activities: (sections.activities && sections.activities.length) ? _parseActivityEntries(sections.activities || []) : [emptyAct()],
