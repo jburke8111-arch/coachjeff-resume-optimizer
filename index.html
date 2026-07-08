@@ -1,4 +1,19 @@
-<title>Coach Jeff Resume Optimizer</title>
+<!-- v12.0.1: Unicode cleanup — fixed escaped characters rendering literally in UI text. -->
+<!-- v12.0.3: Guided workflow update with dynamic summary cards, clearer next-step messaging, import quality card before ATS, and no placeholder Job Match score before a posting is loaded. -->
+<!-- v12.0.2: clarifies score labels, fixes step count to 8, adds AI/ML/HPC target track, improves no-job Job Match messaging, and anchors target-role feedback to selected field. -->
+<!-- v12.0.1: cleaned escaped Unicode sequences in UI copy. -->
+<!-- v12.0.5: Fixed browser-tab title (now v12.0.5); removed the stray "}" that leaked into the Resume Workshop view and the load-time TreeWalker cleanup hack that masked it (it could also blank a legitimate "}" in user resume text). No feature changes. -->
+<!-- v12.0.4: Numbered workflow tabs and context-aware next-step card; Snapshot now points to Recruiter Review instead of future Job Match. -->
+<!-- v12.0: Job Match moved before Resume Workshop; users can paste a job description or job posting URL; tailoring recommendations now feed the workshop before ATS Inspection and Export. -->
+<!-- v11.3.3: Recruiter Emotion — decision panel, time-based confidence timeline, more human recruiter copy (Recruiter Review only) -->
+<!-- v11.5 Beta Tester Update: fixes workflow navigation/buttons, adds browser PDF import, expands career targets, improves projects/volunteer/leadership parsing, unifies recruiter scoring, adds field-fit guardrails, improves spacing, and strips duplicate bullets on export. -->
+<!-- v11.4.1 Workflow Cleanup: Career Goal asked once during upload, Resume Workshop no longer shows import panel, tighter workshop transition. -->
+<!-- v11.4: Coach Review — new coaching screen (opening thoughts, game plan, strengths, star-ranked improvements, roadmap, before/after, quick wins, bigger projects, if-we-worked-together, motivation). No changes to Snapshot, Recruiter Review, import/export, ATS Inspection, Job Match, or Word export. -->
+<!-- v9.4.2: safe Bullet Quality Analyzer helpers; no JSX injection -->
+<!-- v9.3.4: contact hyperlink labels, school-first education, org/location standardization, leadership title+org -->
+<!-- v9.3.2: bullet spacing normalization (0 before/0 after) -->
+<!-- v9.3 -->
+<!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3046,6 +3061,7 @@ function App() {
             <button onClick={saveNow} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid " + (justSaved ? "#16a34a" : "#cbd5e1"), background: justSaved ? "#16a34a" : "#fff", color: justSaved ? "#fff" : "#1e293b", fontWeight: justSaved ? 600 : 400, cursor: "pointer", transition: "all .15s" }}>{justSaved ? "Saved ✓" : "Save"}</button>
             <button onClick={reset} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Reset</button>
             <a href="https://coachjeff-coverletter.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Cover Letter →</a>
+            <a href="https://coachjeff-jobfinder.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Job Finder →</a>
             <button onClick={printPdf} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print / PDF</button>
             <button onClick={exportDocxReal} disabled={busy} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 600, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
           </div>
