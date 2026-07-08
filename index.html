@@ -79,6 +79,19 @@ const FIELD_PRESETS = {
   "General / Other": ["summary", "education", "skills", "experience", "projects", "activities", "certifications", "awards", "volunteer", "publications"],
 };
 
+// Classifies a target field by what kind of "prove your work" asset a recruiter expects.
+// - "code":      a code host (GitHub/GitLab) is a real, expected signal
+// - "portfolio": a visual/writing portfolio site is the norm
+// - "credential": no work-sample link expected; LinkedIn + certifications/licensure carry the weight
+// Used to tailor Quick Wins and Bigger Projects so, e.g., an HR resume isn't told to add a GitHub.
+function fieldWorkSampleProfile(fieldRaw) {
+  const f = String(fieldRaw || "").toLowerCase();
+  if (/(cs|comput|software|engineer(ing)?|data|analyt|ai|machine learning|ml|hpc|cloud|devops|cyber|qa|quality assurance|it support|help desk|it specialist|technical support)/.test(f)
+      && !/non-software/.test(f)) return "code";
+  if (/(creative|design|media|market|content|writ|communicat|journalis|ux|ui|brand)/.test(f)) return "portfolio";
+  return "credential"; // HR, finance, accounting, healthcare, legal, social work, education, ops, PM, etc.
+}
+
 const SKILL_BANK = {
   "Technology / CS / Engineering": ["Python", "Java", "JavaScript", "SQL", "Git", "GitHub", "APIs", "React", "Node.js", "Linux", "Cloud Computing", "AWS", "Azure", "Docker", "Agile", "Testing", "Debugging", "Data Structures", "Algorithms", "Technical Documentation"],
   "Data / Analytics / AI/ML": ["Python", "SQL", "Excel", "Tableau", "Power BI", "Data Analysis", "Data Visualization", "Statistics", "Pandas", "NumPy", "Machine Learning", "Dashboarding", "Reporting", "Business Intelligence", "Research", "Communication"],
@@ -3248,9 +3261,15 @@ function App() {
     if (!examplesPersonalized) { for (const f of illustrativeFallback) addCard(f); }
 
     // ---- Quick wins (<10 min) ----
+    const workSample = fieldWorkSampleProfile(data.field);
     const quickWins = [];
     const c = data.contact || {};
-    if (!(c.portfolio && /github/i.test(c.portfolio))) quickWins.push("Add your GitHub or portfolio link near the top.");
+    if (workSample === "code") {
+      if (!(c.portfolio && /github|gitlab|portfolio/i.test(c.portfolio))) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
+    } else if (workSample === "portfolio") {
+      if (!(c.portfolio && /portfolio|behance|dribbble|http/i.test(c.portfolio))) quickWins.push("If your work is visual (design, content, marketing), add a portfolio link near the top.");
+    }
+    // (credential fields get no work-sample nudge; LinkedIn below is the relevant link.)
     if (!c.linkedin) quickWins.push("Add your LinkedIn URL so recruiters can verify and connect.");
     if (expBullets && expQuant < expBullets) quickWins.push("Add one number to a bullet you already have (scope, %, count, or time saved).");
     quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
@@ -3259,13 +3278,26 @@ function App() {
     const quickWinsFinal = quickWins.slice(0, 6);
 
     // ---- Bigger projects (longer-term) ----
-    const bigger = [
-      { label: "Build a portfolio", why: "One link that shows real work does more than a dozen resume lines." },
-      { label: "Earn a targeted certification", why: "A credential in your target field is fast, verifiable proof of commitment." },
-      { label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." },
-      { label: "Network intentionally", why: "Most early-career roles come through people. A few genuine conversations beats 50 cold applications." },
-      { label: "Add one more strong project", why: "A second well-documented project deepens the evidence of what you can actually do." }
-    ];
+    // The lead item differs by field: a code/portfolio field is well served by a work-sample
+    // link, but a credential field (HR, finance, healthcare, etc.) is not — there the
+    // high-value moves are a strong LinkedIn presence and a recognized certification/license.
+    const bigger = [];
+    if (workSample === "code") {
+      bigger.push({ label: "Build a GitHub or portfolio", why: "One link to real, working code does more than a dozen resume lines for technical roles." });
+    } else if (workSample === "portfolio") {
+      bigger.push({ label: "Build a portfolio", why: "One link that shows finished work does more than a dozen resume lines in creative and marketing roles." });
+    } else {
+      bigger.push({ label: "Strengthen your LinkedIn profile", why: "In this field your profile is the link recruiters check. A complete, keyword-matched profile is the equivalent of a portfolio." });
+    }
+    bigger.push({ label: "Earn a targeted certification" + (workSample === "credential" ? " or license" : ""),
+      why: workSample === "credential"
+        ? "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost."
+        : "A credential in your target field is fast, verifiable proof of commitment." });
+    bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
+    bigger.push({ label: "Network intentionally", why: "Most early-career roles come through people. A few genuine conversations beats 50 cold applications." });
+    bigger.push(workSample === "credential"
+      ? { label: "Add measurable wins to your experience", why: "In place of a project portfolio, quantified results (headcount, time saved, compliance rates) are your strongest proof." }
+      : { label: "Add one more strong project", why: "A second well-documented project deepens the evidence of what you can actually do." });
 
     // ---- If we worked together ----
     const topThree = planForToday.map(p => p.title.replace(/^(Rewrite|Write|Strengthen|Improve|Add|Reorganize|Reframe|Polish)\s+/i, m => m.toLowerCase()));
