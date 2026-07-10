@@ -228,6 +228,17 @@ function normalizeImportedResumeText(rawText) {
   t = t.replace(/([a-z])([A-Z][a-z]+,\s*(?:Texas|TX|Florida|FL|New York|NY|California|CA|Ohio|OH|Georgia|GA|Virginia|VA|Maryland|MD|Illinois|IL|Arizona|AZ|Washington|WA|USA|United States))/g, "$1\n$2");
   t = t.replace(/([A-Za-z]{2,})([A-Z][a-z]+,\s*[A-Z]{2})/g, "$1\n$2");
 
+  // Break apart text glued at a bullet/entry boundary. When a DOCX has no line break
+  // between the end of one bullet and the start of the next entry, the extracted text
+  // runs together (e.g. "...presented at CSCE 2024Graduate Assistant | Introductory CS").
+  // Split conservatively at HIGH-CONFIDENCE boundaries only, so legitimate CamelCase
+  // (PyTorch, GitHub, FastAPI) is never broken:
+  //   1) a 4-digit year immediately followed by a capitalized word ("2024Graduate")
+  t = t.replace(/\b((?:19|20)\d{2})([A-Z][a-z]{2,})/g, "$1\n$2");
+  //   2) a lowercase letter glued to a Title-Case phrase that is followed by " | " —
+  //      the pipe strongly signals a new experience/education entry header.
+  t = t.replace(/([a-z])([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*\s*\|)/g, "$1\n$2");
+
   // Normalize contact separators when they separate contact items.
   t = t.replace(/\s*[|•]\s*(?=(?:\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})|[a-z0-9._%+\-]+@|(?:https?:\/\/)?(?:www\.)?linkedin|github\.com)/gi, "\n");
   t = t.replace(/([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})\s*[|•]\s*/gi, "$1\n");
@@ -785,11 +796,20 @@ function _parseExperienceEntries(lines) {
       bulletStart = 2;
     }
 
+    // A line that starts with an action/accomplishment verb (or a leading bullet mark) is
+    // real content, NOT an org/location header — even if it superficially trips
+    // _looksLikeOrgLocation (e.g. "Published in Parallel and Distributed Processing
+    // Techniques, presented at CSCE 2024" has commas + Title-Case that mimic an org line).
+    // Never discard such lines, or genuine achievements/publications get silently dropped.
+    const looksLikeContentBullet = (l) => {
+      const s = String(l || "").replace(/^\s*[•\-*·]\s*/, "").trim();
+      return /^(published|presented|co-authored|authored|developed|designed|built|created|led|lead|managed|conducted|analyzed|implemented|introduced|achieved|ran|benchmark|supported|tutored|mentored|coordinated|organized|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|facilitated|spearheaded|launched|contributed)\b/i.test(s);
+    };
     const bullets = chunk.slice(bulletStart).filter(l =>
       l &&
       !isHardSectionHeading(l) &&
       !extractDateRangeFromLine(l) &&
-      !(_looksLikeOrgLocation(l) && l.length < 90)
+      (looksLikeContentBullet(l) || !(_looksLikeOrgLocation(l) && l.length < 90))
     );
 
     return {
@@ -1375,10 +1395,41 @@ function repeatedLeadingVerbs(bullets) {
     .sort((a, b) => b.count - a.count);
 }
 
+// ---- Shared quantification detector (v11.5) ----
+// Decides whether a bullet contains a genuine *measurable result*, not just an
+// incidental digit. Fixes two failure modes seen on strong technical resumes:
+//   1) false positives — "CUDA C/C++", "Python 3", "Lonestar6", "COVID-19",
+//      version numbers, and plain years were counted as quantification.
+//   2) false negatives — real metrics phrased as ratios/multipliers ("2.68×",
+//      "430x speedup") or named metrics weren't always credited.
+function isQuantifiedBullet(raw) {
+  const b = String(raw || "").trim();
+  if (!b) return false;
+  // Strip patterns that contain digits but are NOT measurable results, so they
+  // don't get mistaken for quantification.
+  const stripped = b
+    .replace(/\bc\/c\+\+|c\+\+|c#/gi, " ")               // languages
+    .replace(/\bpython\s*\d(\.\d+)?/gi, " ")             // "Python 3"
+    .replace(/\b[a-z]+\d[a-z0-9]*\b/gi, " ")             // alphanumeric names: Lonestar6, GPT4, S3, ResNet50
+    .replace(/\bcovid-?19\b/gi, " ")                     // named events
+    .replace(/\bversion\s*\d+(\.\d+)*/gi, " ")           // version strings
+    .replace(/\bv\d+(\.\d+)*/gi, " ")                    // v2, v3.1
+    .replace(/\b(19|20)\d{2}\b/g, " ");                  // bare calendar years
+  // Genuine measurable-result signals.
+  const strongMetric =
+    /\d+(\.\d+)?\s*(×|x)\b/i.test(stripped) ||           // 2.68×, 430x  (ratios/multipliers)
+    /[%$]/.test(stripped) ||                             // percentages, dollars
+    /\d+(\.\d+)?\s*(k\+?|m\+?|b\+?|million|thousand|billion)\b/i.test(stripped) ||
+    /\b\d{2,}\+?\b/.test(stripped) ||                    // any standalone number ≥ 10 (users, records, hours…)
+    /\b\d+(\.\d+)?\s*(users?|customers?|students?|records?|hours?|days?|weeks?|months?|people|teams?|projects?|models?|clients?|requests?|queries|images?|datasets?|gb|tb|ms|fps|reduction|increase|faster|improvement)/i.test(stripped) ||
+    /\bgpa\b[\s:]*\d/i.test(b);                          // GPA counts even on original
+  return strongMetric;
+}
+
 function analyzeExperienceQuality(data) {
   const entries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
   const bullets = entries.flatMap(e => (e.bullets || []).filter(Boolean));
-  const quantified = bullets.filter(b => /\d|%|\$|million|thousand|k\+|[0-9]+\+/i.test(b)).length;
+  const quantified = bullets.filter(b => isQuantifiedBullet(b)).length;
   const longBullets = bullets.filter(b => b.split(/\s+/).length > 38).length;
   const weakStarts = bullets.filter(b => /^(responsible for|was responsible for|worked on|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|contributed to|took part in|oversaw the|duties included|tasked with|successfully)\b/i.test(b.trim())).length;
   const missingAction = bullets.filter(b => !/^(analyzed|built|developed|created|led|managed|delivered|presented|quantified|implemented|engineered|recruited|coordinated|selected|conceptualized|authored|improved|identified|recommended|applied|designed|supported|evaluated|collaborated|organized|executed|optimized|translated|documented|spearheaded|launched|negotiated|researched|trained|streamlined|reduced|increased|generated|achieved|conducted|facilitated|founded|initiated|produced|secured|automated|redesigned|mentored|drafted|tested|deployed|maintained|configured|resolved|established|expanded|forecasted|modeled|programmed|published|spearhead|won|wrote)/i.test(b.trim())).length;
@@ -1670,7 +1721,7 @@ function analyzeProjectStrength(data) {
   const techTerms = ["Python","SQL","API","APIs","React","Node","Power BI","Tableau","XGBoost","Logistic Regression","D3","Gemini","RAG","Machine Learning","NetworkX","TradingView","Figma","Agile","Excel","Azure","AWS","Docker"];
   // Accomplishment bullets exclude tools and subtitle/org lines.
   const bullets = projects.flatMap(p => (p.bullets || []).filter(b => b && b.trim() && !metaLine(b)));
-  const quantified = bullets.filter(b => /\d|%|\$|million|thousand|k\+|[0-9]+\+/i.test(b)).length;
+  const quantified = bullets.filter(b => isQuantifiedBullet(b)).length;
   const techDetected = projects.filter(p => {
     const hasToolsLine = (p.bullets || []).some(toolsLine);
     const t = [p.name, ...(p.bullets || [])].join(" ");
@@ -1703,7 +1754,7 @@ function targetFieldFit(data) {
 }
 
 function leadershipEvidenceCount(data) {
-  const leadershipWords = /\b(lead|led|leader|leadership|president|vice president|captain|chair|coordinator|mentor|trained|supervised|organized|founded|initiated|volunteer|community|team|collaborated|collaboration|facilitated|managed)\b/i;
+  const leadershipWords = /\b(lead|led|leader|leadership|president|vice president|captain|chair|coordinator|mentor|mentored|tutored|tutor|taught|instructed|trained|supervised|organized|founded|initiated|spearheaded|volunteer|community|team|collaborated|collaboration|facilitated|managed|oversaw|directed|headed|guided)\b/i;
   const pools = []
     .concat(data.activities || [])
     .concat(data.volunteer || [])
@@ -1767,7 +1818,7 @@ function specificExperienceFeedback(data) {
   const entries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
   const bullets = entries.flatMap(e => (e.bullets || []).filter(Boolean).map(b => ({ text: String(b || ""), entry: e })));
   const weak = bullets.filter(x => /^(responsible for|was responsible for|worked on|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|contributed to|took part in|oversaw the|duties included|tasked with|successfully)\b/i.test(x.text.trim()));
-  const quantified = bullets.filter(x => /\d|%|\$|million|thousand|k\+|[0-9]+\+|years?|months?/i.test(x.text));
+  const quantified = bullets.filter(x => isQuantifiedBullet(x.text));
   const unquantified = bullets.length - quantified.length;
   const missingDates = entries.filter(e => (e.title || e.org) && (!e.start || !e.end)).length;
   const longBullets = bullets.filter(x => x.text.split(/\s+/).length > 38).length;
@@ -1788,7 +1839,7 @@ function specificProjectFeedback(data) {
   const projects = (data.projects || []).filter(p => p && (p.name && (p.bullets || []).some(b => b && b.trim() && !metaLine(b))));
   const techPattern = /(python|sql|api|react|node|power bi|tableau|xgboost|logistic regression|machine learning|d3|rag|gemini|networkx|tradingview|excel|azure|aws|docker|linux|github|git|jupyter|vs code|figma|agile)/i;
   const projectTech = projects.filter(p => (p.bullets || []).some(toolsLine) || techPattern.test([p.name, ...(p.bullets || [])].join(" ")));
-  const quantified = projects.filter(p => (p.bullets || []).some(b => !metaLine(b) && /\d|%|\$|million|thousand|k\+|[0-9]+\+/i.test(b)));
+  const quantified = projects.filter(p => (p.bullets || []).some(b => !metaLine(b) && isQuantifiedBullet(b)));
   const genericTitles = projects.filter(p => p.name && !techPattern.test(p.name) && p.name.split(/\s+/).length < 4);
 
   const notes = [];
@@ -3154,9 +3205,51 @@ function App() {
     if (hasSkills && skillCount >= 6) addStrength("Technical Skills", "You list " + skillCount + " concrete skills/tools. That gives a recruiter something specific to picture you doing.");
     if (hasExperience) addStrength("Work Experience", "Real-world experience is credibility coursework can't give. It signals you've operated in a professional setting.");
     if (hasProjects) addStrength("Projects", "Projects prove hands-on ability — they show you can apply what you know, not just list it.");
-    if (certCount) addStrength("Certifications", "Certifications are third-party proof of skill. They're an easy confidence boost for a screener.");
+    // Only claim certifications if there's REAL cert content (a named entry that isn't actually
+    // a publication/award mis-mapped by the parser). Prevents "you have certifications" on a
+    // resume that has none.
+    const realCerts = (data.certifications || []).filter(c => {
+      const nm = String((c && c.name) || "").trim();
+      if (nm.length < 3) return false;
+      // guard against publications/papers leaking into the cert bucket
+      if (/\b(published|journal|proceedings|conference|presented at|doi|vol\.|pp\.)\b/i.test(nm)) return false;
+      return true;
+    });
+    if (realCerts.length) addStrength("Certifications", "You list " + realCerts.length + " certification" + (realCerts.length === 1 ? "" : "s") + " — third-party proof of skill that's an easy confidence boost for a screener.");
+    // Publications are their own strength — common on strong technical/research resumes and
+    // stronger evidence than most certs. Detect them even when the publication is written as a
+    // bullet inside Experience/Projects rather than a dedicated Publications section, since that's
+    // a common and easy-to-miss case for research-track candidates.
+    const pubSectionCount = (data.publications || []).filter(p => String((p && (p.name || p.title)) || "").trim().length > 3).length;
+    const pubMentionRe = /\b(published in|publication in|peer[- ]reviewed|in the proceedings of|presented at [A-Z]|accepted (to|at)|doi:|journal of|conference on|\bIEEE\b|\bACM\b(?![- ]?SIG)|co-authored|first author)\b/i;
+    // Scan ALL text-bearing fields across every section — a publication can land as a bullet,
+    // an entry title, or an award line depending on how the resume was structured on import.
+    const collectText = (obj) => {
+      if (obj == null) return [];
+      if (typeof obj === "string") return [obj];
+      if (Array.isArray(obj)) return obj.flatMap(collectText);
+      if (typeof obj === "object") return Object.keys(obj).filter(k => k !== "id").flatMap(k => collectText(obj[k]));
+      return [];
+    };
+    const pubScanText = [
+      data.experience, data.projects, data.awards, data.activities,
+      data.volunteer, data.education, data.publications, data.summary
+    ].flatMap(collectText).map(x => String(x || ""));
+    const pubMentioned = pubScanText.some(t => pubMentionRe.test(t));
+    if (pubSectionCount || pubMentioned) {
+      addStrength("Published Work", pubMentioned && !pubSectionCount
+        ? "You mention published/peer-reviewed work in your experience — that's rare at this stage and signals real depth. Consider giving it its own \"Publications\" line so it's not buried; recruiters and hiring managers notice it immediately."
+        : "A publication is rare at this stage and signals depth most candidates can't show — recruiters and hiring managers notice it immediately.");
+    }
     if (hasEducation) addStrength("Education", "Your degree and school are clearly present, which anchors the rest of your story.");
-    if (leadershipCount) addStrength("Leadership & Involvement", "Activities and leadership show initiative and teamwork — traits recruiters read as maturity.");
+    // Leadership strength: ground the "why" in where the evidence actually lives, since it's
+    // often inside experience/project bullets rather than a separate activities section.
+    if (leadershipCount) {
+      const inExp = (data.experience || []).some(e => /\b(led|lead|mentor|tutored|taught|instructed|trained|supervised|coordinated|organized|managed|founded|spearheaded)\b/i.test((e.bullets || []).join(" ")));
+      addStrength("Leadership & Initiative", inExp
+        ? "You show leadership inside your experience — mentoring, teaching, or leading a team. That reads as maturity and ownership, not just a title."
+        : "Activities and leadership show initiative and teamwork — traits recruiters read as maturity.");
+    }
     if (exp && expQuant >= Math.ceil(expBullets / 3) && expBullets) addStrength("Measurable Results", "Several bullets already include numbers or outcomes. That's exactly the habit that separates strong resumes.");
     const strengthsFinal = strengths.slice(0, 6);
 
@@ -3171,9 +3264,10 @@ function App() {
         "15 min", "High");
     }
     if (hasExperience && expBullets && expQuant < Math.ceil(expBullets / 2)) {
-      addImp(4, "Quantify your experience",
-        "Only " + expQuant + " of " + expBullets + " experience bullets show measurable results. Numbers make accomplishments believable and memorable.",
-        "20 min", "High");
+      const quantWhy = expQuant >= 1
+        ? "You already have " + expQuant + " strong quantified bullet" + (expQuant === 1 ? "" : "s") + " — that's exactly the habit recruiters look for. Extend it: " + (expBullets - expQuant) + " of your " + expBullets + " experience bullets still read as tasks. Add a number, scope, or outcome to a few more."
+        : "None of your " + expBullets + " experience bullets show measurable results yet. Numbers make accomplishments believable and memorable — add scope, %, counts, or outcomes where accurate.";
+      addImp(4, "Quantify your experience", quantWhy, "20 min", "High");
     }
     if (hasProjects && projQuant < Math.max(1, Math.ceil((proj.projects || 1) / 2))) {
       addImp(4, "Improve project descriptions",
@@ -3267,14 +3361,20 @@ function App() {
       { kind: "rewrite", section: "Projects", weak: "Made a machine learning project.", better: "Built a churn-prediction model in Python (scikit-learn) reaching 86% accuracy on test data." }
     ];
 
-    const WEAK_OPENERS = /^(worked on|responsible for|helped( to| with)?|assisted( in| with)?|duties included|tasked with|in charge of|handled|involved in|participated in|was part of|part of|dealt with|contributed to|supported|aided( in| with)?)\b/i;
+    // TIER 1 — pure filler openers with no role meaning. Safe to rewrite to a stronger verb.
+    const WEAK_OPENERS = /^(worked on|responsible for|helped( to| with)?|assisted( in| with)?|duties included|tasked with|in charge of|handled|involved in|participated in|was part of|part of|dealt with|aided( in| with)?)\b/i;
+    // TIER 2 — openers that describe a REAL (if modest) level of ownership. Swapping these
+    // for a stronger verb would inflate the claim ("Contributed to" → "Led" invents leadership;
+    // "Supported X" → "Trained X" often breaks grammar). These are flagged to TIGHTEN, never
+    // auto-promoted. This preserves the rule: never invent facts the resume doesn't state.
+    const CLAIM_OPENERS = /^(contributed to|supported|coordinated|collaborated( on| with)?)\b/i;
     const hasNumber = (s) => /\d/.test(String(s || ""));
     const cleanBullet = (s) => String(s || "").replace(/^[•\-\u2013\u2014\s]+/, "").replace(/\s+/g, " ").replace(/[.;]+$/, "").trim();
     const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
     const lc1 = (s) => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
     const trunc = (s, n) => (s && s.length > n ? s.slice(0, n).replace(/\s+\S*$/, "") + "…" : s);
 
-    // Choose a strong verb that fits the content, without changing meaning.
+    // Choose a strong verb that fits the content, without changing meaning or inflating the claim.
     const pickVerb = (text) => {
       if (/train|mentor|onboard|coach|taught|instruct/i.test(text)) return "Trained";
       if (/schedul|coordinat|calendar|appointment|logistic/i.test(text)) return "Coordinated";
@@ -3282,9 +3382,10 @@ function App() {
       if (/report|dashboard|analy|data|metric|track/i.test(text)) return "Analyzed";
       if (/prepar|cook|meal|serve|food/i.test(text)) return "Prepared";
       if (/inventor|stock|supply|material/i.test(text)) return "Oversaw";
-      if (/plan|event|program|initiativ/i.test(text)) return "Led";
+      if (/plan|event|program|initiativ/i.test(text)) return "Organized";
       if (/build|built|creat|develop|design/i.test(text)) return "Built";
-      return "Led";
+      // Neutral, meaning-safe default — never fabricate "Led" for generic content.
+      return "Handled";
     };
 
     // Try to produce a REAL, substantive rewrite from a line, inventing nothing.
@@ -3321,6 +3422,12 @@ function App() {
       if (!b || b.length < 20) return null;
       if (hasNumber(b)) return null;                 // already quantified — leave it alone
       const low = b.toLowerCase();
+
+      // Role-claim openers ("Supported…", "Contributed to…"): don't rewrite the verb (that would
+      // inflate the claim). Instead, flag it to add the outcome, which is what it actually needs.
+      if (CLAIM_OPENERS.test(b)) {
+        return { weak: cap(b), note: "Keep the verb honest, but add the result — what changed because of your support or contribution (a number, an outcome, or who benefited)." };
+      }
 
       // Pull a short, human anchor phrase from the line so the note points at THIS bullet.
       const anchor = (() => {
@@ -3435,10 +3542,21 @@ function App() {
     const workSample = fieldWorkSampleProfile(data.field);
     const quickWins = [];
     const c = data.contact || {};
+    // Detect a code/portfolio link ANYWHERE the resume might carry it: the contact block,
+    // an explicit portfolio field, project links, or the header text. Prevents suggesting
+    // "add a GitHub" to someone who already lists one (e.g. github.com/user on a project).
+    const codeSampleText = [
+      c.portfolio, c.github, c.website, c.links,
+      ...(data.projects || []).flatMap(p => [p.link, p.url, p.name, ...(p.bullets || [])]),
+      (data.header || []).join ? (data.header || []).join(" ") : data.header,
+      data.summary
+    ].filter(Boolean).join(" ");
+    const hasCodeSample = /\b(github\.com|gitlab\.com|bitbucket\.org)\b/i.test(codeSampleText) || /\bportfolio\b/i.test(String(c.portfolio || ""));
+    const hasVisualPortfolio = /\b(behance\.net|dribbble\.com|portfolio|artstation)\b/i.test(codeSampleText);
     if (workSample === "code") {
-      if (!(c.portfolio && /github|gitlab|portfolio/i.test(c.portfolio))) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
+      if (!hasCodeSample) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
     } else if (workSample === "portfolio") {
-      if (!(c.portfolio && /portfolio|behance|dribbble|http/i.test(c.portfolio))) quickWins.push("If your work is visual (design, content, marketing), add a portfolio link near the top.");
+      if (!hasVisualPortfolio) quickWins.push("If your work is visual (design, content, marketing), add a portfolio link near the top.");
     }
     // (credential fields get no work-sample nudge; LinkedIn below is the relevant link.)
     if (!c.linkedin) quickWins.push("Add your LinkedIn URL so recruiters can verify and connect.");
@@ -3454,9 +3572,13 @@ function App() {
     // high-value moves are a strong LinkedIn presence and a recognized certification/license.
     const bigger = [];
     if (workSample === "code") {
-      bigger.push({ label: "Build a GitHub or portfolio", why: "One link to real, working code does more than a dozen resume lines for technical roles." });
+      bigger.push(hasCodeSample
+        ? { label: "Deepen your strongest GitHub project", why: "You already link to code — now make one repo shine: a clear README, a short demo, and a results/impact note turn a link into a talking point." }
+        : { label: "Build a GitHub or portfolio", why: "One link to real, working code does more than a dozen resume lines for technical roles." });
     } else if (workSample === "portfolio") {
-      bigger.push({ label: "Build a portfolio", why: "One link that shows finished work does more than a dozen resume lines in creative and marketing roles." });
+      bigger.push(hasVisualPortfolio
+        ? { label: "Curate your portfolio's best 3 pieces", why: "You already have a portfolio — leading with your three strongest, well-captioned pieces beats a large, unfiltered gallery." }
+        : { label: "Build a portfolio", why: "One link that shows finished work does more than a dozen resume lines in creative and marketing roles." });
     } else {
       bigger.push({ label: "Strengthen your LinkedIn profile", why: "In this field your profile is the link recruiters check. A complete, keyword-matched profile is the equivalent of a portfolio." });
     }
@@ -3464,11 +3586,13 @@ function App() {
       why: workSample === "credential"
         ? "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost."
         : "A credential in your target field is fast, verifiable proof of commitment." });
-    bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
+    // Only suggest adding leadership if the resume doesn't already show it.
+    if (!leadershipCount) bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
     bigger.push({ label: "Network intentionally", why: "Most early-career roles come through people. A few genuine conversations beats 50 cold applications." });
     bigger.push(workSample === "credential"
       ? { label: "Add measurable wins to your experience", why: "In place of a project portfolio, quantified results (headcount, time saved, compliance rates) are your strongest proof." }
       : { label: "Add one more strong project", why: "A second well-documented project deepens the evidence of what you can actually do." });
+    const biggerFinal = bigger.slice(0, 5);
 
     // ---- If we worked together ----
     const topThree = planForToday.map(p => p.title.replace(/^(Rewrite|Write|Strengthen|Improve|Add|Reorganize|Reframe|Polish)\s+/i, m => m.toLowerCase()));
@@ -3494,7 +3618,7 @@ function App() {
       examples,
       examplesPersonalized,
       quickWins: quickWinsFinal,
-      bigger,
+      bigger: biggerFinal,
       together,
       motivation
     };
