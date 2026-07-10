@@ -309,7 +309,11 @@ function _headingKey(line) {
 function _splitResume(rawText) {
   const normalized = normalizeImportedResumeText(rawText);
   const rawLines = normalized.replace(/\r/g, "").split("\n").map(_cleanLine).filter(Boolean);
-  const lines = rawLines.filter(l => !/^[_\-=—–]{3,}$/.test(l.trim()));
+  // Strip scanner/app watermarks that get baked into scanned PDFs (TapScanner,
+  // CamScanner, Adobe Scan, Genius Scan, Office Lens, etc.). These are boilerplate,
+  // never resume content, and otherwise leak into the Experience bullets.
+  const isScanWatermark = (l) => /^\s*(scanned\s+(by|with|using)\b|created\s+(by|with)\s+(cam\s?scanner|tap\s?scanner|adobe\s+scan|genius\s+scan|office\s+lens)|cam\s?scanner|tap\s?scanner|genius\s+scan|office\s+lens|digitized\s+by)\b/i.test(l);
+  const lines = rawLines.filter(l => !/^[_\-=—–]{3,}$/.test(l.trim()) && !isScanWatermark(l));
   const sections = { header: [] };
   const debugHeadings = [];
   let current = "header";
@@ -2279,6 +2283,118 @@ function App() {
     } finally { setBusy(false); }
   };
 
+  // ---- Review Report → Word (.doc) export — v11.5 ----
+  // Compiles Resume Snapshot + Recruiter Review + Coach Review into one branded,
+  // shareable Word document. Reuses the same derived state the screens already render
+  // (snapshotStrengths/snapshotOpportunities, recruiterReview, coachReview) and the same
+  // application/msword blob pattern as exportDocx above. No new dependencies.
+  const buildCoachReportHtml = () => {
+    const esc = (s) => String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const P  = (s, extra) => s ? '<p style="margin:0 0 9pt 0;font-size:11pt;color:#1e293b;line-height:1.5;' + (extra || "") + '">' + esc(s) + '</p>' : "";
+    const H2 = (s) => '<h2 style="font-size:15pt;color:#1F3864;border-bottom:1.5pt solid #1F3864;padding-bottom:3pt;margin:20pt 0 8pt 0;">' + esc(s) + '</h2>';
+    const H3 = (s) => '<h3 style="font-size:12.5pt;color:#334155;margin:14pt 0 5pt 0;">' + esc(s) + '</h3>';
+    const UL = (arr, fn) => (Array.isArray(arr) && arr.length)
+      ? '<ul style="margin:0 0 9pt 0;padding-left:18pt;">' + arr.map(x => '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;">' + (fn ? fn(x) : esc(x)) + '</li>').join("") + '</ul>'
+      : "";
+
+    const parts = [];
+    const rr = recruiterReview || {};
+    const cr = coachReview || {};
+    const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const who = (data && data.name) ? data.name : (cr.firstName || "");
+
+    // Cover / header
+    parts.push('<h1 style="font-size:22pt;color:#1F3864;margin:0 0 2pt 0;">Resume Review Report</h1>');
+    parts.push('<p style="font-size:10.5pt;color:#64748b;margin:0 0 2pt 0;">' + (who ? esc(who) + ' &middot; ' : '') + esc(today) + '</p>');
+    parts.push('<p style="font-size:10.5pt;color:#64748b;margin:0 0 4pt 0;">Prepared with the Coach Jeff Resume Optimizer</p>');
+
+    // 2. Resume Snapshot — kept lean: strengths + opportunities, not the raw parse.
+    parts.push(H2("Resume Snapshot"));
+    const snapS = (typeof snapshotStrengths !== "undefined" && snapshotStrengths) || [];
+    const snapO = (typeof snapshotOpportunities !== "undefined" && snapshotOpportunities) || [];
+    if (snapS.length) { parts.push(H3("What's working")); parts.push(UL(snapS)); }
+    if (snapO.length) { parts.push(H3("Opportunities")); parts.push(UL(snapO)); }
+    if (!snapS.length && !snapO.length) parts.push(P("Resume content imported successfully. See the reviews below for detailed feedback."));
+
+    // 3. Recruiter Review
+    parts.push(H2("Recruiter Review"));
+    if (rr.outcome != null || rr.confidence != null)
+      parts.push(P((rr.outcome ? String(rr.outcome).replace(/[🟢🟡🟠🔴]\s*/g, "") : "") + (rr.confidence != null ? "  —  Recruiter confidence: " + rr.confidence + "%" : ""), "font-weight:700;"));
+    if (rr.emotionalRead)  parts.push(P(rr.emotionalRead, "font-style:italic;color:#475569;"));
+    if (rr.firstNoticed) { parts.push(H3("What I noticed first")); parts.push(P(rr.firstNoticed)); }
+    if (rr.paused)        { parts.push(H3("Where I paused"));       parts.push(P(rr.paused)); }
+    if (rr.confidenceText){ parts.push(H3("What builds confidence"));parts.push(P(rr.confidenceText)); }
+    if (Array.isArray(rr.improvements) && rr.improvements.length) {
+      parts.push(H3("Top improvements from a recruiter's view"));
+      parts.push(UL(rr.improvements.slice(0, 3), (im) => esc(im.title || im.label || im) + (im.why ? " — " + esc(im.why) : "")));
+    }
+    if (rr.closing) { parts.push(H3("Where I landed")); parts.push(P(rr.closing)); }
+
+    // 4. Coach Review
+    parts.push(H2("Coach Review"));
+    if (cr.opening) parts.push(P(cr.opening));
+    if (Array.isArray(cr.planForToday) && cr.planForToday.length) {
+      parts.push(H3("Coach Jeff's Game Plan" + (cr.totalMinutes ? " (" + cr.totalMinutes + " min today)" : "")));
+      parts.push(UL(cr.planForToday, (p) => '<b>' + esc(p.title) + '</b>' + (p.minutes ? ' (' + p.minutes + ' min)' : '') + (p.why ? ' — ' + esc(p.why) : '')));
+    }
+    if ((cr.conf != null) && (cr.targetConf != null))
+      parts.push(P("Projected recruiter confidence with these edits: " + cr.conf + "% → " + cr.targetConf + "%", "font-weight:700;color:#166534;"));
+    if (Array.isArray(cr.strengths) && cr.strengths.length) {
+      parts.push(H3("Strengths to keep"));
+      parts.push(UL(cr.strengths, (s) => '<b>' + esc(s.label) + '</b>' + (s.why ? ' — ' + esc(s.why) : '')));
+    }
+    if (Array.isArray(cr.improvements) && cr.improvements.length) {
+      parts.push(H3("Highest-impact improvements"));
+      parts.push(UL(cr.improvements, (im) => '<b>' + esc(im.title) + '</b>' + (im.stars ? ' (' + '★'.repeat(im.stars) + ')' : '') + (im.why ? ' — ' + esc(im.why) : '') + (im.effort ? '  [Effort: ' + esc(im.effort) + (im.impact ? ' · Impact: ' + esc(im.impact) : '') + ']' : '')));
+    }
+    if (Array.isArray(cr.roadmap) && cr.roadmap.length) {
+      parts.push(H3("Your improvement roadmap"));
+      parts.push('<ol style="margin:0 0 9pt 0;padding-left:18pt;">' + cr.roadmap.map(step => '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;">' + esc(step) + '</li>').join("") + '</ol>');
+    }
+    if (Array.isArray(cr.examples) && cr.examples.length) {
+      parts.push(H3("Before → After: coaching examples"));
+      cr.examples.forEach((ex) => {
+        parts.push('<p style="margin:0 0 2pt 0;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;">' + esc(ex.section || "") + '</p>');
+        parts.push('<p style="margin:0 0 2pt 0;font-size:11pt;color:#7f1d1d;font-style:italic;">' + (ex.kind === "tighten" ? "Your line: " : "Weak: ") + '&ldquo;' + esc(ex.weak) + '&rdquo;</p>');
+        parts.push('<p style="margin:0 0 10pt 0;font-size:11pt;color:#14532d;font-weight:600;">' + (ex.kind === "tighten" ? "Tighten: " + esc(ex.note) : "Better: &ldquo;" + esc(ex.better) + "&rdquo;") + '</p>');
+      });
+      parts.push(P("Only ever use numbers and details that are true for you.", "font-size:9.5pt;color:#94a3b8;"));
+    }
+    if (Array.isArray(cr.quickWins) && cr.quickWins.length) { parts.push(H3("Quick wins (under 10 min each)")); parts.push(UL(cr.quickWins)); }
+    if (Array.isArray(cr.bigger) && cr.bigger.length) {
+      parts.push(H3("Bigger projects"));
+      parts.push(UL(cr.bigger, (b) => '<b>' + esc(b.label) + '</b>' + (b.why ? ' — ' + esc(b.why) : '')));
+    }
+    if (cr.together)   { parts.push(H3("If we worked together")); parts.push(P(cr.together)); }
+    if (cr.motivation) parts.push(P(cr.motivation, "font-weight:600;color:#1F3864;"));
+
+    parts.push('<p style="margin:26pt 0 0 0;font-size:9pt;color:#94a3b8;border-top:0.75pt solid #e2e8f0;padding-top:6pt;">Prepared with the Coach Jeff Resume Optimizer &middot; coachjeff-resume-optimizer.netlify.app</p>');
+
+    return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+      '<head><meta charset="utf-8"><title>Resume Review Report</title>' +
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+      '<style>@page WordSection1 { size:8.5in 11.0in; margin:0.75in 0.75in 0.75in 0.75in; } div.WordSection1 { page:WordSection1; } body{font-family:Calibri,Arial,sans-serif;}</style>' +
+      '</head><body><div class="WordSection1">' + parts.join("") + '</div></body></html>';
+  };
+
+  const exportCoachReport = () => {
+    try {
+      const html = buildCoachReportHtml();
+      const blob = new Blob(['\ufeff', html], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = ((data && data.name) || coachReview.firstName || "Resume").replace(/\s+/g, "_") + "_Review_Report.doc";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      alert("Sorry — the review download hit an error. You can still use Print / PDF.\n\n" + err.message);
+    }
+  };
+
   // ---- True .docx export (built from scratch with JSZip; no fragile docx library) ----
   function loadJSZip() {
     if (typeof window.JSZip !== "undefined") return Promise.resolve();
@@ -3828,7 +3944,10 @@ function App() {
           {/* Navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
             <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(true); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>← Back to Recruiter Review</button>
-            <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(false); setActiveWorkshopSection("Job Match"); setShowBuilderWorkspace(true); setTimeout(() => scrollToWorkshopSection("Job Match"), 50); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Customize for a Job →</button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button onClick={exportCoachReport} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 800, cursor: "pointer" }}>📄 Download This Review (Word)</button>
+              <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(false); setActiveWorkshopSection("Job Match"); setShowBuilderWorkspace(true); setTimeout(() => scrollToWorkshopSection("Job Match"), 50); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Customize for a Job →</button>
+            </div>
           </div>
         </div>
       ) : null}
