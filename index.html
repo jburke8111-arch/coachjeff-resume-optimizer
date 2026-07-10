@@ -2350,7 +2350,11 @@ function App() {
     }
     if (Array.isArray(cr.roadmap) && cr.roadmap.length) {
       parts.push(H3("Your improvement roadmap"));
-      parts.push('<ol style="margin:0 0 9pt 0;padding-left:18pt;">' + cr.roadmap.map(step => '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;">' + esc(step) + '</li>').join("") + '</ol>');
+      parts.push('<ol style="margin:0 0 9pt 0;padding-left:18pt;">' + cr.roadmap.map(stop => {
+        const label = typeof stop === "string" ? stop : stop.step;
+        const action = typeof stop === "string" ? "" : stop.action;
+        return '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;"><b>' + esc(label) + '</b>' + (action ? ' — ' + esc(action) : '') + '</li>';
+      }).join("") + '</ol>');
     }
     if (Array.isArray(cr.examples) && cr.examples.length) {
       parts.push(H3("Before → After: coaching examples"));
@@ -3186,17 +3190,68 @@ function App() {
         "Combined skill groups are hard to scan. Splitting them into clean categories helps both recruiters and ATS.",
         "10 min", "Medium");
     }
-    addImp(2, "Formatting polish",
-      "Small things — consistent spacing, section order, and clean bullets — remove friction so nothing slows the read.",
-      "10 min", "Low-Medium");
+    // ---- Formatting polish — inspect the ACTUAL resume and name specific issues.
+    // Only claims what it can see; falls back to an honest "already clean" note otherwise. ----
+    const allBullets = [
+      ...(data.experience || []).flatMap(e => (e.bullets || [])),
+      ...(data.projects || []).flatMap(p => (p.bullets || []))
+    ].map(b => String(b || "").trim()).filter(Boolean);
+    const fmtIssues = [];
+    const longOnes = allBullets.filter(b => b.length > 160).length;
+    if (longOnes >= 2) fmtIssues.push(longOnes + " bullets run long (over ~2 lines) — tighten them so each leads with the result");
+    const lowerStart = allBullets.filter(b => /^[a-z]/.test(b)).length;
+    const upperStart = allBullets.filter(b => /^[A-Z]/.test(b)).length;
+    if (lowerStart > 0 && upperStart > 0) fmtIssues.push("bullet capitalization is inconsistent — some start lowercase, some uppercase");
+    const withPeriod = allBullets.filter(b => /[.]$/.test(b)).length;
+    if (withPeriod > 0 && withPeriod < allBullets.length && allBullets.length >= 4) fmtIssues.push("some bullets end with a period and some don't — pick one and apply it everywhere");
+    const orderCheck = recommendSectionOrder(data);
+    if (orderCheck && orderCheck.mismatch) fmtIssues.push("section order could be improved for a " + (data.field || "your") + " resume — use Apply Smart Order in the workshop");
+    if (fmtIssues.length) {
+      const why = "I spotted specific things a recruiter would notice: " + fmtIssues.slice(0, 3).join("; ") + ".";
+      addImp(fmtIssues.length >= 2 ? 3 : 2, "Formatting polish", why, "10 min", fmtIssues.length >= 3 ? "Medium" : "Low-Medium");
+    } else if (conf < 92) {
+      addImp(2, "Final formatting pass",
+        "Your formatting already reads cleanly — no specific issues stood out. Do one last read-through for alignment, consistent dates, and spacing so nothing distracts from strong content.",
+        "5 min", "Low");
+    }
     const improvementsFinal = improvements.sort((a, b) => b.stars - a.stars).slice(0, 5);
 
-    // ---- Roadmap (ordered coaching path) ----
-    const roadmap = ["Professional Summary"];
-    if (hasExperience || expBullets) roadmap.push("Experience");
-    if (hasProjects || !hasExperience) roadmap.push("Projects");
-    if (!leadershipCount) roadmap.push("Leadership");
-    roadmap.push("Final Review");
+    // ---- Roadmap (ordered coaching path) — each stop carries a concrete action,
+    // grounded in this resume's actual gaps, so the strip earns its space. ----
+    const roadmap = [];
+    roadmap.push({
+      step: "Professional Summary",
+      action: hasSummary
+        ? "Sharpen your opening to name your target role and top 2–3 strengths in the first line."
+        : "Add a 2–3 line summary naming your target role and strongest qualifications — it's the first thing read."
+    });
+    if (hasExperience || expBullets) {
+      const q = (typeof expQuant === "number" && typeof expBullets === "number") ? (expBullets - expQuant) : 0;
+      roadmap.push({
+        step: "Experience",
+        action: q > 0
+          ? "Add measurable results to " + q + " bullet" + (q === 1 ? "" : "s") + " that currently describe tasks without outcomes."
+          : "Lead each bullet with a strong verb and the result, keeping your strongest evidence near the top."
+      });
+    }
+    if (hasProjects || !hasExperience) {
+      roadmap.push({
+        step: "Projects",
+        action: (projQuant != null && projBulletTotal && projQuant < projBulletTotal)
+          ? "For each project, state the problem, the tools you used, and the outcome or impact."
+          : "Keep each project tied to a clear problem-tools-result story so it reads as evidence, not a list."
+      });
+    }
+    if (!leadershipCount) {
+      roadmap.push({
+        step: "Leadership",
+        action: "Add one line of ownership — a team, campus, or volunteer role — if it's accurate to you."
+      });
+    }
+    roadmap.push({
+      step: "Final Review",
+      action: "Read top to bottom once for consistent dates, spacing, and bullet style before you export."
+    });
 
     // ---- Before / After coaching examples ----
     // RULE: every card shown here must come from the user's OWN resume. We never mix in
@@ -3860,16 +3915,25 @@ function App() {
             <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>🗺 Your Improvement Roadmap</h3>
             <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>Think of this as the path we'd walk together, one stop at a time.</p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 0 }}>
-              {coachReview.roadmap.map((step, i) => (
+              {coachReview.roadmap.map((stop, i) => {
+                const label = typeof stop === "string" ? stop : stop.step;
+                const action = typeof stop === "string" ? "" : stop.action;
+                return (
                 <div key={i}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, background: i === 0 ? "#eff6ff" : "#f8fafc", border: "1px solid " + (i === 0 ? "#bfdbfe" : "#e2e8f0"), borderRadius: 12, padding: "11px 14px" }}>
-                    <div style={{ flex: "0 0 26px", width: 26, height: 26, borderRadius: 999, background: i === coachReview.roadmap.length - 1 ? "#16a34a" : "#1F3864", color: "#fff", fontWeight: 900, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1e293b" }}>{step}</div>
-                    {i === 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 900, color: "#1d4ed8", background: "#dbeafe", borderRadius: 999, padding: "2px 9px", textTransform: "uppercase", letterSpacing: ".05em" }}>Start here</span>}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: i === 0 ? "#eff6ff" : "#f8fafc", border: "1px solid " + (i === 0 ? "#bfdbfe" : "#e2e8f0"), borderRadius: 12, padding: "11px 14px" }}>
+                    <div style={{ flex: "0 0 26px", width: 26, height: 26, borderRadius: 999, background: i === coachReview.roadmap.length - 1 ? "#16a34a" : "#1F3864", color: "#fff", fontWeight: 900, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1e293b" }}>{label}</div>
+                        {i === 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 900, color: "#1d4ed8", background: "#dbeafe", borderRadius: 999, padding: "2px 9px", textTransform: "uppercase", letterSpacing: ".05em" }}>Start here</span>}
+                      </div>
+                      {action && <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.45, marginTop: 3 }}>{action}</div>}
+                    </div>
                   </div>
                   {i < coachReview.roadmap.length - 1 && <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 16, lineHeight: 1, padding: "3px 0" }}>↓</div>}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
