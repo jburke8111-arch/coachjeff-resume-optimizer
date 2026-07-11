@@ -1560,11 +1560,299 @@ function analyzeRunOnBullets(data) {
   return { count, score, flagged: flagged.slice(0, 4), notes };
 }
 
+// ============================================================================
+// CREDIBILITY & MECHANICS ANALYZERS (Coach Jeff eval Sections 6, 7, 14, 15,
+// 16, 19, 22, 24). These run on the RAW resume text rather than the parsed
+// structure, so they stay reliable even when section parsing mis-buckets a
+// bullet. Every finding is grounded in something literally present on the
+// page — the tool never claims what it can't see.
+// ============================================================================
+
+// Return the best available raw resume text for text-level scanning. Prefers
+// the untouched imported text; falls back to text reconstructed from the
+// structured builder data so typed-in resumes are covered too.
+function resumeScanText(data, rawImportText) {
+  const raw = String(rawImportText || "").trim();
+  if (raw.length > 40) return raw;
+  return collectResumeText(data);
+}
+
+// ---- 1. Mechanics pass (Sections 6 & 7): typos a careful recruiter catches ----
+// Detects the specific, high-signal credibility errors from the manual eval:
+// missing hyphen in common compounds ("faulttolerant"), double periods,
+// brand-casing ("Linkedin"/"Github"), and mid-name "Of" capitalization
+// ("University Of"). Conservative patterns — each targets a real, common error
+// rather than guessing, so false positives stay low.
+function analyzeMechanics(data, rawImportText) {
+  const text = resumeScanText(data, rawImportText);
+  const findings = [];
+  const seen = new Set();
+  const add = (label, detail, example) => {
+    const key = label + "|" + (example || "");
+    if (seen.has(key)) return;
+    seen.add(key);
+    findings.push({ label, detail, example: example || "" });
+  };
+
+  // (a) Missing-hyphen compounds. These read as typos and are quick wins.
+  const COMPOUND = [
+    ["faulttolerant", "fault-tolerant"],
+    ["realtime", "real-time"],
+    ["fullstack", "full-stack"],
+    ["frontend", "front-end"],
+    ["backend", "back-end"],
+    ["endtoend", "end-to-end"],
+    ["opensource", "open-source"],
+    ["multithreaded", "multi-threaded"],
+    ["costeffective", "cost-effective"],
+    ["datadriven", "data-driven"],
+    ["decisionmaking", "decision-making"],
+    ["problemsolving", "problem-solving"]
+  ];
+  COMPOUND.forEach(([bad, good]) => {
+    // Match the run-together form as a whole word, case-insensitive. "backend"
+    // and "frontend" are widely accepted, so only flag them softly (still a
+    // house-style nudge, not a hard error) by grouping them under the same fix.
+    const re = new RegExp("\\b" + bad + "\\b", "i");
+    if (re.test(text)) add(
+      "Hyphenation",
+      "\u201C" + bad + "\u201D reads as a typo to a careful reviewer \u2014 use \u201C" + good + "\u201D.",
+      bad + " \u2192 " + good
+    );
+  });
+
+  // (b) Double period / stray double punctuation (not ellipsis "...").
+  if (/[A-Za-z0-9%)][.]\s*[.](?!\.)/.test(text) || /[A-Za-z0-9%)]\.\.(?!\.)/.test(text)) {
+    add("Punctuation", "There's a double period (\u201C..\u201D) on the page. Remove the extra period.", "..  \u2192  .");
+  }
+  // Space-before-punctuation and doubled commas — small but recruiter-visible.
+  if (/\s[,;.](?=\s|$)/.test(text)) add("Punctuation", "A space appears before a comma or period somewhere \u2014 close it up.", " ,  \u2192  ,");
+  if (/,,/.test(text)) add("Punctuation", "A doubled comma (\u201C,,\u201D) appears on the page. Remove the extra comma.", ",,  \u2192  ,");
+
+  // (c) Brand casing: LinkedIn / GitHub. Only flag the wrong casing.
+  if (/\bLinkedin\b/.test(text) || /\blinkedIn\b/.test(text.replace(/\blinkedin\.com/gi, ""))) {
+    if (/\bLinkedin\b/.test(text)) add("Brand casing", "\u201CLinkedin\u201D should be \u201CLinkedIn\u201D (capital I).", "Linkedin \u2192 LinkedIn");
+  }
+  if (/\bGithub\b/.test(text)) add("Brand casing", "\u201CGithub\u201D should be \u201CGitHub\u201D (capital H).", "Github \u2192 GitHub");
+
+  // (d) Mid-name capitalization: "University Of", "College Of", "Institute Of".
+  if (/\b(University|College|Institute|School|Department|Bureau)\s+Of\b/.test(text)) {
+    add("Capitalization", "In a proper name, \u201COf\u201D should be lowercase (e.g. \u201CUniversity of ...\u201D).", "University Of \u2192 University of");
+  }
+  // "And" mid-name is the same class of error.
+  if (/\b[A-Z][a-z]+\s+And\s+[A-Z][a-z]+/.test(text) && /\b(University|College|Institute|School|Department)\b/.test(text)) {
+    add("Capitalization", "Check mid-name \u201CAnd\u201D \u2014 it's usually lowercase inside a proper name (\u201C... and ...\u201D).", "And \u2192 and");
+  }
+
+  let score = 100;
+  if (findings.length === 1) score = 88;
+  else if (findings.length === 2) score = 78;
+  else if (findings.length >= 3) score = Math.max(60, 78 - (findings.length - 2) * 6);
+
+  const notes = [];
+  if (findings.length) {
+    const list = findings.slice(0, 4).map(f => f.example || f.detail).join("; ");
+    notes.push(findings.length + " small mechanical error" + (findings.length === 1 ? "" : "s") +
+      " that a careful recruiter will notice: " + list + ". These are fast fixes, but each one quietly signals carelessness \u2014 clean them up before you apply.");
+  }
+  return { findings: findings.slice(0, 8), count: findings.length, score, notes };
+}
+
+// ---- 2. Metric credibility (Sections 14 & 21): can you defend this number? ----
+// Flags metrics that read as invented or unverifiable so the candidate can
+// soften or anchor them BEFORE a recruiter mentally discounts the whole resume.
+// Targets absolute perfection claims (100%, 99.9%) and synthetic-context metrics
+// (metrics attached to "simulated"/"synthetic"/personal-project language).
+function analyzeMetricCredibility(data, rawImportText) {
+  const isMetaLine = t => /^\s*(tools?|tech|technologies|stack|built with|skills used|methods?)\s*[:|]/i.test(String(t || "").trim());
+  const bullets = [
+    ...(data.experience || []).flatMap(e => (e.bullets || [])),
+    ...(data.projects || []).flatMap(p => (p.bullets || []))
+  ].map(b => String(b || "").trim()).filter(b => b && !isMetaLine(b));
+
+  // If parsing collapsed the bullets, fall back to sentence-splitting raw text.
+  let units = bullets;
+  if (units.length < 2) {
+    const text = resumeScanText(data, rawImportText);
+    units = text.split(/(?:[.;]\s+|\n)/).map(s => s.trim()).filter(s => s.length > 20 && /\d/.test(s));
+  }
+
+  const flagged = [];
+  const seen = new Set();
+  const push = (text, reason) => {
+    const key = text.slice(0, 60);
+    if (seen.has(key)) return;
+    seen.add(key);
+    flagged.push({ text: text.length > 140 ? text.slice(0, 137) + "\u2026" : text, reason });
+  };
+
+  units.forEach(b => {
+    // Absolute-perfection claims that recruiters distrust.
+    if (/\b100\s*%/.test(b) && !/\b100\s*%\s*(of\s+the\s+)?(test|unit)?\s*coverage/i.test(b)) {
+      push(b, "\u201C100%\u201D reads as an absolute claim. Soften to what you can prove (e.g. \u201Cstrong/consistent\u2026\u201D or name the measurement).");
+    }
+    if (/\b99\.9+\s*%/.test(b) || /\b99\s*%\s*uptime/i.test(b)) {
+      push(b, "\u201C99.9% uptime\u201D on a personal or academic project reads as inflated. Say \u201Cin local stress testing\u201D or drop the figure.");
+    }
+    // High-precision percentage improvements with no measurement context.
+    const pctImp = b.match(/\b(\d{2,3})\s*%\s*(improve|increase|reduc|decreas|boost|faster|gain|growth|optimi)/i);
+    if (pctImp) {
+      const n = parseInt(pctImp[1], 10);
+      const hasContext = /(benchmark|measured|tracked|A\/B|baseline|from\s+\d|to\s+\d|over\s+\d|in\s+testing|in\s+simulation)/i.test(b);
+      if (n >= 30 && !hasContext) {
+        push(b, "A " + n + "% improvement with no baseline or measurement reads as a guess. Anchor it (\u201C~" + n + "% in benchmark tests\u201D) or explain how you measured it.");
+      }
+    }
+    // Metrics attached to simulated / synthetic work stated as if real.
+    if (/(simulat|synthetic|mock|dummy|local\s+stress|personal\s+project)/i.test(b) && /\d/.test(b) && /(uptime|consistency|accuracy|throughput|latency|requests|users|traffic)/i.test(b)) {
+      push(b, "This number comes from simulated/synthetic conditions \u2014 state that explicitly (\u201Cin simulation\u201D / \u201Cin local benchmarks\u201D) so it reads as honest, not inflated.");
+    }
+  });
+
+  const count = flagged.length;
+  let score = 100;
+  if (count === 1) score = 86;
+  else if (count === 2) score = 74;
+  else if (count >= 3) score = Math.max(58, 74 - (count - 2) * 6);
+
+  const notes = [];
+  if (count) {
+    notes.push(count + " metric" + (count === 1 ? "" : "s") +
+      " on your resume may read as invented or unverifiable to a recruiter. The fix isn't to remove numbers \u2014 it's to make each one defensible: anchor it to how you measured it, or soften absolute claims. If you can't explain a figure end-to-end in an interview, soften or cut it.");
+  }
+  return { flagged: flagged.slice(0, 5), count, score, notes };
+}
+
+// ---- 3. Title-vs-content mismatch (Section 15) ----
+// Catches a role titled e.g. "Machine Learning Engineer Intern" whose bullets
+// describe only unrelated work (APIs, pipelines) — an ATS-keyword and
+// interview-risk problem the manual eval flags explicitly.
+function analyzeTitleContentMatch(data) {
+  const ROLE_KEYWORDS = {
+    "machine learning|ml engineer|ml intern|deep learning": /\b(model|training|trained|neural|tensor|pytorch|scikit|sklearn|inference|classifier|regression|nlp|computer vision|ml\b|machine learning|dataset|feature engineering|fine-tun)\b/i,
+    "data scien|data analyst": /\b(model|regression|statistic|hypothesis|dataset|pandas|numpy|visualiz|dashboard|sql|analy|forecast|cluster|a\/b)\b/i,
+    "front[- ]?end|ui engineer|ux engineer": /\b(react|vue|angular|css|html|component|responsive|ui|ux|frontend|front-end|accessibility|dom|typescript)\b/i,
+    "devops|site reliability|sre|cloud engineer": /\b(kubernetes|docker|terraform|ci\/cd|pipeline|aws|gcp|azure|deploy|infrastructure|monitoring|ansible)\b/i,
+    "security|infosec": /\b(vulnerab|penetration|encryption|threat|owasp|siem|firewall|authentication|secure|security)\b/i
+  };
+  const entries = (data.experience || []).filter(e => e && (e.title || (e.bullets || []).some(Boolean)));
+  const flagged = [];
+  entries.forEach(e => {
+    const title = String(e.title || "").toLowerCase();
+    const body = (e.bullets || []).join(" ");
+    if (!body.trim()) return;
+    for (const rolePat in ROLE_KEYWORDS) {
+      if (new RegExp(rolePat, "i").test(title)) {
+        if (!ROLE_KEYWORDS[rolePat].test(body)) {
+          flagged.push({
+            title: e.title || "This role",
+            note: "Your \u201C" + (e.title || "role") + "\u201D title isn't backed by matching content in its bullets. Add one bullet that shows the core work the title implies, or adjust the title to match what you actually did \u2014 otherwise it confuses ATS keyword matching and invites interview questions you may not want."
+          });
+        }
+        break;
+      }
+    }
+  });
+  const count = flagged.length;
+  let score = count === 0 ? 100 : count === 1 ? 80 : 66;
+  const notes = flagged.map(f => f.note);
+  return { flagged: flagged.slice(0, 3), count, score, notes };
+}
+
+// ---- 4. Section-quality nudges (Sections 16, 19, 22) ----
+// Content-quality checks the parser-based path misses: GPA threshold, ambiguous
+// university campus, cert-gap vs. heavily-listed cloud skills, and buried awards.
+function analyzeSectionQuality(data, rawImportText) {
+  const text = resumeScanText(data, rawImportText);
+  const notes = [];
+
+  // (a) GPA threshold. If a GPA is present and >= 3.5, affirm listing it; if a
+  // GPA is present but < 3.0, gently note that omitting it is an option.
+  const gpaMatch = text.match(/\bgpa\b[\s:]*([0-4](?:\.\d{1,2})?)\s*(?:\/\s*([45](?:\.0)?))?/i);
+  if (gpaMatch) {
+    const gpa = parseFloat(gpaMatch[1]);
+    const scale = gpaMatch[2] ? parseFloat(gpaMatch[2]) : 4;
+    const norm = scale >= 5 ? (gpa / scale) * 4 : gpa;
+    if (norm >= 3.5) notes.push({ kind: "good", text: "Your GPA (" + gpaMatch[1] + (gpaMatch[2] ? "/" + gpaMatch[2] : "") + ") is above the 3.5 bar recruiters look for \u2014 keep it on the resume; it's an asset." });
+    else if (norm < 3.0) notes.push({ kind: "tip", text: "A GPA below ~3.0 is optional to list. If your projects and experience are strong, you can omit it and let them carry the resume." });
+  }
+
+  // (b) Ambiguous university campus (state-system schools with multiple campuses).
+  // Case-insensitive on "of" so "University Of Massachusetts" is caught too.
+  const AMBIG = /\bUniversity [Oo]f (Massachusetts|California|Texas|Illinois|Wisconsin|Colorado|Michigan|Minnesota|Maryland|Missouri|Washington|North Carolina|South Carolina)\b(?!\s+(?:at\s+)?[A-Z][a-z]|[- ]?(?:Amherst|Berkeley|Austin|Dallas|Chicago|Madison|Boulder|Ann Arbor|Twin Cities|College Park|Seattle|Chapel Hill|Columbia|Lowell|Boston|Dartmouth|San Diego|Los Angeles|Irvine|Davis|Riverside))/;
+  const am = text.match(AMBIG);
+  if (am) notes.push({ kind: "tip", text: "\u201C" + am[0] + "\u201D is ambiguous \u2014 that system has several campuses. Name yours (e.g. \u201C" + am[0] + " Amherst\u201D) so recruiters and ATS place it correctly." });
+
+  // (c) Cert gap vs. heavily-listed cloud skills.
+  const listsAWS = /\bAWS\b/i.test(text);
+  const listsAzure = /\bAzure\b/i.test(text);
+  const listsGCP = /\b(GCP|Google Cloud)\b/i.test(text);
+  const hasCloudCert = /\b(AWS Certified|Solutions Architect|Cloud Practitioner|Azure Fundamentals|AZ-\d|Professional Cloud|Google Cloud Certified)\b/i.test(text);
+  const cloudMentions = (listsAWS ? 1 : 0) + (listsAzure ? 1 : 0) + (listsGCP ? 1 : 0);
+  const awsCount = (text.match(/\bAWS\b/gi) || []).length;
+  if ((cloudMentions && awsCount >= 3 && !hasCloudCert)) {
+    notes.push({ kind: "tip", text: "You lean on cloud skills (AWS appears " + awsCount + "\u00D7) but list no cloud certification. An AWS Cloud Practitioner or Solutions Architect Associate turns a listed skill into verifiable proof \u2014 a real differentiator for cloud-focused roles. Only add it once earned (\u201Cin progress\u201D is fine)." });
+  }
+
+  // (d) Buried awards: an award/honor mentioned inside education/experience text
+  // rather than surfaced. Detects distinguished honors that deserve visibility.
+  const awardMention = /\b(Distinguished|Dean's List|President's List|Valedictorian|Summa Cum Laude|Magna Cum Laude|Cum Laude|Leadership (Medal|Award)|First Place|1st Place|Hackathon Winner|Scholarship|Fellowship|Honor(s|able)|Award|Medal)\b/i;
+  const hasAwardsSection = (data.awards || []).some(a => String((a && a.name) || "").trim().length > 3);
+  if (!hasAwardsSection && awardMention.test(text)) {
+    const m = text.match(awardMention);
+    notes.push({ kind: "tip", text: "You mention an honor (\u201C" + (m ? m[0] : "award") + "\u201D) but don't have a dedicated Awards line. A standout award is a genuine differentiator \u2014 give it its own line so it isn't buried." });
+  }
+
+  const tips = notes.filter(n => n.kind === "tip");
+  let score = 100 - Math.min(30, tips.length * 8);
+  return { notes, tips, goodNotes: notes.filter(n => n.kind === "good"), count: tips.length, score };
+}
+
+// ---- 5. File-naming convention (Section 24) ----
+// A quick-win coaching nudge: recommend FirstName_LastName_Resume_Role.pdf.
+function analyzeFileNaming(data, importedFileName) {
+  const name = String(importedFileName || "").trim();
+  if (!name) return { note: "", ok: null };
+  const base = name.replace(/\.(pdf|docx?|txt)$/i, "");
+  const looksGood = /^[A-Z][a-z]+[_ ][A-Z][a-z]+.*resume/i.test(base) || /resume/i.test(base) && /_/.test(base);
+  const generic = /^(resume|cv|my ?resume|final|document|untitled|new)\b/i.test(base) || base.length < 4;
+  const first = (String(data.name || "").trim().split(/\s+/)[0] || "FirstName");
+  const last = (String(data.name || "").trim().split(/\s+/).slice(-1)[0] || "LastName");
+  const suggested = first + "_" + last + "_Resume_" + (String(data.field || "Role").replace(/[^A-Za-z]/g, "") || "Role") + ".pdf";
+  if (generic || !looksGood) {
+    return {
+      ok: false,
+      note: "Save your file as " + suggested + " (FirstName_LastName_Resume_Role). Generic names like \u201C" + name + "\u201D are harder for a recruiter to file and find later.",
+      suggested
+    };
+  }
+  return { ok: true, note: "", suggested };
+}
+
+// ---- 6. Honest parser-limitation disclosure ----
+// The tool reads parsed TEXT, not the rendered page, so it cannot see margins,
+// exact font sizes, line-level spacing/density, or word-breaks. Rather than
+// stay silent (and let a student assume those were checked), we say so plainly
+// and point them to the one human-eye pass that still matters.
+function parserLimitationNote() {
+  return {
+    title: "What this tool can't check (do a 30-second human-eye pass)",
+    items: [
+      "Page margins vs. the 0.75\u2033 standard \u2014 open the file and confirm nothing runs edge-to-edge.",
+      "Exact font sizes and the name/heading hierarchy (name ~20pt bold, headings ~13pt, body 11pt).",
+      "White space and visual density \u2014 add ~6pt between entries and ~12pt between sections so the page can breathe.",
+      "Words broken across lines (e.g. a hyphen splitting a term mid-line) \u2014 these only show in the rendered layout.",
+      "That the exported PDF has selectable text (not a scanned image), so ATS can read it."
+    ],
+    why: "This optimizer analyzes your resume's text, not its printed layout, so these visual details need a quick look from you. Everything above is a 30-second check that catches the last things a recruiter sees before you do."
+  };
+}
+
 // ---- Category scorecard + market-readiness classification ----
 // Condenses the manual eval's 32-section scorecard into 6 recruiter-facing
 // categories plus a NEAR-READY / MARKET-READY / NEEDS-WORK tier, so the
 // automated report tells a student WHERE they're weak, not just an overall %.
-function buildResumeScorecard(data, resumeStrength, verbTense, runOn) {
+function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics, metricCred) {
   const rs = resumeStrength || {};
   const exp = rs.exp || {};
   const skills = rs.skills || {};
@@ -1576,15 +1864,20 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn) {
   const clamp = n => Math.max(20, Math.min(100, Math.round(n)));
   const pct = n => n; // scores are already 0–100
 
+  // Metric-credibility findings pull down the Content score, because an
+  // inflated-looking number damages content credibility more than a missing one.
+  const metricPenalty = metricCred ? Math.min(22, (metricCred.count || 0) * 8) : 0;
   const contentScore = clamp(
-    expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60
+    (expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60) - metricPenalty
   );
   const skillsScore = clamp(typeof skills.score === "number" ? skills.score : 75);
   const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75));
   const tenseScore = clamp(verbTense ? verbTense.score : 100);
   const orderScore = clamp(order.mismatch ? 72 : 92);
   const summaryScore = clamp(hasSummary ? 90 : 55);
-  const formattingScore = clamp(runOn ? runOn.score : 100);
+  // Mechanics (typos, casing, punctuation) belong to Formatting & Polish along
+  // with run-on bullets — both are "does this read clean" signals.
+  const formattingScore = clamp(Math.round(((runOn ? runOn.score : 100) * 0.5) + ((mechanics ? mechanics.score : 100) * 0.5)));
 
   const categories = [
     { key: "Content & Quantification", score: contentScore },
@@ -2606,10 +2899,55 @@ function App() {
       });
       parts.push(P("Only ever use numbers and details that are true for you.", "font-size:9.5pt;color:#94a3b8;"));
     }
+    // ---- Credibility & Mechanics Check (manual-eval Sections 6,7,14,15,16,19,22,24) ----
+    const mech = cr.mechanics || {};
+    const mc = cr.metricCred || {};
+    const tm = cr.titleMatch || {};
+    const sq = cr.sectionQuality || {};
+    const fn = cr.fileNaming || {};
+    const anyCredibility = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
+    if (anyCredibility) {
+      parts.push(H2("Credibility & Mechanics Check"));
+      parts.push(P("These are the small, high-signal issues a careful recruiter uses to filter quickly. None require new content — just cleanup. Fix them before you apply.", "color:#475569;"));
+
+      if (mech.count && mech.findings && mech.findings.length) {
+        parts.push(H3("Mechanics (typos, casing, punctuation)"));
+        parts.push(UL(mech.findings, (f) => '<b>' + esc(f.label) + ':</b> ' + esc(f.detail)));
+      }
+      if (mc.count && mc.flagged && mc.flagged.length) {
+        parts.push(H3("Metric credibility — can you defend each number?"));
+        mc.flagged.forEach(f => {
+          parts.push('<p style="margin:0 0 2pt 0;font-size:11pt;color:#7f1d1d;font-style:italic;">On your resume: &ldquo;' + esc(f.text) + '&rdquo;</p>');
+          parts.push('<p style="margin:0 0 9pt 0;font-size:11pt;color:#14532d;">Fix: ' + esc(f.reason) + '</p>');
+        });
+      }
+      if (tm.count && tm.flagged && tm.flagged.length) {
+        parts.push(H3("Job title vs. content"));
+        parts.push(UL(tm.flagged, (f) => esc(f.note)));
+      }
+      if (sq.tips && sq.tips.length) {
+        parts.push(H3("Section-quality opportunities"));
+        parts.push(UL(sq.tips, (t) => esc(t.text)));
+      }
+      if (sq.goodNotes && sq.goodNotes.length) {
+        sq.goodNotes.forEach(g => parts.push(P("\u2713 " + g.text, "color:#166534;font-size:11pt;")));
+      }
+      if (fn && fn.ok === false && fn.note) {
+        parts.push(H3("File name"));
+        parts.push(P(fn.note));
+      }
+    }
+
     if (Array.isArray(cr.quickWins) && cr.quickWins.length) { parts.push(H3("Quick wins (under 10 min each)")); parts.push(UL(cr.quickWins)); }
     if (Array.isArray(cr.bigger) && cr.bigger.length) {
       parts.push(H3("Bigger projects"));
       parts.push(UL(cr.bigger, (b) => '<b>' + esc(b.label) + '</b>' + (b.why ? ' — ' + esc(b.why) : '')));
+    }
+    // ---- Honest scope note: what a text-based tool can't see ----
+    if (cr.limitations && Array.isArray(cr.limitations.items)) {
+      parts.push(H3(cr.limitations.title));
+      parts.push(P(cr.limitations.why, "color:#475569;"));
+      parts.push(UL(cr.limitations.items));
     }
     if (cr.together)   { parts.push(H3("If we worked together")); parts.push(P(cr.together)); }
     if (cr.motivation) parts.push(P(cr.motivation, "font-weight:600;color:#1F3864;"));
@@ -3084,22 +3422,54 @@ function App() {
   const hasProjects = projectCount > 0;
   const hasEducation = (data.education || []).some(e => e.degree || e.school);
   const hasExperience = experienceCount > 0;
+  // Resilient bullet count: if the structured parse reports 0 (a known
+  // mis-bucketing failure mode on dense resumes), fall back to counting
+  // bullet-like lines in the raw imported text so we never claim "0 bullet
+  // points" on a resume that clearly has them.
+  const rawBulletFallback = (() => {
+    const t = String(importText || "");
+    if (!t.trim()) return 0;
+    const lines = t.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    return lines.filter(l =>
+      /^[•\-*·▪◦‣]/.test(l) ||
+      /^(analyzed|built|developed|created|led|managed|delivered|presented|implemented|engineered|coordinated|designed|improved|optimized|reduced|increased|deployed|architected|automated|streamlined|maintained|integrated|constructed|modeled|generated|leveraged)\b/i.test(l)
+    ).length;
+  })();
+  const effectiveExpBullets = expBulletCount || rawBulletFallback;
   const snapshotStrengths = [
     hasSkills ? "Skills section includes " + skillCount + " identifiable skills/tools." : "",
-    hasExperience ? "Experience section is present with " + expBulletCount + " bullet points." : "",
+    // Only mention a bullet count when we actually have one; otherwise state the
+    // section's presence without an unreliable (and possibly zero) number.
+    hasExperience ? ("Experience section is present" + (effectiveExpBullets ? " with " + effectiveExpBullets + " accomplishment bullet" + (effectiveExpBullets === 1 ? "" : "s") : "") + ".") : "",
     hasProjects ? "Projects section helps show hands-on work." : "",
     hasEducation ? "Education information is included." : "",
     atsScore >= 90 ? "Resume appears generally ATS-friendly from the current builder checks." : ""
   ].filter(Boolean).slice(0,3);
   const linkedInMissing = !(data.contact && (data.contact.linkedin || data.contact.portfolio));
+  // Reject any candidate opportunity string that is actually a chunk of
+  // unparsed resume content (a mis-bucketed blob), not real coaching advice.
+  // Signals: excessive length, multiple bullet-like fragments, or many pipe/
+  // dash separators — none of which belong in a one-line "opportunity".
+  const isRawBlob = (s) => {
+    const t = String(s || "");
+    if (t.length > 220) return true;
+    const dashFrags = (t.match(/\s[-–—]\s/g) || []).length;
+    const pipes = (t.match(/\|/g) || []).length;
+    const bulletMarks = (t.match(/[•·▪◦‣]/g) || []).length;
+    if (dashFrags >= 2 || pipes >= 2 || bulletMarks >= 1) return true;
+    // Multiple sentence-final periods mid-string => stitched-together bullets.
+    if ((t.match(/\.\s+[A-Z]/g) || []).length >= 2) return true;
+    return false;
+  };
+  const priorityDetail = topPriorities && topPriorities[0] && !isRawBlob(topPriorities[0].detail) ? topPriorities[0].detail : "";
   const snapshotOpportunities = [
     linkedInMissing ? "Add a LinkedIn URL to your header — it's missing, and recruiters expect it for verification and outreach." : "",
     !hasSummary ? "Strengthen the professional summary so the target role is clear." : "",
     expBulletCount && resumeStrength && resumeStrength.exp && resumeStrength.exp.quantified < Math.ceil(expBulletCount / 3) ? "Add more measurable results to experience bullets where accurate." : "",
     hasProjects && projectBulletCount < Math.max(2, projectCount * 2) ? "Add more project details: problem, tools, actions, and outcome." : "",
     !leadershipCount ? "Add leadership, campus involvement, team projects, or volunteer leadership if accurate." : "",
-    topPriorities && topPriorities[0] ? topPriorities[0].detail : ""
-  ].filter(Boolean).slice(0,3);
+    priorityDetail
+  ].filter(Boolean).filter(s => !isRawBlob(s)).slice(0,3);
   const firstImpression = resumeStrength.overall >= 85
     ? "Your resume has a strong foundation. The main opportunity is to make your value easier to see quickly by tightening the summary, highlighting measurable accomplishments, and keeping the strongest evidence near the top."
     : "Your resume has useful content, but it needs clearer positioning before applying. Start with the professional summary, measurable accomplishments, and section organization so recruiters can understand your direction faster.";
@@ -3351,7 +3721,14 @@ function App() {
     // ---- New analyzers: verb tense, run-on bullets, and the category scorecard ----
     const verbTense = analyzeVerbTense(data);
     const runOn = analyzeRunOnBullets(data);
-    const scorecard = buildResumeScorecard(data, resumeStrength, verbTense, runOn);
+    // ---- Credibility & mechanics analyzers (Coach Jeff eval Sections 6,7,14,15,16,19,22,24) ----
+    const mechanics = analyzeMechanics(data, importText);
+    const metricCred = analyzeMetricCredibility(data, importText);
+    const titleMatch = analyzeTitleContentMatch(data);
+    const sectionQuality = analyzeSectionQuality(data, importText);
+    const fileNaming = analyzeFileNaming(data, currentResumeName);
+    const limitations = parserLimitationNote();
+    const scorecard = buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics, metricCred);
 
     // ---- Opening thoughts (conversational, tuned to where the resume stands) ----
     let opening;
@@ -3470,6 +3847,25 @@ function App() {
       addImp(3, "Tighten run-on bullets",
         runOn.notes[0] || "A few bullets chain several outcomes with commas. Lead with the strongest result and trim the rest.",
         "10 min", "Medium");
+    }
+    // Mechanics: typos, brand casing, punctuation, mid-name capitalization.
+    // Ranked high — these are cheap to fix and quietly damage credibility.
+    if (mechanics.count) {
+      addImp(mechanics.count >= 2 ? 5 : 4, "Fix small mechanical errors",
+        mechanics.notes[0] || "A few typos or casing slips are on the page. Clean them up before applying.",
+        mechanics.count >= 3 ? "10 min" : "5 min", "High");
+    }
+    // Metric credibility: inflated/unverifiable numbers.
+    if (metricCred.count) {
+      addImp(4, "Make your metrics defensible",
+        metricCred.notes[0] || "Some numbers read as inflated. Anchor each to how you measured it, or soften absolute claims.",
+        "15 min", "High");
+    }
+    // Title-vs-content mismatch.
+    if (titleMatch.count) {
+      addImp(4, "Align a job title with its bullets",
+        titleMatch.notes[0] || "A role's title isn't supported by its bullets. Add a matching bullet or adjust the title.",
+        "10 min", "Medium-High");
     }
     if (hasExperience && expBullets && expQuant < Math.ceil(expBullets / 2)) {
       const quantWhy = expQuant >= 1
@@ -3772,7 +4168,17 @@ function App() {
     quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
     quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
-    const quickWinsFinal = quickWins.slice(0, 6);
+    // Mechanics quick wins — each specific error is its own fast fix.
+    mechanics.findings.slice(0, 2).forEach(f => {
+      if (f.example) quickWins.push("Fix a " + f.label.toLowerCase() + " slip: " + f.example + ".");
+    });
+    // Section-quality tips (ambiguous campus, cert gap, buried award).
+    sectionQuality.tips.slice(0, 2).forEach(t => quickWins.push(t.text));
+    // File-naming convention.
+    if (fileNaming && fileNaming.ok === false && fileNaming.suggested) {
+      quickWins.push("Rename your file to " + fileNaming.suggested + " so it's easy for a recruiter to file.");
+    }
+    const quickWinsFinal = quickWins.slice(0, 7);
 
     // ---- Bigger projects (longer-term) ----
     // The lead item differs by field: a code/portfolio field is well served by a work-sample
@@ -3831,9 +4237,15 @@ function App() {
       motivation,
       verbTense,
       runOn,
+      mechanics,
+      metricCred,
+      titleMatch,
+      sectionQuality,
+      fileNaming,
+      limitations,
       scorecard
     };
-  }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview]);
+  }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
 
   const workflowSteps = ['Upload','Resume Snapshot','Recruiter Review','Coach Review','Job Match','Resume Workshop','ATS Inspection','Export'];
   const currentWorkflowStepIndex = !hasStarted ? 0 : (showRecruiterReview ? 2 : (showCoachReview ? 3 : (showBuilderWorkspace ? (activeWorkshopSection === "Job Match" ? 4 : activeWorkshopSection === "Resume Workshop" ? 5 : activeWorkshopSection === "ATS Inspection" ? 6 : activeWorkshopSection === "Export" ? 7 : 1) : 1)));
@@ -4303,6 +4715,69 @@ function App() {
               : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
 
+          {/* 6b. Credibility & Mechanics Check */}
+          {(() => {
+            const mech = coachReview.mechanics || {};
+            const mc = coachReview.metricCred || {};
+            const tm = coachReview.titleMatch || {};
+            const sq = coachReview.sectionQuality || {};
+            const fn = coachReview.fileNaming || {};
+            const total = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
+            if (!total) return null;
+            return (
+              <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #dc2626", borderRadius: 16, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>🔍 Credibility & Mechanics Check</h3>
+                <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>The small, high-signal issues a careful recruiter uses to filter quickly. No new content needed — just cleanup before you apply.</p>
+                {mech.count && mech.findings && mech.findings.length ? (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Mechanics (typos, casing, punctuation)</div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {mech.findings.map((f, i) => (
+                        <li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}><b>{f.label}:</b> {f.detail}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {mc.count && mc.flagged && mc.flagged.length ? (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Metric credibility — can you defend each number?</div>
+                    {mc.flagged.map((f, i) => (
+                      <div key={i} style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 12.5, color: "#7f1d1d", fontStyle: "italic" }}>On your resume: “{f.text}”</div>
+                        <div style={{ fontSize: 12.5, color: "#14532d" }}>Fix: {f.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {tm.count && tm.flagged && tm.flagged.length ? (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Job title vs. content</div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {tm.flagged.map((f, i) => (<li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}>{f.note}</li>))}
+                    </ul>
+                  </div>
+                ) : null}
+                {sq.tips && sq.tips.length ? (
+                  <div style={{ marginBottom: sq.goodNotes && sq.goodNotes.length ? 8 : 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Section-quality opportunities</div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {sq.tips.map((t, i) => (<li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}>{t.text}</li>))}
+                    </ul>
+                  </div>
+                ) : null}
+                {sq.goodNotes && sq.goodNotes.length ? sq.goodNotes.map((g, i) => (
+                  <div key={i} style={{ fontSize: 12.5, color: "#166534", marginBottom: 3 }}>✓ {g.text}</div>
+                )) : null}
+                {fn && fn.ok === false && fn.note ? (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>File name</div>
+                    <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{fn.note}</div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
+
           {/* 7 + 8. Quick Wins and Bigger Projects */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #16a34a", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
@@ -4327,6 +4802,19 @@ function App() {
               </ul>
             </div>
           </div>
+
+          {/* 8b. What this tool can't check — honest scope note */}
+          {coachReview.limitations && Array.isArray(coachReview.limitations.items) ? (
+            <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 16, padding: "18px 20px", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, color: "#334155", margin: "0 0 6px" }}>👁 {coachReview.limitations.title}</h3>
+              <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 10px", lineHeight: 1.5 }}>{coachReview.limitations.why}</p>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {coachReview.limitations.items.map((it, i) => (
+                  <li key={i} style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.5, marginBottom: 3 }}>{it}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {/* 9. If We Worked Together... */}
           <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 16, padding: "18px 20px", marginBottom: 16 }}>
