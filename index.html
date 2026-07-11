@@ -315,6 +315,29 @@ function _headingKey(line) {
   if (/^(awards|honors|awards\s+&\s+honors|awards\s+and\s+honors|awards\s+&\s+recognition|awards\s+and\s+recognition|awards\s+&\s+activities|awards\s+and\s+activities|honors\s+&\s+activities|honors\s+and\s+activities|awards\s+&\s+achievements|awards\s+and\s+achievements|honors\s+&\s+awards|honors\s+and\s+awards|recognition|achievements|accomplishments|scholarships)$/i.test(s)) return "awards";
   if (/^(publications|publication|research|publications\s+\/\s+research|presentations|conference\s+presentations|proceedings)$/i.test(s)) return "publications";
   if (/^(volunteer|volunteer\s+experience|volunteering|community\s+service|community\s+involvement|service|service\s+experience|volunteer\s+work|voluntary\s+experience)$/i.test(s)) return "volunteer";
+
+  // Tolerant fallback — PDF/DOCX extraction often leaves a short trailing artifact on a
+  // heading line (a broken superscript, a page number, a stray date, or a right-aligned
+  // location that merged onto the heading row, e.g. "WORK EXPERIENCE 2" or
+  // "EXPERIENCE Boston, MA"). Anchored ("^word ..."), the exact matchers above miss these,
+  // which silently drops the entire Experience section. If the line STARTS with a known
+  // section word and is short (a heading, not a sentence), classify it — but never let a
+  // real content bullet (starts with an action verb, or is long/prose) be swallowed as a
+  // heading.
+  const shortLine = s.length <= 32 && s.split(" ").length <= 4;
+  const startsAction = /^(published|presented|developed|designed|built|created|led|managed|conducted|analyzed|implemented|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|coordinated|organized|spearheaded|launched|contributed|architected|engineered|optimized|streamlined)\b/i.test(s);
+  if (shortLine && !startsAction) {
+    if (/^(work\s+experience|professional\s+experience|experience|employment(\s+history)?|work\s+history|internships?)\b/i.test(s)) return "experience";
+    if (/^(projects?|academic\s+projects|technical\s+projects)\b/i.test(s)) return "projects";
+    if (/^(education|academic\s+background)\b/i.test(s)) return "education";
+    if (/^(skills|technical\s+skills|core\s+competencies)\b/i.test(s)) return "skills";
+    if (/^(certifications?|licenses?)\b/i.test(s)) return "certifications";
+    if (/^(awards?|honors?|achievements?)\b/i.test(s)) return "awards";
+    if (/^(publications?|research)\b/i.test(s)) return "publications";
+    if (/^(leadership|activities|organizations?)\b/i.test(s)) return "activities";
+    if (/^(volunteer(ing)?|community\s+service)\b/i.test(s)) return "volunteer";
+    if (/^(summary|profile|objective)\b/i.test(s)) return "summary";
+  }
   return null;
 }
 function _splitResume(rawText) {
@@ -1451,6 +1474,145 @@ function analyzeExperienceQuality(data) {
   return { entries: entries.length, bullets: bullets.length, quantified, longBullets, weakStarts, missingAction, score, notes };
 }
 
+// ---- Verb-tense consistency (Coach Jeff eval Section 8 — highest-impact fix) ----
+// Flags the most common and most credibility-damaging error on new-grad resumes:
+// a bullet that opens in past tense but slips into present tense mid-sentence
+// ("Built ... cuts processing time", "Architected ... enabled ... and cuts ...").
+// Conservative by design — it only flags a clear past→present slip so it never
+// nags a candidate who is legitimately describing a current, ongoing role.
+function analyzeVerbTense(data) {
+  // Verbs that, in "-s" form, are almost always present-tense slips on a resume
+  // (not plural nouns). We match a whitelist to avoid false hits on words like
+  // "systems", "analytics", "operations", "metrics".
+  const PRESENT_S = /\b(cuts|reduces|increases|improves|builds|creates|develops|designs|manages|leads|delivers|implements|drives|enables|supports|maintains|handles|processes|generates|streamlines|optimizes|automates|analyzes|coordinates|oversees|produces|provides|boosts|saves|grows|adds|removes|updates|monitors|tracks|ensures|allows|helps|makes|takes|gives|runs|sets|keeps|holds|serves|meets|leads|owns)\b/i;
+  // A leading past-tense action verb (regular -ed or common irregulars).
+  const PAST_LEAD = /^(\w+ed|built|led|drove|made|took|gave|ran|set|kept|held|wrote|grew|won|met|oversaw|spearheaded|began|chose|brought|taught|sought)\b/i;
+  const isMetaLine = t => /^\s*(tools?|tech|technologies|stack|built with|skills used|methods?)\s*[:|]/i.test(t);
+
+  const entries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  const bullets = entries.flatMap(e => (e.bullets || []).filter(Boolean));
+  const flagged = [];
+  bullets.forEach(raw => {
+    const t = String(raw || "").trim().replace(/^[•\-\u2013\u2014\s]+/, "");
+    if (!t || isMetaLine(t)) return;
+    const pastLead = PAST_LEAD.test(t);
+    // Look for a present-tense "-s" verb AFTER the first word.
+    const afterLead = t.replace(/^\S+\s*/, "");
+    const slip = PRESENT_S.exec(afterLead);
+    if (pastLead && slip) {
+      flagged.push({ text: t, verb: slip[0].toLowerCase() });
+    }
+  });
+  const total = bullets.length;
+  const count = flagged.length;
+  // Score: heavy penalty because this is the single most visible error to a
+  // careful reviewer, mirroring the manual eval's 2/5 when tense is inconsistent.
+  let score = 100;
+  if (count === 1) score = 82;
+  else if (count === 2) score = 68;
+  else if (count >= 3) score = 55;
+  const notes = [];
+  if (count) {
+    const uniqVerbs = [...new Set(flagged.map(f => f.verb))].slice(0, 3);
+    const sample = uniqVerbs.map(v => "\u201C" + v + "\u201D").join(", ");
+    notes.push(count + " experience bullet" + (count === 1 ? "" : "s") +
+      " mix" + (count === 1 ? "es" : "") + " past and present tense (e.g. " + sample +
+      "). Because these describe completed work, convert them to simple past (\u201Ccuts\u201D \u2192 \u201Ccut\u201D).");
+  }
+  return { count, total, score, flagged: flagged.slice(0, 5), notes };
+}
+
+// ---- Run-on / comma-chained bullet detection (Coach Jeff eval Section 7) ----
+// Catches bullets that chain multiple outcomes with commas, which buries the
+// strongest metric. Flags a bullet as run-on when it is long AND stacks 2+
+// result clauses joined by commas ("...cuts time 60%, streamlined workflows,
+// improved efficiency 40%").
+function analyzeRunOnBullets(data) {
+  const isMetaLine = t => /^\s*(tools?|tech|technologies|stack|built with|skills used|methods?)\s*[:|]/i.test(t);
+  const entries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  const projects = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
+  const bullets = [
+    ...entries.flatMap(e => (e.bullets || []).filter(Boolean)),
+    ...projects.flatMap(p => (p.bullets || []).filter(Boolean))
+  ];
+  const flagged = [];
+  bullets.forEach(raw => {
+    const t = String(raw || "").trim().replace(/^[•\-\u2013\u2014\s]+/, "");
+    if (!t || isMetaLine(t)) return;
+    const words = t.split(/\s+/).length;
+    const commas = (t.match(/,/g) || []).length;
+    // 2+ commas and reasonably long, OR 3+ commas at any length = a chain.
+    if ((commas >= 2 && words >= 18) || commas >= 3) {
+      flagged.push(t);
+    }
+  });
+  const count = flagged.length;
+  let score = 100;
+  if (count === 1) score = 88;
+  else if (count === 2) score = 78;
+  else if (count >= 3) score = 68;
+  const notes = [];
+  if (count) {
+    notes.push(count + " bullet" + (count === 1 ? "" : "s") +
+      " chain" + (count === 1 ? "s" : "") +
+      " several outcomes with commas, which dilutes your strongest number. Lead each bullet with the single most impressive result and move or drop the rest.");
+  }
+  return { count, score, flagged: flagged.slice(0, 4), notes };
+}
+
+// ---- Category scorecard + market-readiness classification ----
+// Condenses the manual eval's 32-section scorecard into 6 recruiter-facing
+// categories plus a NEAR-READY / MARKET-READY / NEEDS-WORK tier, so the
+// automated report tells a student WHERE they're weak, not just an overall %.
+function buildResumeScorecard(data, resumeStrength, verbTense, runOn) {
+  const rs = resumeStrength || {};
+  const exp = rs.exp || {};
+  const skills = rs.skills || {};
+  const order = rs.order || {};
+  const hasSummary = String(data.summary || "").trim().length > 80;
+  const expBullets = exp.bullets || 0;
+  const expQuant = exp.quantified || 0;
+
+  const clamp = n => Math.max(20, Math.min(100, Math.round(n)));
+  const pct = n => n; // scores are already 0–100
+
+  const contentScore = clamp(
+    expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60
+  );
+  const skillsScore = clamp(typeof skills.score === "number" ? skills.score : 75);
+  const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75));
+  const tenseScore = clamp(verbTense ? verbTense.score : 100);
+  const orderScore = clamp(order.mismatch ? 72 : 92);
+  const summaryScore = clamp(hasSummary ? 90 : 55);
+  const formattingScore = clamp(runOn ? runOn.score : 100);
+
+  const categories = [
+    { key: "Content & Quantification", score: contentScore },
+    { key: "Skills Depth & Relevance", score: skillsScore },
+    { key: "ATS Structure & Parsing", score: atsScore },
+    { key: "Verb / Tense Consistency", score: tenseScore },
+    { key: "Section Ordering", score: orderScore },
+    { key: "Summary & Positioning", score: summaryScore },
+    { key: "Formatting & Polish", score: formattingScore }
+  ];
+  // Convert to a 0–5 dot rating for display parity with the manual eval.
+  categories.forEach(c => { c.dots = Math.max(1, Math.min(5, Math.round(c.score / 20))); });
+
+  const overall = Math.round(categories.reduce((s, c) => s + c.score, 0) / categories.length);
+  let tier, tierNote;
+  if (overall >= 85) {
+    tier = "MARKET-READY / COMPETITIVE";
+    tierNote = "Strong across the board — this resume competes well for your target roles. Remaining edits are precision, not repair.";
+  } else if (overall >= 72) {
+    tier = "NEAR-READY";
+    tierNote = "A strong foundation held back by a few fixable items — not structural problems. Clear the top fixes and this moves to MARKET-READY.";
+  } else {
+    tier = "NEEDS-WORK";
+    tierNote = "The content is worth building on, but positioning and evidence need work before applying to competitive roles.";
+  }
+  return { categories, overall, tier, tierNote };
+}
+
 function analyzeSkillsClassification(data) {
   const technical = splitCsvSkills(data.skills && data.skills.technical);
   const dataViz = splitCsvSkills(data.skills && data.skills.dataVisualization);
@@ -2382,6 +2544,34 @@ function App() {
     }
     if (rr.closing) { parts.push(H3("Where I landed")); parts.push(P(rr.closing)); }
 
+    // 3b. Category Scorecard + Market-Readiness (condensed from the manual eval)
+    if (cr.scorecard && Array.isArray(cr.scorecard.categories) && cr.scorecard.categories.length) {
+      const sc = cr.scorecard;
+      parts.push(H2("Resume Scorecard"));
+      const rows = sc.categories.map(c => {
+        const dots = "\u25CF".repeat(c.dots) + "\u25CB".repeat(5 - c.dots);
+        return '<tr>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#334155;border-bottom:0.5pt solid #e2e8f0;">' + esc(c.key) + '</td>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#1F3864;border-bottom:0.5pt solid #e2e8f0;letter-spacing:2px;">' + dots + '</td>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#64748b;border-bottom:0.5pt solid #e2e8f0;text-align:right;">' + c.score + '/100</td>' +
+          '</tr>';
+      }).join("");
+      parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;">' +
+        '<tr>' +
+        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Category</th>' +
+        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Rating</th>' +
+        '<th style="text-align:right;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Score</th>' +
+        '</tr>' + rows +
+        '<tr>' +
+        '<td style="padding:6pt 8pt;font-size:11pt;color:#1F3864;font-weight:700;border-top:1pt solid #1F3864;">OVERALL</td>' +
+        '<td style="padding:6pt 8pt;border-top:1pt solid #1F3864;"></td>' +
+        '<td style="padding:6pt 8pt;font-size:11pt;color:#1F3864;font-weight:700;text-align:right;border-top:1pt solid #1F3864;">' + sc.overall + '/100</td>' +
+        '</tr>' +
+        '</table>');
+      parts.push(P("Market readiness: " + sc.tier, "font-weight:700;color:#1F3864;"));
+      if (sc.tierNote) parts.push(P(sc.tierNote, "color:#475569;"));
+    }
+
     // 4. Coach Review
     parts.push(H2("Coach Review"));
     if (cr.opening) parts.push(P(cr.opening));
@@ -3158,6 +3348,11 @@ function App() {
     const conf = recruiterReview ? recruiterReview.confidence : 70;
     const targetConf = recruiterReview ? recruiterReview.improvedConfidence : Math.min(98, conf + 7);
 
+    // ---- New analyzers: verb tense, run-on bullets, and the category scorecard ----
+    const verbTense = analyzeVerbTense(data);
+    const runOn = analyzeRunOnBullets(data);
+    const scorecard = buildResumeScorecard(data, resumeStrength, verbTense, runOn);
+
     // ---- Opening thoughts (conversational, tuned to where the resume stands) ----
     let opening;
     if (conf >= 88) {
@@ -3176,6 +3371,9 @@ function App() {
       addPlan("Write a Professional Summary", 15, "Give the recruiter your target role and strongest evidence in the first two lines they read.");
     } else {
       addPlan("Rewrite your Professional Summary", 15, "Lead with your target role and one or two proof points so your direction is obvious at a glance.");
+    }
+    if (verbTense.count) {
+      addPlan("Fix verb-tense consistency", 10, "Several bullets mix past and present tense (e.g. \u201Ccuts\u201D vs \u201Ccut\u201D). Converting completed work to simple past is a fast, high-value fix a careful reviewer notices immediately.");
     }
     if (hasExperience && expBullets && expQuant < Math.ceil(expBullets / 2)) {
       addPlan("Strengthen your first two experience bullets", 20, "The top bullets get read most. Add numbers, scope, or outcomes so they land as results, not duties.");
@@ -3262,6 +3460,16 @@ function App() {
       addImp(5, hasSummary ? "Rewrite Professional Summary" : "Add Professional Summary",
         "This is the first thing read and the fastest way to set your direction. A vague or missing summary makes a recruiter guess — and guessing lowers confidence.",
         "15 min", "High");
+    }
+    if (verbTense.count) {
+      addImp(5, "Fix verb-tense consistency",
+        verbTense.notes[0] || "Convert completed work to simple past tense so every bullet reads consistently.",
+        "10 min", "High");
+    }
+    if (runOn.count) {
+      addImp(3, "Tighten run-on bullets",
+        runOn.notes[0] || "A few bullets chain several outcomes with commas. Lead with the strongest result and trim the rest.",
+        "10 min", "Medium");
     }
     if (hasExperience && expBullets && expQuant < Math.ceil(expBullets / 2)) {
       const quantWhy = expQuant >= 1
@@ -3620,7 +3828,10 @@ function App() {
       quickWins: quickWinsFinal,
       bigger: biggerFinal,
       together,
-      motivation
+      motivation,
+      verbTense,
+      runOn,
+      scorecard
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview]);
 
