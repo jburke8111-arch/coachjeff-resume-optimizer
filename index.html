@@ -1,6 +1,14 @@
 <!-- v12.0.1: Unicode cleanup — fixed escaped characters rendering literally in UI text. -->
 <!-- v12.0.3: Guided workflow update with dynamic summary cards, clearer next-step messaging, import quality card before ATS, and no placeholder Job Match score before a posting is loaded. -->
 <!-- v12.0.2: clarifies score labels, fixes step count to 8, adds AI/ML/HPC target track, improves no-job Job Match messaging, and anchors target-role feedback to selected field. -->
+<!-- v12.1.0: adds manual-eval parity sections — Evaluation Context (§0), consolidated Resume Risk Flags (§29), and a relative, caveated Interview Conversion Outlook (§31). -->
+<!-- v12.1.1: analyzeVerbTense now detects verb inflation (§8) — strong leadership verbs on solo work — activating the Risk Flags "Verb inflation" line and a "Right-size strong verbs" Coach Review item. -->
+<!-- v12.1.2: import parser fix — experience/project bullets no longer misread as org lines or new titles. Preserves leading bullet-marker as a title-vs-bullet signal, rescues brand-style project titles (e.g. TritonStore.ai) via structural position, and expands the content-verb guard. Fixes the "No experience entries detected" false negative on resumes with RESEARCH EXPERIENCE and undated PROJECTS. -->
+<!-- v12.1.3: ROOT-CAUSE FIX for PDF imports — extractPdfTextFromFile now reconstructs line breaks from PDF.js item Y-coordinates instead of flattening every page into one space-joined string. Previously all line structure was destroyed before the parser ran, so every resume PDF imported as a single line and the v12.1.2 parser fixes never received usable input (experience/projects silently dropped). Now sections, entry headers, and bullets land on separate lines and parse correctly. DOCX path (mammoth) unaffected. -->
+<!-- v12.1.4-note: build stamp bumped to v12.1.3. -->
+<!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
+<!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
+<!-- v12.1.7: adds stage-aware section-order advice (manual eval §11) — for a new grad with a strong GPA (≥3.5), recommends Education above Skills (Summary→Education→Skills→Experience→Projects) WITH the honest senior-IC caveat; affirms when already correct; stays silent for experienced/weak-GPA/no-GPA cases. smartRecommendedOrder is now stage-aware so "Apply Smart Order" matches the advice, and recommendSectionOrder's mismatch check now compares only sections the resume actually has (fixes a pre-existing bug where correctly-ordered resumes were penalized for missing optional sections like volunteer). -->
 <!-- v12.0.1: cleaned escaped Unicode sequences in UI copy. -->
 <!-- v12.0.5: Fixed browser-tab title (now v12.0.5); removed the stray "}" that leaked into the Resume Workshop view and the load-time TreeWalker cleanup hack that masked it (it could also blank a legitimate "}" in user resume text). No feature changes. -->
 <!-- v12.0.4: Numbered workflow tabs and context-aware next-step card; Snapshot now points to Recruiter Review instead of future Job Match. -->
@@ -19,7 +27,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Coach Jeff Resume Optimizer v12.0.5</title>
+<title>Coach Jeff Resume Optimizer v12.1.7</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -45,6 +53,10 @@
 
 <script type="text/jsx-app" id="app-source">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// Build stamp — shown in the report footer so every export self-identifies the
+// exact version that produced it. Bump this whenever logic changes.
+const BUILD_VERSION = "v12.1.7";
 
 const NAVY = "1F3864";
 const GRAY = "595959";
@@ -207,6 +219,36 @@ function collectResumeText(data) {
 }
 
 function _newId() { return Math.random().toString(36).slice(2, 10); }
+
+// Detect whether the resume actually has professional links, checking BOTH the
+// parsed contact fields AND the raw resume text. Google-Docs-exported resumes
+// often show "Linkedin"/"Github" as anchor words whose URLs don't survive
+// import — in that case the links ARE on the page, so the tool must not claim
+// they're missing. Returns granular flags so callers can be specific.
+function detectProfileLinks(data, rawImportText) {
+  const c = (data && data.contact) || {};
+  const fieldLinkedIn = /linkedin/i.test(String(c.linkedin || "")) || /linkedin/i.test(String(c.portfolio || ""));
+  const fieldGithub = /github/i.test(String(c.portfolio || "")) || /github/i.test(String(c.linkedin || ""));
+  const fieldPortfolio = !!(String(c.portfolio || "").trim());
+  // Scan the header/contact area of the raw text (first ~400 chars) plus the
+  // full reconstructed text, for anchor words or spelled-out URLs.
+  let text = String(rawImportText || "");
+  if (text.length < 40) { try { text = collectResumeText(data); } catch (e) {} }
+  const head = text.slice(0, 600);
+  const textLinkedIn = /\blinked ?in\b/i.test(head) || /linkedin\.com/i.test(text);
+  const textGithub = /\bgit ?hub\b/i.test(head) || /github\.com/i.test(text);
+  const textPortfolio = /\b[a-z0-9\-]+\.(?:dev|io|me|net|com)\/[A-Za-z0-9]/i.test(text) && !/gmail|outlook|yahoo|hotmail/i.test(head);
+  const hasLinkedIn = fieldLinkedIn || textLinkedIn;
+  const hasGithub = fieldGithub || textGithub;
+  const hasPortfolio = fieldPortfolio || textPortfolio;
+  return {
+    hasLinkedIn, hasGithub, hasPortfolio,
+    hasAny: hasLinkedIn || hasGithub || hasPortfolio,
+    // "URL missing but anchor present" — a distinct, softer coaching case.
+    linkedInTextOnly: textLinkedIn && !fieldLinkedIn,
+    githubTextOnly: textGithub && !fieldGithub
+  };
+}
 
 function normalizeImportedResumeText(rawText) {
   let t = String(rawText || "").replace(/\r/g, "\n");
@@ -769,7 +811,13 @@ function _looksLikeJobTitle(line) {
   return /(trainer|specialist|technician|intern|assistant|associate|analyst|coordinator|representative|manager|cashier|server|tutor|researcher|consultant|ambassador|developer|engineer|clerk|advisor|aide|processor|executive|president|vice president|support|help desk|customer|information technology|student worker|strategy planning)/i.test(s);
 }
 function _parseExperienceEntries(lines) {
-  const clean = _linesToBullets(lines).map(l => String(l || "").trim()).filter(Boolean);
+  // Keep the raw lines (with any leading bullet markers) alongside the cleaned
+  // text. The marker is the most reliable signal that a line is a bullet, not an
+  // org/location header — without it, a first bullet like "Implemented AdaDecay
+  // in PyTorch, boosting sparsity 12%" can be misread as the org line.
+  const rawLines = (lines || []).map(l => String(l || "")).filter(l => l.trim());
+  const clean = rawLines.map(l => l.replace(/^[••·\-\*]\s*/, "").trim()).filter(Boolean);
+  const isMarkedBullet = (l) => /^\s*[•·\-\*]\s+/.test(String(l || ""));
 
   function isHardSectionHeading(line) {
     return /^(projects|education|skills|certifications|awards|awards & recognition|publications|leadership|leadership & volunteering|leadership and volunteering)$/i.test(String(line || "").trim());
@@ -788,7 +836,7 @@ function _parseExperienceEntries(lines) {
     };
   }
 
-  function makeEntryFromChunk(chunk) {
+  function makeEntryFromChunk(chunk, chunkMarks) {
     if (!chunk || !chunk.length) return null;
     const first = chunk[0];
     const date = extractDateRangeFromLine(first);
@@ -812,7 +860,10 @@ function _parseExperienceEntries(lines) {
     }
 
     const second = chunk[1] || "";
-    if (second && _looksLikeOrgLocation(second)) {
+    const secondIsMarked = chunkMarks ? chunkMarks[1] : false;
+    // Only promote the second line to org/location if it is NOT a bullet-marked
+    // line. A dashed line is always accomplishment content, never an org header.
+    if (second && !secondIsMarked && _looksLikeOrgLocation(second)) {
       const ol = _splitOrgLocation(second);
       org = org || ol.org;
       location = ol.location || "";
@@ -826,13 +877,13 @@ function _parseExperienceEntries(lines) {
     // Never discard such lines, or genuine achievements/publications get silently dropped.
     const looksLikeContentBullet = (l) => {
       const s = String(l || "").replace(/^\s*[•\-*·]\s*/, "").trim();
-      return /^(published|presented|co-authored|authored|developed|designed|built|created|led|lead|managed|conducted|analyzed|implemented|introduced|achieved|ran|benchmark|supported|tutored|mentored|coordinated|organized|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|facilitated|spearheaded|launched|contributed)\b/i.test(s);
+      return /^(published|presented|co-authored|authored|developed|designed|built|created|led|lead|managed|conducted|analyzed|implemented|introduced|achieved|ran|benchmark|supported|tutored|mentored|coordinated|organized|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|facilitated|spearheaded|launched|contributed|engineered|optimized|architected|systematized|benchmarked|containerized|codified|quantified|executed|evaluated|validated|strengthened|configured|integrated|streamlined|automated)\b/i.test(s);
     };
-    const bullets = chunk.slice(bulletStart).filter(l =>
+    const bullets = chunk.slice(bulletStart).filter((l, k) =>
       l &&
       !isHardSectionHeading(l) &&
       !extractDateRangeFromLine(l) &&
-      (looksLikeContentBullet(l) || !(_looksLikeOrgLocation(l) && l.length < 90))
+      ((chunkMarks && chunkMarks[bulletStart + k]) || looksLikeContentBullet(l) || !(_looksLikeOrgLocation(l) && l.length < 90))
     );
 
     return {
@@ -862,8 +913,15 @@ function _parseExperienceEntries(lines) {
     const entries = [];
     startIdxs.forEach((start, i) => {
       const end = startIdxs[i + 1] || clean.length;
-      const chunk = clean.slice(start, end).filter(l => !isHardSectionHeading(l));
-      const entry = makeEntryFromChunk(chunk);
+      // Slice both the text and the marker flags together, dropping section headings.
+      const chunkPairs = [];
+      for (let k = start; k < end; k++) {
+        if (isHardSectionHeading(clean[k])) continue;
+        chunkPairs.push([clean[k], isMarkedBullet(rawLines[k])]);
+      }
+      const chunk = chunkPairs.map(p => p[0]);
+      const chunkMarks = chunkPairs.map(p => p[1]);
+      const entry = makeEntryFromChunk(chunk, chunkMarks);
       if (entry) entries.push(entry);
     });
     if (entries.length) return entries;
@@ -874,26 +932,29 @@ function _parseExperienceEntries(lines) {
   let current = null;
   clean.forEach((line, idx) => {
     if (!line || isHardSectionHeading(line)) return;
+    const marked = isMarkedBullet(rawLines[idx]);
 
-    if (_looksLikeJobTitle(line) && (!current || current.org || current.start || current.bullets.length)) {
+    // A bullet-marked line is never a job title or org — always content.
+    if (!marked && _looksLikeJobTitle(line) && (!current || current.org || current.start || current.bullets.length)) {
       if (current) entries.push(current);
       current = { id: _newId(), title: line, org: "", location: "", start: "", end: "", bullets: [] };
       return;
     }
 
     if (!current) {
-      current = { id: _newId(), title: line, org: "", location: "", start: "", end: "", bullets: [] };
+      current = { id: _newId(), title: marked ? "" : line, org: "", location: "", start: "", end: "", bullets: [] };
+      if (marked) current.bullets.push(line);
       return;
     }
 
-    if (!current.org && _looksLikeOrgLocation(line)) {
+    if (!marked && !current.org && _looksLikeOrgLocation(line)) {
       const ol = _splitOrgLocation(line);
       current.org = ol.org;
       current.location = ol.location;
       return;
     }
 
-    if (!current.start && _looksLikeDateRange(line)) {
+    if (!marked && !current.start && _looksLikeDateRange(line)) {
       const dr = _splitDateRange(line);
       current.start = dr.start;
       current.end = dr.end;
@@ -1008,18 +1069,43 @@ function _parseProjectLine(line) {
   return { name: s, date: "" };
 }
 function _parseProjectEntries(lines) {
-  const clean = _linesToBullets(lines).map(l => String(l || "").trim()).filter(Boolean);
+  // Preserve the single most reliable title-vs-bullet signal: a leading bullet
+  // marker (- • * ·). A marked line is ALWAYS a bullet, never a project title —
+  // this prevents accomplishment bullets (e.g. "Systematized a LangChain RAG
+  // pipeline...") from being misread as new project names when their leading
+  // verb isn't in the guard list. Unmarked lines use the keyword heuristic.
+  const raw = (lines || []).map(l => String(l || ""));
+  const marked = raw.map(l => /^\s*[•·\-\*]\s+/.test(l));
+  const clean = raw.map(l => l.replace(/^\s*[•·\-\*]\s*/, "").trim());
+
   const entries = [];
   let current = null;
-  clean.forEach(line => {
-    if (_looksLikeProjectTitle(line)) {
+  clean.forEach((line, i) => {
+    if (!line) return;
+    const isBulletMarked = marked[i];
+    // An UNMARKED line is a project title if either it reads like one (keywords/
+    // date) OR it structurally sits as a header: not bullet-marked, and the next
+    // non-empty line IS bullet-marked. This rescues short brand-style titles like
+    // "TritonStore.ai" that carry no title keyword.
+    const nextMarked = (() => {
+      for (let k = i + 1; k < clean.length; k++) { if (clean[k]) return marked[k]; }
+      return false;
+    })();
+    const structuralTitle = !isBulletMarked && current && current.bullets.length > 0 && nextMarked && line.length < 80;
+    if (!isBulletMarked && (_looksLikeProjectTitle(line) || structuralTitle)) {
       if (current) entries.push(current);
       const parsed = _parseProjectLine(line);
       current = { id: _newId(), name: parsed.name, date: parsed.date, bullets: [] };
       return;
     }
-    if (!current) current = { id: _newId(), name: line, date: "", bullets: [] };
-    else current.bullets.push(line);
+    if (!current) {
+      // First line with no title yet: if it's bullet-marked we still need a
+      // container, but treat the line as a bullet under an unnamed project.
+      current = { id: _newId(), name: isBulletMarked ? "" : line, date: "", bullets: [] };
+      if (isBulletMarked) current.bullets.push(line);
+      return;
+    }
+    current.bullets.push(line);
   });
   if (current) entries.push(current);
   return entries.length ? entries.map(e => ({ ...e, bullets: e.bullets.length ? e.bullets : [""] })) : [emptyProj()];
@@ -1167,8 +1253,9 @@ async function extractDocxHyperlinks(arrayBuffer) {
   try {
     if (typeof window.JSZip === "undefined") return [];
     const zip = await window.JSZip.loadAsync(arrayBuffer);
-    const relPaths = Object.keys(zip.files).filter(p => /^word\/.*_rels\/.*\.rels$/i.test(p) || /^word\/_rels\/document\.xml\.rels$/i.test(p));
     const urls = [];
+    // (1) Standard relationship targets (Word-authored links).
+    const relPaths = Object.keys(zip.files).filter(p => /_rels\/.*\.rels$/i.test(p));
     for (const p of relPaths) {
       const xml = await zip.file(p).async("text");
       const doc = new DOMParser().parseFromString(xml, "application/xml");
@@ -1178,16 +1265,46 @@ async function extractDocxHyperlinks(arrayBuffer) {
         if (/hyperlink/i.test(type) && /^https?:\/\//i.test(target)) urls.push(target);
       });
     }
-    return Array.from(new Set(urls));
+    // (2) Field-code hyperlinks (common in Google-Docs-exported resumes):
+    //     <w:instrText> HYPERLINK "https://..." </w:instrText>.
+    // (3) Any raw URL sitting in document/footnote/header text or instrText.
+    const bodyParts = Object.keys(zip.files).filter(p => /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/i.test(p));
+    const URL_RE = /https?:\/\/[^\s"'<>\\]+/gi;
+    for (const p of bodyParts) {
+      const xml = await zip.file(p).async("text");
+      // HYPERLINK field codes
+      const fieldRe = /HYPERLINK\s+"([^"]+)"/gi;
+      let m;
+      while ((m = fieldRe.exec(xml))) { if (/^https?:\/\//i.test(m[1])) urls.push(m[1]); }
+      // Bare URLs anywhere in the text (covers spelled-out links like
+      // "linkedin.com/in/name" written as visible text, and www-less forms).
+      const rawText = xml.replace(/<[^>]+>/g, " ");
+      let u;
+      while ((u = URL_RE.exec(rawText))) urls.push(u[0]);
+      // Also catch domain-only forms authors type without http:// —
+      // linkedin.com/in/..., github.com/..., a personal portfolio domain.
+      const bareRe = /\b(?:linkedin\.com\/in\/[A-Za-z0-9\-_%]+|github\.com\/[A-Za-z0-9\-_.]+|[a-z0-9\-]+\.(?:dev|io|me|portfolio|net))\b/gi;
+      let b;
+      while ((b = bareRe.exec(rawText))) urls.push("https://" + b[0].replace(/^https?:\/\//i, ""));
+    }
+    // Normalize + de-dupe (case-insensitive, trailing punctuation stripped).
+    const norm = urls
+      .map(u => String(u || "").trim().replace(/[),.;]+$/, ""))
+      .filter(u => /^https?:\/\//i.test(u));
+    const seen = new Set();
+    const out = [];
+    norm.forEach(u => { const k = u.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(u); } });
+    return out;
   } catch (e) {
     return [];
   }
 }
 function summarizeImportedLinks(urls) {
   const clean = Array.from(new Set((urls || []).filter(Boolean)));
-  const linkedIn = clean.find(u => /linkedin\.com\/in\//i.test(u)) || "";
-  const github = clean.find(u => /github\.com\//i.test(u)) || "";
-  const portfolio = clean.find(u => !/linkedin\.com/i.test(u) && !/github\.com/i.test(u) && !/(gmail|outlook|hotmail|yahoo|icloud)\.com/i.test(u)) || "";
+  // Accept any linkedin.com URL (not just /in/), and any github.com URL.
+  const linkedIn = clean.find(u => /linkedin\.com/i.test(u)) || "";
+  const github = clean.find(u => /github\.com/i.test(u)) || "";
+  const portfolio = clean.find(u => !/linkedin\.com/i.test(u) && !/github\.com/i.test(u) && !/(gmail|outlook|hotmail|yahoo|icloud)\.com/i.test(u) && !/^https?:\/\/(www\.)?(google|w3|schemas|microsoft)\./i.test(u)) || "";
   return { linkedIn, github, portfolio, all: clean };
 }
 
@@ -1210,8 +1327,39 @@ async function extractPdfTextFromFile(file) {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
-    const strings = (content.items || []).map(item => item.str || "").filter(Boolean);
-    pages.push(strings.join(" ").replace(/\s{2,}/g, " "));
+    // PDF.js returns each text run as an item with a transform matrix; index 5 is
+    // the Y position and index 4 is X. Text runs on the same visual line share a
+    // Y (within a small tolerance). Joining everything with spaces destroys the
+    // line structure the resume parser depends on (section headings, entry
+    // headers, and bullet boundaries all live on separate lines), so we
+    // reconstruct lines by grouping runs whose Y is within tolerance, then sort
+    // each line left-to-right by X.
+    const items = (content.items || []).filter(it => (it.str || "").length);
+    const rows = [];
+    const Y_TOL = 3; // points; same-line runs rarely differ by more than this
+    items.forEach(it => {
+      const tr = it.transform || it.transformMatrix || [1, 0, 0, 1, 0, 0];
+      const x = tr[4] || 0;
+      const y = tr[5] || 0;
+      // Find an existing row at (approximately) this Y.
+      let row = null;
+      for (let r = rows.length - 1; r >= 0; r--) {
+        if (Math.abs(rows[r].y - y) <= Y_TOL) { row = rows[r]; break; }
+        // Rows are appended in reading order; if we've passed the tolerance band
+        // by a wide margin we can stop scanning back.
+        if (rows[r].y - y > Y_TOL * 6) break;
+      }
+      if (!row) { row = { y, runs: [] }; rows.push(row); }
+      row.runs.push({ x, str: it.str });
+    });
+    // Sort rows top-to-bottom (PDF Y increases upward, so descending Y = top-down),
+    // then each row left-to-right by X, and join runs into a line.
+    rows.sort((a, b) => b.y - a.y);
+    const lines = rows.map(row => {
+      row.runs.sort((a, b) => a.x - b.x);
+      return row.runs.map(rn => rn.str).join(" ").replace(/\s{2,}/g, " ").trim();
+    }).filter(Boolean);
+    pages.push(lines.join("\n"));
   }
   return pages.join("\n").trim();
 }
@@ -1519,7 +1667,54 @@ function analyzeVerbTense(data) {
       " mix" + (count === 1 ? "es" : "") + " past and present tense (e.g. " + sample +
       "). Because these describe completed work, convert them to simple past (\u201Ccuts\u201D \u2192 \u201Ccut\u201D).");
   }
-  return { count, total, score, flagged: flagged.slice(0, 5), notes };
+
+  // ---- Verb inflation pass (manual eval §8) ----
+  // Flags "big leadership" verbs used on work that reads as solo. This is a
+  // credibility check (scope vs. verb), distinct from tense consistency above.
+  // Leadership verbs that imply directing others or ground-up ownership.
+  const INFLATED = /^(spearheaded|architected|pioneered|orchestrated|championed|masterminded|helmed|led)\b/i;
+  // Signals within a bullet or its entry that a real team/leadership scope exists,
+  // which would justify the strong verb and suppress the flag.
+  const TEAM_SIGNAL = /\b(team|teams|engineers?|developers?|analysts?|interns?|reports?|direct reports?|people|members?|committee|cross[- ]functional|stakeholders?|volunteers?|staff|colleagues?|club|chapter|cohort|group of \d+|\d+\s*(?:person|member|engineer|people))\b/i;
+  const isMetaLineInfl = t => /^\s*(tools?|tech|technologies|stack|built with|skills used|methods?)\s*[:|]/i.test(t);
+
+  const inflated = [];
+  const scanForInflation = (bulletList, soloByDefault) => {
+    (bulletList || []).forEach(raw => {
+      const t = String(raw || "").trim().replace(/^[•\-\u2013\u2014\s]+/, "");
+      if (!t || isMetaLineInfl(t)) return;
+      const m = INFLATED.exec(t);
+      if (!m) return;
+      // Suppress when the bullet itself names a team/leadership scope.
+      if (TEAM_SIGNAL.test(t)) return;
+      // Experience bullets are only "solo" when nothing in the entry implies a team;
+      // project bullets are treated as solo unless the bullet names a team.
+      if (soloByDefault) {
+        inflated.push({ text: t, verb: m[0].toLowerCase() });
+      }
+    });
+  };
+
+  // Experience: flag only entries with no team/report signal anywhere in the entry.
+  entries.forEach(e => {
+    const entryText = [(e.title || ""), (e.org || ""), ...((e.bullets || []))].join(" ");
+    const entryHasTeam = TEAM_SIGNAL.test(entryText);
+    scanForInflation(e.bullets, !entryHasTeam);
+  });
+  // Projects: solo by default (the classic inflated-verb case in the manual eval).
+  const projectEntries = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
+  projectEntries.forEach(p => scanForInflation(p.bullets, true));
+
+  const inflatedCount = inflated.length;
+  if (inflatedCount) {
+    const uniqInfl = [...new Set(inflated.map(f => f.verb))].slice(0, 3);
+    const sampleInfl = uniqInfl.map(v => "\u201C" + v.charAt(0).toUpperCase() + v.slice(1) + "\u201D").join(", ");
+    notes.push(inflatedCount + " bullet" + (inflatedCount === 1 ? "" : "s") +
+      " use" + (inflatedCount === 1 ? "s" : "") + " a strong leadership verb (" + sampleInfl +
+      ") on work that reads as solo. Reserve these for genuine leadership or ground-up design; \u201CBuilt/Designed/Developed\u201D reads as more credible on individual work.");
+  }
+
+  return { count, total, score, flagged: flagged.slice(0, 5), notes, inflatedCount, inflated: inflated.slice(0, 5) };
 }
 
 // ---- Run-on / comma-chained bullet detection (Coach Jeff eval Section 7) ----
@@ -1560,8 +1755,133 @@ function analyzeRunOnBullets(data) {
   return { count, score, flagged: flagged.slice(0, 4), notes };
 }
 
-// ============================================================================
-// CREDIBILITY & MECHANICS ANALYZERS (Coach Jeff eval Sections 6, 7, 14, 15,
+// ---- Metric density (manual eval §10, §21, Risk Flag #1) ----
+// The comma-chain check above catches list-style run-ons; this catches the
+// OTHER density problem the manual audit flags: a single bullet packing multiple
+// distinct quantified claims ("three quantified claims in a single line"), which
+// tires the eye and buries the strongest number. The coaching fix is "one
+// headline metric per bullet." We count DISTINCT metrics, treating a before→after
+// range ("from 72% to 98%") as a single claim so we never penalize good writing.
+function analyzeMetricDensity(data) {
+  const isMetaLine = t => /^\s*(tools?|tech|technologies|stack|built with|skills used|methods?)\s*[:|]/i.test(t);
+  const entries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  const projects = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
+  const bullets = [
+    ...entries.flatMap(e => (e.bullets || []).filter(Boolean)),
+    ...projects.flatMap(p => (p.bullets || []).filter(Boolean))
+  ];
+
+  const countMetrics = (raw) => {
+    let t = String(raw || "");
+    // Collapse before→after ranges to a single token so "from 72% to 98%",
+    // "72%-98%", "72 to 98%" count as ONE claim, not two.
+    t = t.replace(/\bfrom\s+\d+(\.\d+)?%?\s+to\s+\d+(\.\d+)?%?/gi, " RANGE ");
+    t = t.replace(/\b\d+(\.\d+)?%?\s*(?:[-\u2013\u2014]|to)\s*\d+(\.\d+)?%/gi, " RANGE ");
+    // Single combined metric matcher. Order matters: the more specific "sub-100ms"
+    // alternative is tried before the bare "100ms" one, and we walk the string with
+    // a global regex so overlapping spans are consumed once (no double-counting a
+    // number that satisfies two patterns).
+    const metricRe = /\bsub-\s*\d+\s*[a-z]{1,3}\b|\d+(?:\.\d+)?\s*%|\d+(?:\.\d+)?\s*(?:ms|x|k\+?|m\+?|gb|tb|mb|fps|rps|qps)\b|\d{2,}\s*\+|\bRANGE\b/gi;
+    const matches = t.match(metricRe) || [];
+    return matches.length;
+  };
+
+  const flagged = [];
+  bullets.forEach(raw => {
+    const t = String(raw || "").trim().replace(/^[•\-\u2013\u2014\s]+/, "");
+    if (!t || isMetaLine(t)) return;
+    const metrics = countMetrics(t);
+    if (metrics >= 3) flagged.push({ text: t, metrics }); // 3+ distinct claims = overload
+  });
+  const count = flagged.length;
+  let score = 100;
+  if (count === 1) score = 90;
+  else if (count === 2) score = 82;
+  else if (count >= 3) score = 72;
+  const notes = [];
+  if (count) {
+    notes.push(count + " bullet" + (count === 1 ? "" : "s") +
+      " pack" + (count === 1 ? "s" : "") + " three or more separate numbers into one line, which tires the eye and buries your strongest result. Keep one headline metric per bullet and move or drop the rest.");
+  }
+  return { count, score, flagged: flagged.slice(0, 4), notes };
+}
+
+// ---- Summary quality (manual eval §13) ----
+// Reads the ACTUAL summary text and flags the specific weaknesses the manual
+// audit calls out — rather than a generic "rewrite this." Findings: buzzword
+// density, missing article ("bridging gap" -> "bridging the gap"), abstraction
+// with no concrete proof point (no number/metric), first-person filler, and
+// length problems. Each finding names the exact phrase so the fix is obvious.
+function analyzeSummaryQuality(data) {
+  const summary = String(data.summary || "").trim();
+  const findings = [];
+  const suggestions = [];
+  if (summary.length < 40) {
+    return {
+      present: summary.length > 0,
+      findings: summary.length ? ["Your summary is very short — expand it to 2–3 lines that name your target role, top strengths, and one concrete proof point."] : [],
+      suggestions: [],
+      hasMetric: false,
+      score: summary.length ? 70 : 55,
+      count: summary.length ? 1 : 0
+    };
+  }
+
+  const words = summary.split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
+
+  // (1) Buzzword / abstraction density. These read as impressive but say little;
+  // the manual audit flags exactly this ("sound impressive but say little concrete").
+  const BUZZWORDS = /\b(proven track record|results?-driven|detail-oriented|team player|hard-working|hardworking|go-getter|self-starter|passionate|dynamic|synergy|leverage|leveraging|cutting-edge|state-of-the-art|world-class|best-in-class|thought leader|game-changer|value-add|move the needle|deep expertise|expert in|seasoned|highly motivated|extensive experience|track record|end-to-end lifecycle|high-availability|production-grade|robust|scalable solutions|real-time solutions)\b/gi;
+  const buzzHits = [...new Set((summary.match(BUZZWORDS) || []).map(s => s.toLowerCase()))];
+  if (buzzHits.length >= 2) {
+    findings.push("Your summary leans on buzzwords that sound impressive but say little concrete: " +
+      buzzHits.slice(0, 3).map(b => "\u201C" + b + "\u201D").join(", ") +
+      ". Replace one or two with a specific, verifiable result.");
+  }
+
+  // (2) Missing article before "gap" — the manual audit's exact §13 catch
+  // ("bridging gap" -> "bridging the gap"). Also common: "bridge gap".
+  if (/\bbridg(?:ing|e)\s+gap\b/i.test(summary)) {
+    findings.push("Small grammar slip: \u201Cbridging gap\u201D is missing an article \u2014 write \u201Cbridging the gap.\u201D");
+  }
+  // A couple of other frequent missing-article patterns in summaries. Skip the
+  // "lifecycle" article nudge if we already flagged "end-to-end lifecycle" as a
+  // buzzword above, to avoid two findings pointing at the same phrase.
+  const lifecycleAlreadyFlagged = buzzHits.includes("end-to-end lifecycle");
+  if (!lifecycleAlreadyFlagged && /\b(specializing in|focus on|expert in)\s+(?:end-to-end\s+)?lifecycle\b/i.test(summary)) {
+    findings.push("\u201Clifecycle\u201D needs an article \u2014 e.g. \u201Cthe end-to-end lifecycle of ...\u201D reads more naturally.");
+  }
+
+  // (3) No concrete proof point. A strong summary carries at least one number,
+  // percentage, or hard credential (GPA, years). Its absence is the manual
+  // audit's "no specific hook" note.
+  const hasMetric = /\b\d+(\.\d+)?\s*%|\b\d{2,}\b|\bGPA\b|\b\d+\+?\s*(years?|yrs?)\b/i.test(summary);
+  if (!hasMetric) {
+    findings.push("Your summary states what you do but offers no concrete hook \u2014 no metric, GPA, years, or standout result. Add one proof point (e.g. a headline number from your best bullet) so the opening lands.");
+  }
+
+  // (4) First-person filler / weak openers.
+  if (/^\s*(i\s+am|i'm|as a|seeking|looking for|motivated|hardworking)\b/i.test(summary)) {
+    findings.push("Open with your professional identity and value, not \u201CI am\u201D or \u201Cseeking\u201D \u2014 lead with the role and a proof point.");
+  }
+
+  // (5) Length: too long buries the point; the sweet spot is ~2–3 lines.
+  if (wordCount > 70) {
+    findings.push("Your summary runs long (" + wordCount + " words). Tighten to 2\u20133 lines so a recruiter absorbs it in one glance.");
+  }
+
+  if (findings.length) {
+    suggestions.push("Lead with what you are, add one concrete proof point, and cut the abstraction. Example shape: \u201C[Role/credential] who [does X] \u2014 [headline metric or result].\u201D");
+  }
+
+  let score = 92;
+  score -= Math.min(30, findings.length * 8);
+  if (!hasMetric) score -= 4;
+  score = Math.max(55, score);
+
+  return { present: true, findings: findings.slice(0, 5), suggestions, hasMetric, score, count: findings.length };
+}
 // 16, 19, 22, 24). These run on the RAW resume text rather than the parsed
 // structure, so they stay reliable even when section parsing mis-buckets a
 // bullet. Every finding is grounded in something literally present on the
@@ -1643,6 +1963,32 @@ function analyzeMechanics(data, rawImportText) {
   if (/\b[A-Z][a-z]+\s+And\s+[A-Z][a-z]+/.test(text) && /\b(University|College|Institute|School|Department)\b/.test(text)) {
     add("Capitalization", "Check mid-name \u201CAnd\u201D \u2014 it's usually lowercase inside a proper name (\u201C... and ...\u201D).", "And \u2192 and");
   }
+
+  // (e) Common word-form typos in resume/coursework context. "Advance" is a real
+  // word, so only flag it when used as an adjective before a subject noun
+  // (e.g. "Advance Machine Learning" should be "Advanced ..."). This mirrors the
+  // manual audit's §6 catch and avoids false hits on "advance the project".
+  if (/\bAdvance\s+(Machine\s+Learning|Statistics|Calculus|Algorithms?|Data|Database|Programming|Python|Analytics|Mathematics|Economics|Accounting|Physics|Financial|Computer)\b/.test(text)) {
+    add("Word form", "\u201CAdvance\u201D should be \u201CAdvanced\u201D before a course/subject name (e.g. \u201CAdvanced Machine Learning\u201D).", "Advance \u2192 Advanced");
+  }
+  // A few other high-frequency resume misspellings, matched as whole words.
+  const WORD_TYPOS = [
+    ["Manangement", "Management"],
+    ["Managment", "Management"],
+    ["Enviroment", "Environment"],
+    ["Responsibilites", "Responsibilities"],
+    ["Acheived", "Achieved"],
+    ["Recieved", "Received"],
+    ["Collaboratation", "Collaboration"],
+    ["Developement", "Development"],
+    ["Sucessful", "Successful"],
+    ["Analyis", "Analysis"]
+  ];
+  WORD_TYPOS.forEach(([bad, good]) => {
+    if (new RegExp("\\b" + bad + "\\b", "i").test(text)) {
+      add("Spelling", "\u201C" + bad + "\u201D looks like a typo \u2014 did you mean \u201C" + good + "\u201D?", bad + " \u2192 " + good);
+    }
+  });
 
   let score = 100;
   if (findings.length === 1) score = 88;
@@ -1906,6 +2252,88 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   return { categories, overall, tier, tierNote };
 }
 
+// ---- Resume Risk Flags (manual eval §29) ----
+// Consolidates the highest-signal credibility risks into one block so the
+// candidate sees their vulnerabilities together, not scattered.
+function buildRiskFlags(data, ctx) {
+  const { verbTense, runOn, mechanics, metricCred, metricDensity } = ctx || {};
+  const flags = [];
+
+  if (metricCred && metricCred.count) {
+    flags.push({
+      title: "Metric credibility",
+      note: metricCred.count + " number" + (metricCred.count === 1 ? "" : "s") +
+        " may read as inflated or unverifiable. Anchor each to how it was measured, or soften absolute claims you can't defend end-to-end in an interview."
+    });
+  }
+  // Metric overload covers two density problems the manual audit flags: comma-
+  // chained result lists (runOn) and single bullets packing 3+ distinct numbers
+  // (metricDensity). Either triggers the same coaching fix: one headline metric.
+  const overloadCount = Math.max(
+    (runOn && runOn.count) || 0,
+    (metricDensity && metricDensity.count) || 0
+  );
+  if (overloadCount) {
+    flags.push({
+      title: "Metric overload",
+      note: overloadCount + " bullet" + (overloadCount === 1 ? "" : "s") +
+        " pack multiple results into one line, which tires the eye and buries your strongest number. Lead each bullet with one headline metric and move or drop the rest."
+    });
+  }
+  // Verb inflation (populated once analyzeVerbTense returns `inflatedCount`).
+  if (verbTense && verbTense.inflatedCount) {
+    flags.push({
+      title: "Verb inflation",
+      note: "\u201CSpearheaded\u201D / \u201CArchitected\u201D on solo work can read as overreach to a skeptical reviewer. Reserve them for genuine leadership or ground-up design; use \u201CBuilt/Designed/Developed\u201D otherwise."
+    });
+  }
+  // Experience thinness: only one real experience entry.
+  const expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  if (expEntries.length <= 1) {
+    flags.push({
+      title: "Experience thinness",
+      note: "Only one paid role is visible; research and projects carry the weight. Normal for a new grad — be ready to address it, and make sure projects read as evidence, not a list."
+    });
+  }
+  if (mechanics && mechanics.count) {
+    flags.push({
+      title: "Small typos & casing",
+      note: mechanics.count + " minor issue" + (mechanics.count === 1 ? "" : "s") +
+        " (casing, spelling, spacing, brand names). Individually trivial, but together they signal less polish than the content deserves. Five-minute fix, outsized payoff."
+    });
+  }
+  return flags;
+}
+
+// ---- Interview Conversion estimate (manual eval §31) ----
+// A RELATIVE, caveated read — never a promised hit rate. Blends recruiter
+// confidence, overall score, and field fit into a qualitative band.
+function buildConversionEstimate(recruiterReview, scorecard, fieldFit) {
+  const conf = (recruiterReview && recruiterReview.confidence) || 0;
+  const overall = (scorecard && scorecard.overall) || 0;
+  const penalty = (fieldFit && fieldFit.penalty) || 0;
+  const blend = Math.round(conf * 0.5 + overall * 0.5 - penalty);
+
+  let band, note;
+  if (blend >= 85) {
+    band = "High";
+    note = "Strong quantification, keyword coverage, and positioning should clear most ATS filters and catch a recruiter's eye for well-matched roles.";
+  } else if (blend >= 72) {
+    band = "Moderate-to-High";
+    note = "The foundation is competitive. Clearing the top fixes — especially the risk flags above — should meaningfully raise your odds for suitable roles.";
+  } else if (blend >= 60) {
+    band = "Moderate";
+    note = "There's real material here, but positioning and evidence need tightening before this competes for higher-demand postings.";
+  } else {
+    band = "Building";
+    note = "Focus first on direction (summary + target role) and evidence (projects as experience). Those moves raise conversion faster than anything else.";
+  }
+  return {
+    band, note,
+    disclaimer: "This is a relative estimate for suitably-matched roles, not a promised hit rate — no tool or coach can guarantee a specific outcome. It reflects how well the resume is set up to convert, which is the part you control."
+  };
+}
+
 function analyzeSkillsClassification(data) {
   const technical = splitCsvSkills(data.skills && data.skills.technical);
   const dataViz = splitCsvSkills(data.skills && data.skills.dataVisualization);
@@ -1969,7 +2397,14 @@ function analyzeEducationCleanup(data) {
 function recommendSectionOrder(data) {
   const recommended = smartRecommendedOrder(data);
   const current = (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
-  const mismatch = recommended.slice(0, 6).some((k, i) => current[i] !== k);
+  // Compare only sections the resume actually has: filter the recommended list
+  // down to present sections, then check whether the current order matches that
+  // relative sequence. Previously we compared the full recommended top-6, which
+  // included sections the resume doesn't have (e.g. "volunteer"), so a correctly
+  // ordered resume was flagged as a mismatch and penalized.
+  const currentSet = new Set(current);
+  const recommendedPresent = recommended.filter(k => currentSet.has(k));
+  const mismatch = recommendedPresent.some((k, i) => current[i] !== k);
   return { recommended, current, mismatch };
 }
 
@@ -1997,10 +2432,32 @@ function smartRecommendedOrder(data) {
   const field = String(data.field || "").toLowerCase();
 
   if (/technology|computer|cs|engineering|data|analytics|ai|machine/.test(field)) {
-    const order = ["summary", "skills"];
+    // Stage-aware (manual eval §11): a new grad with a strong GPA leads with
+    // Education, then Skills as the keyword block. Experienced candidates lead
+    // with Skills + applied work, keeping Education lower. We compute the
+    // new-grad signal directly (not via the advice branch) so the recommended
+    // order is stable whether or not the resume already follows it.
+    const eduList = (data.education || []).filter(e => e && (e.degree || e.school));
+    const expList = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+    let bestGpaNorm = null;
+    eduList.forEach(e => {
+      const mm = String(e.gpa || "").match(/([0-9](?:\.\d{1,2})?)\s*(?:\/\s*([0-9]{1,2}(?:\.\d)?))?/);
+      if (mm) {
+        const v = parseFloat(mm[1]); const sc = mm[2] ? parseFloat(mm[2]) : 4;
+        const norm = sc >= 5 ? (v / sc) * 4 : v;
+        if (!isNaN(norm) && (bestGpaNorm === null || norm > bestGpaNorm)) bestGpaNorm = norm;
+      }
+    });
+    const yrs = (collectResumeText(data).match(/\b20\d{2}\b/g) || []).map(Number);
+    const maxYr = yrs.length ? Math.max(...yrs) : null;
+    const nowYr = new Date().getFullYear();
+    const newGradSig = ((maxYr !== null && maxYr >= nowYr - 1) || expList.length <= 1) && eduList.length > 0;
+    const educationFirst = newGradSig && bestGpaNorm !== null && bestGpaNorm >= 3.5;
+
+    const order = educationFirst ? ["summary", "education", "skills"] : ["summary", "skills"];
     if (hasProjects) order.push("projects");
     if (hasExperience) order.push("experience");
-    order.push("education");
+    if (!educationFirst) order.push("education");
     if (hasPublications) order.push("publications");
     if (hasCerts) order.push("certifications");
     if (hasAwards) order.push("awards");
@@ -2010,6 +2467,76 @@ function smartRecommendedOrder(data) {
   }
 
   return FIELD_PRESETS[data.field] ? [...FIELD_PRESETS[data.field]] : [...FIELD_PRESETS["Technology / CS / Engineering"]];
+}
+
+// ---- Stage-aware section-order advice (manual eval §11) ----
+// The generic order engine above doesn't reason about career stage. This does:
+// for a new grad whose degree is the leading credential (recent/upcoming
+// graduation, strong GPA, thin paid experience), it recommends Education ->
+// Skills near the top, WITH the manual audit's honest caveat that for
+// experience-dominant (senior IC) targets the call flips. Only fires when it has
+// a concrete, defensible recommendation to make.
+function analyzeSectionOrderAdvice(data) {
+  const eduEntries = (data.education || []).filter(e => e && (e.degree || e.school));
+  const expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  const current = (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
+
+  // Parse the strongest GPA present (normalize a /5 or /10 scale to /4).
+  let bestGpa = null;
+  eduEntries.forEach(e => {
+    const m = String(e.gpa || "").match(/([0-9](?:\.\d{1,2})?)\s*(?:\/\s*([0-9]{1,2}(?:\.\d)?))?/);
+    if (m) {
+      const val = parseFloat(m[1]);
+      const scale = m[2] ? parseFloat(m[2]) : 4;
+      const norm = scale >= 5 ? (val / scale) * 4 : val;
+      if (!isNaN(norm) && (bestGpa === null || norm > bestGpa)) bestGpa = norm;
+    }
+  });
+
+  // Detect recent / upcoming graduation (new-grad signal).
+  const allText = collectResumeText(data);
+  const gradYears = (allText.match(/\b20\d{2}\b/g) || []).map(Number);
+  const maxYear = gradYears.length ? Math.max(...gradYears) : null;
+  const nowYear = new Date().getFullYear();
+  const recentOrUpcomingGrad = maxYear !== null && maxYear >= (nowYear - 1);
+
+  // "Thin" paid experience: 0–1 real employment entries (research/projects don't
+  // count as employment for this purpose, matching the manual audit's framing).
+  const thinExperience = expEntries.length <= 1;
+
+  // Is Education currently sitting BELOW Skills?
+  const idxEdu = current.indexOf("education");
+  const idxSkills = current.indexOf("skills");
+  const educationBelowSkills = idxEdu > -1 && idxSkills > -1 && idxEdu > idxSkills;
+
+  const newGrad = (recentOrUpcomingGrad || thinExperience) && eduEntries.length > 0;
+  const strongGpa = bestGpa !== null && bestGpa >= 3.5;
+
+  // Only make the Education-first call when it's genuinely warranted AND actionable
+  // (i.e., Education is currently below Skills).
+  if (newGrad && strongGpa && educationBelowSkills) {
+    return {
+      applies: true,
+      headline: "Move Education above Skills.",
+      body: "As a " + (recentOrUpcomingGrad ? "recent/upcoming graduate" : "early-career candidate") +
+        " with a strong GPA (" + bestGpa.toFixed(2).replace(/\.00$/, ".0") + "/4), your degree is your leading asset — recruiters for entry-level roles expect to see it early. Put Education right after your Summary, with Skills immediately below as the keyword block: Summary → Education → Skills → Experience → Projects.",
+      caveat: "Judgment call: this is the safer default for new-grad applications. If you're targeting senior individual-contributor roles where hands-on experience dominates the decision, keep Experience higher instead.",
+      recommendedTop: ["summary", "education", "skills", "experience", "projects"]
+    };
+  }
+
+  // Secondary: strong new grad whose Education is already high — affirm it.
+  if (newGrad && strongGpa && !educationBelowSkills && idxEdu > -1 && idxEdu <= 2) {
+    return {
+      applies: true,
+      headline: "Your section order already leads with your strongest asset.",
+      body: "Education is near the top, which is right for a new grad with a strong GPA — recruiters see your leading credential first. Keep Skills close behind as the keyword block.",
+      caveat: "",
+      recommendedTop: []
+    };
+  }
+
+  return { applies: false };
 }
 
 function sectionOrderExplanation(data) {
@@ -2208,6 +2735,45 @@ function targetFieldFit(data) {
   return { score, hits, missing, penalty, note };
 }
 
+// ---- Evaluation Context (manual eval §0) ----
+// States the target role back to the candidate and flags focus dilution,
+// mirroring the opening frame of the manual audit.
+function buildEvaluationContext(data, resumeStrength) {
+  const field = String(data.field || "").trim();
+  if (!field) return null;
+  const fit = (resumeStrength && resumeStrength.fieldFit) || targetFieldFit(data);
+
+  // Focus-dilution heuristic: count distinct "identity" signals in the resume
+  // text. If the resume spreads across several unrelated tracks, note it.
+  const text = collectResumeText(data).toLowerCase();
+  const identities = [
+    { name: "software / backend engineering", re: /\b(backend|api|microservice|distributed systems|full[- ]?stack)\b/ },
+    { name: "data / ML engineering", re: /\b(machine learning|ml|deep learning|model|pipeline|data engineer)\b/ },
+    { name: "data analysis / BI", re: /\b(tableau|power bi|dashboard|analytics|reporting|sql)\b/ },
+    { name: "cloud / DevOps", re: /\b(aws|azure|kubernetes|docker|ci\/cd|terraform|mlops)\b/ },
+    { name: "product / project management", re: /\b(product manager|scrum|roadmap|stakeholder|agile)\b/ }
+  ];
+  const present = identities.filter(i => i.re.test(text)).map(i => i.name);
+
+  const strengthLine = "You've given a clear target: " + field +
+    " roles. That direction should drive your summary, skill order, and which projects lead.";
+
+  let focusNote = "";
+  if (present.length >= 3) {
+    focusNote = "The resume currently spans several tracks (" + present.slice(0, 3).join(", ") +
+      "). That breadth is a technical strength, but it can dilute focus for any single posting. " +
+      "Keep this as your master version, and tailor a copy per application so the summary and skills lean toward the role you're applying to that day.";
+  } else if (fit.penalty) {
+    focusNote = "The resume shows limited evidence matching " + field +
+      " so far. Make sure your strongest " + field + "-relevant work is near the top and named in the summary.";
+  } else {
+    focusNote = "The resume reads as focused on " + field + " — good. Keep the summary and skill order pointed at that target.";
+  }
+
+  const tailorTip = "Recommended: keep one master resume, then tailor a copy per application (summary + skill order) toward whichever role you're targeting.";
+  return { field, strengthLine, focusNote, tailorTip, spanCount: present.length };
+}
+
 function leadershipEvidenceCount(data) {
   const leadershipWords = /\b(lead|led|leader|leadership|president|vice president|captain|chair|coordinator|mentor|mentored|tutored|tutor|taught|instructed|trained|supervised|organized|founded|initiated|spearheaded|volunteer|community|team|collaborated|collaboration|facilitated|managed|oversaw|directed|headed|guided)\b/i;
   const pools = []
@@ -2230,7 +2796,7 @@ function calculateResumeStrength(data, lastSkillImportNote) {
   const hasSummary = String(data.summary || "").trim().length > 80;
   const hasContact = !!(data.name && data.contact && data.contact.email && data.contact.phone);
   const hasProjects = (data.projects || []).some(p => p.name && (p.bullets || []).some(Boolean));
-  const hasLinks = !!(data.contact && (data.contact.linkedin || data.contact.portfolio));
+  const hasLinks = detectProfileLinks(data).hasAny;
 
   const summaryScore = hasSummary ? 95 : 70;
   const contactScore = hasContact ? 95 : 75;
@@ -2329,7 +2895,7 @@ function analyzeRecruiterReadability(data, resumeStrength) {
   ].filter(Boolean);
   const longBullets = allBullets.filter(b => String(b).split(/\s+/).length > 38).length;
   const contactComplete = !!(data.name && data.contact && data.contact.email && data.contact.phone);
-  const linksPresent = !!(data.contact && (data.contact.linkedin || data.contact.portfolio));
+  const linksPresent = detectProfileLinks(data).hasAny;
   const sectionOrderGood = !order.mismatch;
 
   let score = 100;
@@ -2398,7 +2964,7 @@ function sectionRecruiterFeedback(data) {
   feedback.push({
     section: "Professional Summary",
     score: String(data.summary || "").trim().length > 80 ? 92 : 72,
-    strengths: String(data.summary || "").trim().length > 80 ? ["Summary gives recruiters a quick positioning statement."] : [],
+    strengths: String(data.summary || "").trim().length > 80 ? ["Professional Summary gives recruiters a quick positioning statement."] : [],
     suggestions: String(data.summary || "").trim().length > 80 ? [] : ["Add a 2–4 line summary that states target role, strengths, and evidence."]
   });
 
@@ -2823,6 +3389,15 @@ function App() {
     if (snapO.length) { parts.push(H3("Opportunities")); parts.push(UL(snapO)); }
     if (!snapS.length && !snapO.length) parts.push(P("Resume content imported successfully. See the reviews below for detailed feedback."));
 
+    // 2.5 Evaluation Context — states the target role and focus up front (manual eval §0).
+    if (cr.evalContext) {
+      const ec = cr.evalContext;
+      parts.push(H2("Evaluation Context"));
+      parts.push(P(ec.strengthLine));
+      parts.push(P(ec.focusNote, "color:#475569;"));
+      parts.push(P(ec.tailorTip, "font-style:italic;color:#475569;"));
+    }
+
     // 3. Recruiter Review
     parts.push(H2("Recruiter Review"));
     if (rr.outcome != null || rr.confidence != null)
@@ -2865,6 +3440,21 @@ function App() {
       if (sc.tierNote) parts.push(P(sc.tierNote, "color:#475569;"));
     }
 
+    // 3c. Resume Risk Flags — consolidated credibility risks (manual eval §29).
+    if (Array.isArray(cr.riskFlags) && cr.riskFlags.length) {
+      parts.push(H2("Resume Risk Flags"));
+      parts.push(P("These are the credibility risks a skeptical reviewer would probe. None require new content — address them before you apply.", "color:#475569;"));
+      parts.push(UL(cr.riskFlags, (f) => '<b>' + esc(f.title) + '</b> — ' + esc(f.note)));
+    }
+
+    // 3d. Interview Conversion estimate — relative, caveated (manual eval §31).
+    if (cr.conversion) {
+      parts.push(H2("Interview Conversion Outlook"));
+      parts.push(P("Estimated conversion for suitably-matched roles: " + cr.conversion.band, "font-weight:700;color:#1F3864;"));
+      parts.push(P(cr.conversion.note));
+      parts.push(P(cr.conversion.disclaimer, "font-style:italic;color:#64748b;font-size:10pt;"));
+    }
+
     // 4. Coach Review
     parts.push(H2("Coach Review"));
     if (cr.opening) parts.push(P(cr.opening));
@@ -2905,6 +3495,28 @@ function App() {
     const tm = cr.titleMatch || {};
     const sq = cr.sectionQuality || {};
     const fn = cr.fileNaming || {};
+
+    // Professional Summary Review (manual eval §13) — reads the actual summary
+    // text and names specific weaknesses, not a generic "rewrite this."
+    const sumQ = cr.summaryQuality || {};
+    if (sumQ.present && Array.isArray(sumQ.findings) && sumQ.findings.length) {
+      parts.push(H2("Professional Summary Review"));
+      parts.push(P("Your summary is the first thing read — it sets your direction in one glance. Here's what a recruiter would notice, and how to sharpen it:", "color:#475569;"));
+      parts.push(UL(sumQ.findings));
+      if (Array.isArray(sumQ.suggestions) && sumQ.suggestions.length) {
+        parts.push(P(sumQ.suggestions[0], "font-style:italic;color:#475569;"));
+      }
+    }
+
+    // Section-order advice (manual eval §11) — stage-aware, with the honest caveat.
+    const soa = cr.sectionOrderAdvice || {};
+    if (soa.applies) {
+      parts.push(H2("Section Order"));
+      parts.push(P(soa.headline, "font-weight:700;color:#1F3864;"));
+      parts.push(P(soa.body));
+      if (soa.caveat) parts.push(P(soa.caveat, "font-style:italic;color:#475569;"));
+    }
+
     const anyCredibility = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
     if (anyCredibility) {
       parts.push(H2("Credibility & Mechanics Check"));
@@ -2952,7 +3564,7 @@ function App() {
     if (cr.together)   { parts.push(H3("If we worked together")); parts.push(P(cr.together)); }
     if (cr.motivation) parts.push(P(cr.motivation, "font-weight:600;color:#1F3864;"));
 
-    parts.push('<p style="margin:26pt 0 0 0;font-size:9pt;color:#94a3b8;border-top:0.75pt solid #e2e8f0;padding-top:6pt;">Prepared with the Coach Jeff Resume Optimizer &middot; coachjeff-resume-optimizer.netlify.app</p>');
+    parts.push('<p style="margin:26pt 0 0 0;font-size:9pt;color:#94a3b8;border-top:0.75pt solid #e2e8f0;padding-top:6pt;">Prepared with the Coach Jeff Resume Optimizer &middot; coachjeff-resume-optimizer.netlify.app &middot; Build ' + BUILD_VERSION + ' &middot; ' + esc(today) + '</p>');
 
     return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
       '<head><meta charset="utf-8"><title>Resume Review Report</title>' +
@@ -3343,10 +3955,22 @@ function App() {
   const topPriorities = useMemo(() => {
     const out = [];
     const seenTopics = new Set();
+    // A suggestion string that is actually mis-bucketed resume content (a long
+    // blob, chained bullets, pipe/dash-heavy, or a "N bullets" parser artifact)
+    // must never become a coaching priority. Reject it at the source.
+    const looksLikeBlob = (s) => {
+      const t = String(s || "");
+      if (t.length > 200) return true;
+      if ((t.match(/\|/g) || []).length >= 2) return true;
+      if ((t.match(/\s[-–—]\s/g) || []).length >= 2) return true;
+      if ((t.match(/\.\s+[A-Z]/g) || []).length >= 2) return true;
+      if (/\b\d+\s+bullets?\b/i.test(t)) return true;
+      return false;
+    };
     // Each priority is tagged with a topic; once a topic is used, related items
     // for the same underlying issue are skipped so the three slots are distinct.
     const add = (topic, label, detail) => {
-      if (!detail || seenTopics.has(topic)) return;
+      if (!detail || looksLikeBlob(detail) || seenTopics.has(topic)) return;
       seenTopics.add(topic);
       out.push({ label, detail });
     };
@@ -3368,7 +3992,16 @@ function App() {
       .slice()
       .sort((a, b) => a.score - b.score);
     if (scored.length && scored[0].score < 90) {
-      add(topicOf(scored[0].suggestions[0]), "Strengthen " + scored[0].section + " (lowest section score: " + scored[0].score + ")", scored[0].suggestions[0]);
+      // Use the first suggestion that isn't a mis-bucketed content blob.
+      const cleanSug = (scored[0].suggestions || []).find(s => !looksLikeBlob(s));
+      if (cleanSug) {
+        add(topicOf(cleanSug), "Strengthen " + scored[0].section + " (lowest section score: " + scored[0].score + ")", cleanSug);
+      } else if (/experience/i.test(scored[0].section)) {
+        // Experience parsed poorly but we know the section is weak — give a
+        // clean, meaningful default instead of echoing the raw blob.
+        add("experience-default", "Strengthen " + scored[0].section + " (lowest section score: " + scored[0].score + ")",
+          "Lead each experience bullet with a strong action verb and a measurable result so recruiters see impact fast.");
+      }
     }
 
     // 2) Missing essentials.
@@ -3445,7 +4078,8 @@ function App() {
     hasEducation ? "Education information is included." : "",
     atsScore >= 90 ? "Resume appears generally ATS-friendly from the current builder checks." : ""
   ].filter(Boolean).slice(0,3);
-  const linkedInMissing = !(data.contact && (data.contact.linkedin || data.contact.portfolio));
+  const links = detectProfileLinks(data, importText);
+  const linkedInMissing = !links.hasLinkedIn;
   // Reject any candidate opportunity string that is actually a chunk of
   // unparsed resume content (a mis-bucketed blob), not real coaching advice.
   // Signals: excessive length, multiple bullet-like fragments, or many pipe/
@@ -3459,11 +4093,18 @@ function App() {
     if (dashFrags >= 2 || pipes >= 2 || bulletMarks >= 1) return true;
     // Multiple sentence-final periods mid-string => stitched-together bullets.
     if ((t.match(/\.\s+[A-Z]/g) || []).length >= 2) return true;
+    // A stray "N bullets" fragment is a parser artifact, never real advice.
+    if (/\b\d+\s+bullets?\b/i.test(t) && /missing accomplishment/i.test(t)) return true;
     return false;
   };
   const priorityDetail = topPriorities && topPriorities[0] && !isRawBlob(topPriorities[0].detail) ? topPriorities[0].detail : "";
+  // Link opportunity: distinguish "no link at all" from "link shown as text but
+  // the URL didn't import" — the latter is NOT missing, just needs a live URL.
+  const linkOpportunity = links.hasLinkedIn
+    ? (links.linkedInTextOnly ? "Your LinkedIn is on the page but imported as plain text — make sure it's a live, clickable URL (linkedin.com/in/yourname) so recruiters can click through." : "")
+    : "Add a LinkedIn URL to your header — recruiters expect it for verification and outreach.";
   const snapshotOpportunities = [
-    linkedInMissing ? "Add a LinkedIn URL to your header — it's missing, and recruiters expect it for verification and outreach." : "",
+    linkOpportunity,
     !hasSummary ? "Strengthen the professional summary so the target role is clear." : "",
     expBulletCount && resumeStrength && resumeStrength.exp && resumeStrength.exp.quantified < Math.ceil(expBulletCount / 3) ? "Add more measurable results to experience bullets where accurate." : "",
     hasProjects && projectBulletCount < Math.max(2, projectCount * 2) ? "Add more project details: problem, tools, actions, and outcome." : "",
@@ -3473,7 +4114,11 @@ function App() {
   const firstImpression = resumeStrength.overall >= 85
     ? "Your resume has a strong foundation. The main opportunity is to make your value easier to see quickly by tightening the summary, highlighting measurable accomplishments, and keeping the strongest evidence near the top."
     : "Your resume has useful content, but it needs clearer positioning before applying. Start with the professional summary, measurable accomplishments, and section organization so recruiters can understand your direction faster.";
-  const todaysRecommendation = topPriorities && topPriorities.length ? topPriorities[0] : { label: "Strengthen the Professional Summary", detail: "Make your target role, strongest skills, and best evidence clear in 2–4 lines." };
+  // Bug fix: never surface a raw unparsed blob as "Today's Top Priority". If the
+  // top priority's detail is a mis-bucketed content blob, fall back to a clean,
+  // meaningful default so the card always makes sense.
+  const cleanTopPriority = (topPriorities || []).find(p => p && p.detail && !isRawBlob(p.detail));
+  const todaysRecommendation = cleanTopPriority || { label: "Strengthen the Professional Summary", detail: "Make your target role, strongest skills, and best evidence clear in 2–4 lines." };
 
   const recruiterReview = useMemo(() => {
     const signals = [];
@@ -3517,7 +4162,36 @@ function App() {
     if (leadershipCount) confidence += 4;
     else addImprove("Add leadership or initiative", "Include campus, volunteer, team, mentoring, or project leadership if accurate.", "Low");
 
-    confidence = Math.max(45, Math.min(98, Math.round(confidence)));
+    // ---- Credibility penalty (v12.1.4) ----
+    // Presence signals above reward what the resume HAS; they never account for
+    // the credibility problems a real recruiter would hesitate over. Without this,
+    // confidence can hit the ceiling while the report simultaneously lists verb
+    // inflation, an indefensible metric, and casing errors — an internal
+    // contradiction. We compute the same signals the Risk Flags use, subtract a
+    // penalty per open flag, and (below) refuse to let a resume read as "no
+    // reservations" while unresolved flags remain.
+    let openRiskFlags = 0;
+    try {
+      const _vt = analyzeVerbTense(data);
+      const _mech = analyzeMechanics(data, importText);
+      const _metric = analyzeMetricCredibility(data, importText);
+      const _runOn = analyzeRunOnBullets(data);
+      const _density = analyzeMetricDensity(data);
+      const _expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+      if (_metric && _metric.count) { openRiskFlags++; confidence -= 4; }
+      if (_vt && _vt.inflatedCount) { openRiskFlags++; confidence -= 3; }
+      // Metric overload (either comma-chains or 3+ numbers per bullet) is one flag.
+      if ((_runOn && _runOn.count) || (_density && _density.count)) { openRiskFlags++; confidence -= 3; }
+      if (_mech && _mech.count) { openRiskFlags++; confidence -= Math.min(6, _mech.count * 2); }
+      if (_expEntries.length <= 1) { openRiskFlags++; confidence -= 3; }
+    } catch (e) { /* analyzers are best-effort; never block the review */ }
+
+    // Hard ceiling while credibility flags remain: a resume with open, recruiter-
+    // visible issues should not read as 95%+ ("confident, no reservations"). This
+    // also restores headroom so the Game Plan can show a real projected gain
+    // instead of "98% → 98%".
+    const confidenceCeiling = openRiskFlags > 0 ? 94 : 98;
+    confidence = Math.max(45, Math.min(confidenceCeiling, Math.round(confidence)));
 
     let outcome = "🔴 Not Yet";
     let recommendation = "Not Yet";
@@ -3561,7 +4235,15 @@ function App() {
     }
     if (!improvements.length) addImprove("Polish the resume story", "Make sure the summary, skills, experience, and projects all point toward the same target role.", "Medium");
 
-    const improvedConfidence = Math.min(98, confidence + (confidence >= 90 ? 3 : 7));
+    // Projected confidence assumes the recommended edits get made. When open risk
+    // flags are what's holding confidence under the 94 ceiling, resolving them is
+    // precisely what the Game Plan targets — so the projection is allowed to climb
+    // past the current (flag-limited) number toward the true 98 ceiling. This
+    // replaces the old "98% → 98%" dead-end with a meaningful gain.
+    const projectionCeiling = 98;
+    const baseBump = confidence >= 90 ? 3 : 7;
+    const flagRecovery = openRiskFlags > 0 ? Math.min(4, openRiskFlags * 2) : 0;
+    const improvedConfidence = Math.min(projectionCeiling, confidence + baseBump + flagRecovery);
 
     const finalSignals = signals.length ? signals.slice(0,3) : ["Resume content imported successfully.", "Core sections are present.", "There is enough information for a first-pass review."];
     const finalConcerns = concerns.length ? concerns.slice(0,3) : ["No major recruiter concerns surfaced in the first pass."];
@@ -3701,7 +4383,7 @@ function App() {
       decisionBody,
       closing
     };
-  }, [hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, resumeStrength, topPriorities]);
+  }, [data, importText, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, resumeStrength, topPriorities]);
 
   // v11.4 — Coach Review. Answers "exactly what should this student improve, why does it
   // matter, and what should they do first?" Reuses the same derived resume flags/scoring the
@@ -3721,6 +4403,9 @@ function App() {
     // ---- New analyzers: verb tense, run-on bullets, and the category scorecard ----
     const verbTense = analyzeVerbTense(data);
     const runOn = analyzeRunOnBullets(data);
+    const metricDensity = analyzeMetricDensity(data);
+    const summaryQuality = analyzeSummaryQuality(data);
+    const sectionOrderAdvice = analyzeSectionOrderAdvice(data);
     // ---- Credibility & mechanics analyzers (Coach Jeff eval Sections 6,7,14,15,16,19,22,24) ----
     const mechanics = analyzeMechanics(data, importText);
     const metricCred = analyzeMetricCredibility(data, importText);
@@ -3729,6 +4414,12 @@ function App() {
     const fileNaming = analyzeFileNaming(data, currentResumeName);
     const limitations = parserLimitationNote();
     const scorecard = buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics, metricCred);
+
+    // ---- Manual-eval parity additions: evaluation context (§0), consolidated
+    // risk flags (§29), and a relative interview-conversion estimate (§31) ----
+    const evalContext = buildEvaluationContext(data, resumeStrength);
+    const riskFlags = buildRiskFlags(data, { verbTense, runOn, mechanics, metricCred, metricDensity });
+    const conversion = buildConversionEstimate(recruiterReview, scorecard, resumeStrength.fieldFit);
 
     // ---- Opening thoughts (conversational, tuned to where the resume stands) ----
     let opening;
@@ -3833,15 +4524,27 @@ function App() {
     const addImp = (stars, title, why, effort, impact) => {
       if (!improvements.some(x => x.title === title)) improvements.push({ stars, title, why, effort, impact });
     };
-    if (!hasSummary || conf < 88) {
-      addImp(5, hasSummary ? "Rewrite Professional Summary" : "Add Professional Summary",
-        "This is the first thing read and the fastest way to set your direction. A vague or missing summary makes a recruiter guess — and guessing lowers confidence.",
+    if (!hasSummary || conf < 88 || (summaryQuality && summaryQuality.count)) {
+      // If we read a specific weakness in the summary text, lead with it so the
+      // recommendation is concrete (manual eval §13), not a generic "rewrite."
+      const specificWhy = (summaryQuality && summaryQuality.findings && summaryQuality.findings.length)
+        ? summaryQuality.findings[0] + " See the Professional Summary Review below for the full list."
+        : "This is the first thing read and the fastest way to set your direction. A vague or missing summary makes a recruiter guess — and guessing lowers confidence.";
+      addImp(5, hasSummary ? "Sharpen your Professional Summary" : "Add Professional Summary",
+        specificWhy,
         "15 min", "High");
     }
     if (verbTense.count) {
       addImp(5, "Fix verb-tense consistency",
         verbTense.notes[0] || "Convert completed work to simple past tense so every bullet reads consistently.",
         "10 min", "High");
+    }
+    if (verbTense.inflatedCount) {
+      const inflNote = (verbTense.notes || []).find(n => /leadership verb|reads as solo/i.test(n)) ||
+        "Some bullets use a strong leadership verb on work that reads as solo. Reserve \u201CSpearheaded/Architected\u201D for genuine leadership or ground-up design; \u201CBuilt/Designed/Developed\u201D reads as more credible.";
+      addImp(3, "Right-size strong verbs",
+        inflNote,
+        "10 min", "Medium");
     }
     if (runOn.count) {
       addImp(3, "Tighten run-on bullets",
@@ -4099,7 +4802,7 @@ function App() {
     if (sumRaw && /\b(seeking|looking for|hard[- ]?working|to obtain|motivated (individual|professional)|results[- ]driven)\b/i.test(sumRaw)) {
       const firstSentence = cleanBullet(sumRaw.split(/(?<=[.!?])\s/)[0]);
       const target = String(data.field || "").trim();
-      addCard({ kind: "tighten", section: "Summary", weak: firstSentence,
+      addCard({ kind: "tighten", section: "Professional Summary", weak: firstSentence,
         note: "Open with the role you're targeting" + (target ? " (" + target + ")" : "") + " and one or two proof points — not with what you're seeking." });
     }
     for (const e of expList) {
@@ -4243,7 +4946,13 @@ function App() {
       sectionQuality,
       fileNaming,
       limitations,
-      scorecard
+      scorecard,
+      evalContext,
+      riskFlags,
+      conversion,
+      summaryQuality,
+      metricDensity,
+      sectionOrderAdvice
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
 
@@ -4276,7 +4985,7 @@ function App() {
             <div style={{ width: 32, height: 32, borderRadius: 8, background: "#1F3864", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>CJ</div>
             <div style={{ textAlign: "left" }}>
               <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.1, textAlign: "left" }}>Coach Jeff</div>
-              <div style={{ fontSize: 11, color: "#64748b", textAlign: "left" }}>Resume Optimizer · Import • Analyze • Customize • Improve • Validate • Export</div>
+              <div style={{ fontSize: 11, color: "#64748b", textAlign: "left" }}>Resume Optimizer · Import • Analyze • Customize • Improve • Validate • Export · Build {BUILD_VERSION}</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -4426,7 +5135,7 @@ function App() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 7, fontSize: 12 }}>
                 {[
                   ["Contact Information", data.name && data.contact && data.contact.email ? "✓" : "✕"],
-                  ["LinkedIn / Portfolio Link", data.contact && (data.contact.linkedin || data.contact.portfolio) ? "✓" : "✕"],
+                  ["LinkedIn / Portfolio Link", detectProfileLinks(data, importText).hasAny ? "✓" : "✕"],
                   ["Professional Summary", hasSummary ? "✓" : "○"],
                   ["Technical Skills", hasSkills ? "✓" : "✕"],
                   ["Work Experience", hasExperience ? "✓" : "○"],
