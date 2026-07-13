@@ -8,6 +8,8 @@
 <!-- v12.1.4-note: build stamp bumped to v12.1.3. -->
 <!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
+<!-- v12.1.9: Snapshot card headings now dynamically match the number of strengths/opportunities actually displayed (including singular labels), eliminating "Top 3" headings when only 1–2 items are available. -->
+<!-- v12.1.8: adds a concise Five Major Areas Review covering credibility, formatting consistency, writing mechanics, visual density, and recruiter perception — the five high-level areas previously only lightly covered compared with the detailed manual audit. -->
 <!-- v12.1.7: adds stage-aware section-order advice (manual eval §11) — for a new grad with a strong GPA (≥3.5), recommends Education above Skills (Summary→Education→Skills→Experience→Projects) WITH the honest senior-IC caveat; affirms when already correct; stays silent for experienced/weak-GPA/no-GPA cases. smartRecommendedOrder is now stage-aware so "Apply Smart Order" matches the advice, and recommendSectionOrder's mismatch check now compares only sections the resume actually has (fixes a pre-existing bug where correctly-ordered resumes were penalized for missing optional sections like volunteer). -->
 <!-- v12.0.1: cleaned escaped Unicode sequences in UI copy. -->
 <!-- v12.0.5: Fixed browser-tab title (now v12.0.5); removed the stray "}" that leaked into the Resume Workshop view and the load-time TreeWalker cleanup hack that masked it (it could also blank a legitimate "}" in user resume text). No feature changes. -->
@@ -27,7 +29,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Coach Jeff Resume Optimizer v12.1.7</title>
+<title>Coach Jeff Resume Optimizer v12.1.9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -56,7 +58,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.1.7";
+const BUILD_VERSION = "v12.1.9";
 
 const NAVY = "1F3864";
 const GRAY = "595959";
@@ -2305,6 +2307,60 @@ function buildRiskFlags(data, ctx) {
   return flags;
 }
 
+
+// ---- Five Major Areas Review (manual-audit coverage) ----
+// Keeps the optimizer concise while ensuring it does not miss the five major
+// high-level areas surfaced by the detailed manual resume evaluation.
+function buildFiveMajorAreasReview(data, ctx) {
+  const { mechanics, metricCred, runOn, metricDensity, sectionQuality, scorecard, recruiterReview } = ctx || {};
+  const formattingCategory = scorecard && Array.isArray(scorecard.categories)
+    ? scorecard.categories.find(c => c.key === "Formatting & Polish") : null;
+  const formatScore = formattingCategory ? formattingCategory.score : 85;
+  const overloadCount = Math.max((runOn && runOn.count) || 0, (metricDensity && metricDensity.count) || 0);
+  const sectionIssueCount = (sectionQuality && sectionQuality.count) || 0;
+  const confidence = (recruiterReview && recruiterReview.confidence) || 0;
+
+  return [
+    {
+      title: "Resume credibility",
+      status: metricCred && metricCred.count ? "Needs attention" : "Strong",
+      note: metricCred && metricCred.count
+        ? (metricCred.count + " metric claim" + (metricCred.count === 1 ? " may" : "s may") + " feel difficult to verify. Keep the numbers, but be ready to explain the measurement method and soften absolute claims that cannot be defended.")
+        : "The accomplishments and metrics generally read as believable. Continue using only numbers you can explain clearly in an interview."
+    },
+    {
+      title: "Formatting consistency",
+      status: (formatScore < 85 || sectionIssueCount) ? "Review" : "Strong",
+      note: (formatScore < 85 || sectionIssueCount)
+        ? "The overall structure is ATS-friendly, but spacing, section consistency, or entry formatting may need a final visual cleanup before export."
+        : "The structure and formatting are consistent enough for an ATS-friendly, recruiter-readable resume."
+    },
+    {
+      title: "Writing mechanics",
+      status: mechanics && mechanics.count ? "Needs attention" : "Strong",
+      note: mechanics && mechanics.count
+        ? (mechanics.count + " small spelling, capitalization, punctuation, spacing, or brand-name issue" + (mechanics.count === 1 ? " was" : "s were") + " detected. These are quick fixes with an outsized effect on polish.")
+        : "No meaningful spelling, capitalization, punctuation, or spacing problems were detected."
+    },
+    {
+      title: "Visual density",
+      status: overloadCount ? "Review" : "Balanced",
+      note: overloadCount
+        ? (overloadCount + " bullet" + (overloadCount === 1 ? " is" : "s are") + " carrying too many results or metrics. Lead with one headline result and preserve enough white space for a fast scan.")
+        : "The resume presents substantial information without obvious metric overload. Preserve clear spacing between sections and entries."
+    },
+    {
+      title: "Recruiter perception",
+      status: confidence >= 85 ? "Positive" : confidence >= 72 ? "Promising" : "Mixed",
+      note: confidence >= 85
+        ? "The resume creates a strong first impression. The remaining work is precision: make the target role unmistakable and keep the strongest evidence easy to find."
+        : confidence >= 72
+          ? "The foundation is promising, but a recruiter may need to work too hard to identify the target role or strongest evidence. Tighten positioning and prioritize the most relevant proof."
+          : "The resume contains useful material, but direction and evidence need to become clearer before a recruiter is likely to move quickly toward an interview."
+    }
+  ];
+}
+
 // ---- Interview Conversion estimate (manual eval §31) ----
 // A RELATIVE, caveated read — never a promised hit rate. Blends recruiter
 // confidence, overall score, and field fit into a qualitative band.
@@ -3440,6 +3496,14 @@ function App() {
       if (sc.tierNote) parts.push(P(sc.tierNote, "color:#475569;"));
     }
 
+    // 3c. Five Major Areas Review — concise coverage of the five high-level
+    // areas that the detailed manual audit handles more granularly.
+    if (Array.isArray(cr.fiveMajorAreas) && cr.fiveMajorAreas.length) {
+      parts.push(H2("Five Major Areas Review"));
+      parts.push(P("These five areas summarize the major issues that a detailed manual audit would examine more deeply, without adding unnecessary report length.", "color:#475569;"));
+      parts.push(UL(cr.fiveMajorAreas, (item) => '<b>' + esc(item.title) + ' — ' + esc(item.status) + '</b>: ' + esc(item.note)));
+    }
+
     // 3c. Resume Risk Flags — consolidated credibility risks (manual eval §29).
     if (Array.isArray(cr.riskFlags) && cr.riskFlags.length) {
       parts.push(H2("Resume Risk Flags"));
@@ -4420,6 +4484,7 @@ function App() {
     const evalContext = buildEvaluationContext(data, resumeStrength);
     const riskFlags = buildRiskFlags(data, { verbTense, runOn, mechanics, metricCred, metricDensity });
     const conversion = buildConversionEstimate(recruiterReview, scorecard, resumeStrength.fieldFit);
+    const fiveMajorAreas = buildFiveMajorAreasReview(data, { mechanics, metricCred, runOn, metricDensity, sectionQuality, scorecard, recruiterReview });
 
     // ---- Opening thoughts (conversational, tuned to where the resume stands) ----
     let opening;
@@ -4950,6 +5015,7 @@ function App() {
       evalContext,
       riskFlags,
       conversion,
+      fiveMajorAreas,
       summaryQuality,
       metricDensity,
       sectionOrderAdvice
@@ -5113,7 +5179,7 @@ function App() {
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>Top 3 Strengths</h3>
+              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>{snapshotStrengths.length === 1 ? "Top Strength" : `Top ${snapshotStrengths.length || 1} Strengths`}</h3>
               <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>These are the areas recruiters are most likely to notice first.</p>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55, fontSize: 12.5 }}>
                 {snapshotStrengths.length ? snapshotStrengths.map((s,i) => <li key={i}>✅ {s}</li>) : <li>Resume content imported successfully.</li>}
@@ -5121,7 +5187,7 @@ function App() {
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>Top 3 Opportunities</h3>
+              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>{snapshotOpportunities.length === 1 ? "Top Opportunity" : `Top ${snapshotOpportunities.length || 1} Opportunities`}</h3>
               <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>Addressing these items should improve recruiter confidence fastest.</p>
               <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55, fontSize: 12.5 }}>
                 {snapshotOpportunities.length ? snapshotOpportunities.map((s,i) => <li key={i}>🟡 {s}</li>) : <li>Continue to Recruiter Review for deeper feedback.</li>}
@@ -5238,6 +5304,23 @@ function App() {
               </div>
             ))}
           </div>
+
+          {/* 5b. Five Major Areas Review */}
+          {Array.isArray(coachReview.fiveMajorAreas) && coachReview.fiveMajorAreas.length ? (
+            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+              <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 5px" }}>🔍 Five Major Areas Review</h3>
+              <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px", lineHeight: 1.5 }}>A concise check of five areas covered more granularly in a full manual resume audit.</p>
+              {coachReview.fiveMajorAreas.map((item, i) => (
+                <div key={i} style={{ padding: "10px 0", borderBottom: i < coachReview.fiveMajorAreas.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 900, color: "#1e293b" }}>{i + 1}. {item.title}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 900, color: "#1F3864", background: "#eff6ff", borderRadius: 999, padding: "3px 8px" }}>{item.status}</div>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5, marginTop: 4 }}>{item.note}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* 6. My Decision */}
           <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 16, padding: "18px 20px", textAlign: "left", marginBottom: 14 }}>
