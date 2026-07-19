@@ -8,6 +8,16 @@
 <!-- v12.1.4-note: build stamp bumped to v12.1.3. -->
 <!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
+<!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
+<!-- v12.2.8: SKILLS PARSER — switched from a hard-coded label list to GENERIC label-shape detection, ending the label whack-a-mole. Any "Short Label:" sub-heading is now recognized by shape (a short 1-4 word phrase + colon, followed by a comma-list of skills), so novel labels like "Machine Learning & AI:", "High-Performance Computing:", "Infrastructure & DevOps:", "Networking & Storage:" are stripped and bucketed correctly without being enumerated. A guard requires the post-colon content to look like a skill list (not prose), so a real skill/line containing a colon is not mistaken for a label. Verified on two real resumes (Soham, Samuel) plus dash/bullet/numbered/classic formats. Known minor edge case: a single flattened line cramming multiple label groups with no delimiters can still mis-bucket one trailing label word; this format is prevented by the v12.1.3 line reconstruction in the normal PDF path. -->
+<!-- v12.2.7: PARSER FIX for imported skills. Two root-cause bugs made lines like "- Languages: Python, C++..." import as a garbled blob in Technical Skills: (1) a leading bullet/dash/number marker was never stripped before label detection, so the label was never recognized and the whole line (dash + "Languages :" + values) fell through as raw text; (2) the recognized-label list was too narrow (missing "Languages", "Frameworks & Libraries", "Databases & Tools", "Cloud & DevOps", etc.). Now leading markers are stripped first, the label set is much broader, compound labels ("Programming Languages") are matched before their substrings ("Languages") so no word is orphaned, and label-splitting only happens at real boundaries. Verified across dash/bullet/numbered/classic/combined skill formats. Note: the grey "Power BI, Tableau, Looker" text in empty skill fields is placeholder text, not imported data. -->
+<!-- v12.2.6: Replaced the "missing repeated terms" blocklist with an ALLOWLIST, ending the whack-a-mole. That card now shows a repeated word only if it LOOKS like a skill: it is in some field's SKILL_BANK, is a known tech/tool token, appears Capitalized/ALL-CAPS as a proper noun in the original posting, or contains skill-shaped punctuation (c++, ci/cd, node.js). Generic English and garbage tokens (commitment, solutions, reality, "fdes") are dropped automatically without needing a blocklist entry. IMPORTANT: this only changes the user-facing "missing repeated terms" display (via a new missingDisplay field); the raw missing list still feeds the match/projected score, which is unchanged. -->
+<!-- v12.2.5: Added more generic body words to the stopword filter (entrusted, potential, off, right, world-changing, operate, and common adverbs) that were surfacing in "missing repeated terms." Verified this does NOT touch "operations" or "supply" (the domain-gap skills that drive the role-fit warning), does not break multi-word skill matching like "Customer Service"/"Technical Support" (phrase-level match is unaffected by single-word stopwords), and removed "cross-functional" from the addition because it is a real listed skill. -->
+<!-- v12.2.4: Extended the keyword stopword list with generic body words that were surfacing as "missing repeated terms" but are never skills (real, paid, grad, decisions, embed, outcomes, engineers, and common filler adverbs). Left borderline words that can carry meaning (solve, problem, product, technical) so real signal is not hidden. Verified no added stopword collides with any real skill name, and the match score / role-fit warning behavior is unchanged. -->
+<!-- v12.2.3: Two fixes. (1) Boilerplate strip now also removes short page-chrome / ATS-footer lines ("Jobs powered by Lever", "...Home Page", "Apply for this job", social/share links, cookie notices) that were leaking noise into scoring. (2) Fixed the role-fit warning trigger: it now fires on 2+ cross-domain gaps regardless of how many trivial in-field gaps sit alongside them. Previously a percentage gate let closeable in-field gaps (Java, Data Structures for a CS grad) dilute the ratio and mask a genuine domain mismatch (Supply Chain + Operations), so the warning stayed silent when it should have fired. -->
+<!-- v12.2.2: Added a role-fit warning to Job Match. When the biggest missing skills are cross-domain (they belong only to OTHER fields' skill banks than the user's selected field, e.g. Supply Chain/SLA for a CS grad) and have no adjacent resume evidence, a firm but non-blocking warning appears: it names those un-closeable gaps, notes the "projected after tailoring" score assumes they can be added truthfully, leaves the decision to the user, and distinguishes them from in-field gaps (Java, Data Structures) that a user can legitimately add. Fires only on genuine domain mismatch, never on a low score alone. -->
+<!-- v12.2.1: Job Match scoring now strips boilerplate (EEO/legal, "Life at [company]", benefits, scam/privacy paragraphs) and the employer's own name before computing the match percentage, so the score reflects real role/skill overlap instead of filler. Cleaning applies only to the scoring pass — the pasted text in the box is never modified. Extended the keyword stopword list to drop common non-skill words (what/how/more/customer/etc.). Added a short instruction under the paste box on what to copy. -->
+<!-- v12.2.0: Gated workflow for steps 5–8. Job Match, Resume Workshop, ATS Inspection, and Export are now shown one at a time (matching steps 1–4) instead of stacked on one scrolling page. A step rail + Back/Next nav replace the old scroll-to-anchor "Continue" buttons. The section editors now live inside the Resume Workshop step, with a guidance rail (Coach priorities, recruiter tips, job-specific priorities) beside the editor on wide screens and stacked above it on narrow screens, so users no longer bounce back to earlier screens. ATS Inspection now re-checks the edited resume and shows a before/after score with real findings, and offers a user-chosen "Back to Workshop to fix" vs "Looks good — I'm done" fork instead of any automatic loop-back. -->
 <!-- v12.1.9: Snapshot card headings now dynamically match the number of strengths/opportunities actually displayed (including singular labels), eliminating "Top 3" headings when only 1–2 items are available. -->
 <!-- v12.1.8: adds a concise Five Major Areas Review covering credibility, formatting consistency, writing mechanics, visual density, and recruiter perception — the five high-level areas previously only lightly covered compared with the detailed manual audit. -->
 <!-- v12.1.7: adds stage-aware section-order advice (manual eval §11) — for a new grad with a strong GPA (≥3.5), recommends Education above Skills (Summary→Education→Skills→Experience→Projects) WITH the honest senior-IC caveat; affirms when already correct; stays silent for experienced/weak-GPA/no-GPA cases. smartRecommendedOrder is now stage-aware so "Apply Smart Order" matches the advice, and recommendSectionOrder's mismatch check now compares only sections the resume actually has (fixes a pre-existing bug where correctly-ordered resumes were penalized for missing optional sections like volunteer). -->
@@ -29,7 +39,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Coach Jeff Resume Optimizer v12.1.9</title>
+<title>Coach Jeff Resume Optimizer v12.2.9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -45,6 +55,12 @@
   .spin { animation: pulse 1.2s ease-in-out infinite; }
   .cj-step { padding: 7px 10px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-size: 11px; font-weight: 800; white-space: nowrap; }
   .cj-step.active { background: #1F3864; color: #fff; border-color: #1F3864; }
+  /* v12.2.0: Resume Workshop editor + tips. Sidebar on wide screens; on narrow
+     screens the tips rail moves above the editor so it stays visible on phones. */
+  @media (max-width: 900px) {
+    .workshop-editor-grid { grid-template-columns: 1fr !important; }
+    .workshop-tips-col { position: static !important; order: -1; margin-bottom: 8px; }
+  }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
@@ -58,7 +74,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.1.9";
+const BUILD_VERSION = "v12.2.9";
 
 const NAVY = "1F3864";
 const GRAY = "595959";
@@ -189,7 +205,7 @@ function sortSkillsByJobPost(skills, jobPost) {
   });
 }
 
-const KEYWORD_STOPWORDS = new Set("a an the and or but of to in on at for with by from as is are was were be been being this that these those you your our their they them it its will would should could can may must have has had do does did not no if then than into over under about across after before between during through within without upon per via amid among against toward above below here there such only just very also able based both well get got like need needs needed want wants ideal join seek seeking looking make making take taking new use used using include includes including provide provides help helping ensure ensuring build building create creating develop developing analyze analyzing manage managing support supporting present presenting lead leading drive driving work works working experience team teams company companies job role roles position positions opportunity opportunities please apply applicant candidate required preferred responsibilities requirements qualifications skill skills ability abilities strong excellent good great plus etc years year month months day days week weeks fulltime full-time parttime part-time salary pay benefits remote hybrid onsite location locations employer employee employees equal opportunity diversity inclusion veteran disability authorization sponsorship resume cover letter application".split(/\s+/));
+const KEYWORD_STOPWORDS = new Set("a an the and or but of to in on at for with by from as is are was were be been being this that these those you your our their they them it its will would should could can may must have has had do does did not no if then than into over under about across after before between during through within without upon per via amid among against toward above below here there such only just very also able based both well get got like need needs needed want wants ideal join seek seeking looking make making take taking new use used using include includes including provide provides help helping ensure ensuring build building create creating develop developing analyze analyzing manage managing support supporting present presenting lead leading drive driving work works working experience team teams company companies job role roles position positions opportunity opportunities please apply applicant candidate required preferred responsibilities requirements qualifications skill skills ability abilities strong excellent good great plus etc years year month months day days week weeks fulltime full-time parttime part-time salary pay benefits remote hybrid onsite location locations employer employee employees equal opportunity diversity inclusion veteran disability authorization sponsorship resume cover letter application what when where why how who which whom whose all any some more most much many few less least forward backward customer customers user users people person world class best top great growth mission vision value values culture impact global local daily weekly monthly across around within one two three first second next last part full high low big small long short early late real paid grad grads decision decisions embed embedded outcome outcomes engineers stuff thing things various several multiple etc including includes ranging depending given overall additional additionally furthermore however therefore meanwhile essentially basically simply really actually truly highly deeply widely broadly entrusted potential off right wrong world-changing worldchanging operate operates operating operated matter matters mattering everything anything something someone anyone everyone nothing meaningful meaningfully directly indirectly effectively efficiently successfully proactively collaboratively end-to-end".split(/\s+/));
 function normSkill(s) { return String(s || "").trim().replace(/\s+/g, " "); }
 function addUniqueCsv(existing, item) {
   const clean = normSkill(item);
@@ -582,43 +598,95 @@ function _parseSkills(lines) {
   const importChanges = [];
   const seenLabels = new Set();
 
+  // v12.2.8: Generic label detection instead of a hard-coded list. A skills
+  // sub-label has a recognizable SHAPE — a short phrase (1–4 words, often Title
+  // Case, may contain & / - or "and") followed by a colon, then a comma-list of
+  // skills. We detect that shape so ANY label works ("Machine Learning & AI:",
+  // "Networking & Storage:", "High-Performance Computing:") without enumerating it.
+  // The known-label matcher below is used only to choose the bucket; unknown
+  // labels still get stripped and their contents bucketed as technical.
+  const stripLeadMarker = (s) => String(s || "").replace(/^\s*(?:[-–—•*·▪◦‣]|\d+[.)])\s*/, "").trim();
+  // A generic "label:" prefix: 1–4 words of letters (with optional &, /, -, +, and,
+  // digits like "Fortran 94" excluded by requiring the head to be wordy), then a
+  // colon. Capped length so a full sentence with a colon isn't treated as a label.
+  const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
+
   function normalizeLabel(label) {
     const l = String(label || "").toLowerCase().replace(/\s+/g, " ").trim();
-    if (/technical|core skills|core competencies|programming/.test(l)) return "technical";
-    if (/data visualization|visualization|reporting|bi tools|business intelligence/.test(l)) return "dataVisualization";
-    if (/tools|platforms|technologies|software|development tools/.test(l)) return "tools";
-    if (/domain|areas of expertise|functional expertise|business knowledge|knowledge/.test(l)) return "domain";
+    if (/data visualization|visualization|reporting|bi tools|business intelligence|dashboard/.test(l)) return "dataVisualization";
+    if (/domain|areas of expertise|functional expertise|business knowledge|methodolog|concepts|governance|analytics/.test(l)) return "domain";
+    if (/database|cloud|devops|infrastructure|networking|storage|tools|platforms|technolog|software|development tools|operating systems|ide/.test(l)) return "tools";
+    if (/technical|core skills|core competencies|programming|language|framework|librar|machine learning|deep learning|\bai\b|data science|computing|hpc/.test(l)) return "technical";
     return "";
   }
+  // Decide whether a leading "Word...:" is really a skills LABEL vs. a skill that
+  // happens to contain a colon. Real labels are short, mostly alphabetic, and the
+  // remainder is a comma/space list of skill-like tokens.
+  const looksLikeLabel = (head) => {
+    const h = String(head || "").trim();
+    if (!h || h.length > 40) return false;
+    if ((h.match(/\s+/g) || []).length > 4) return false; // too many words
+    if (/\d{3,}/.test(h)) return false; // long numbers aren't labels
+    return /[A-Za-z]/.test(h);
+  };
+  // The content after a label should read like a skill list: mostly short,
+  // comma-separated tokens — not a prose sentence. Heuristic: either it has
+  // commas, or it's short with few words; and it's not a full sentence with
+  // connective words that signal prose.
+  const looksLikeSkillList = (rest) => {
+    const r = String(rest || "").trim();
+    if (!r) return false;
+    if (/[.!?]$/.test(r) && !/,/.test(r)) return false; // ends like a sentence, no commas
+    if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !/,/.test(r)) return false;
+    // Has commas (list) OR is short enough to be a couple of skills.
+    return /,/.test(r) || r.split(/\s+/).length <= 4;
+  };
 
   function addToBucket(item, bucket) {
-    let s = String(item || "")
-      .replace(/^(Technical Skills|Technical \/ Core Skills|Core Skills|Core Competencies|Data Visualization|Reporting & Visualization|BI Tools|Tools\s*&\s*Platforms|Tools\s*\/\s*Platforms|Tools|Platforms|Technologies|Software|Development Tools|Domain Knowledge|Areas of Expertise|Functional Expertise|Business Knowledge|Programming Languages)\s*:\s*/i, "")
-      .trim();
+    let s = stripLeadMarker(String(item || "")).trim();
     if (!s) return;
-    if (/^tools\s*&$/i.test(s)) {
-      importChanges.push('Removed formatting artifact: "Tools &"');
+    // Drop stray connective artifacts from mangled labels.
+    if (/^(?:&|and|\/|-|tools|frameworks|databases|cloud|infrastructure|networking)?\s*&?$/i.test(s) && s.length <= 3) {
+      importChanges.push('Removed formatting artifact: "' + s + '"');
       return;
     }
     buckets[bucket || "technical"].push(s);
   }
 
   (lines || []).forEach(raw => {
-    const line = String(raw || "").trim();
+    // Strip a leading bullet BEFORE anything else so label detection sees the real
+    // start of the line (root cause of the "- Languages :" leak).
+    let line = stripLeadMarker(String(raw || ""));
     if (!line) return;
 
-    const chunks = line.split(/(?=(?:Technical Skills|Technical \/ Core Skills|Core Skills|Core Competencies|Data Visualization|Reporting & Visualization|BI Tools|Tools\s*&\s*Platforms|Tools\s*\/\s*Platforms|Tools|Platforms|Technologies|Software|Development Tools|Domain Knowledge|Areas of Expertise|Functional Expertise|Business Knowledge|Programming Languages)\s*:)/i);
+    // Detect a leading generic label. If found and it looks like a label (AND what
+    // follows looks like a skill list, not prose), use it to pick the bucket.
+    let bucket = "technical";
+    const m = line.match(GENERIC_LABEL);
+    if (m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length))) {
+      seenLabels.add(m[1].trim());
+      bucket = normalizeLabel(m[1]) || "technical";
+      line = line.slice(m[0].length);
+    }
 
-    chunks.forEach(chunk => {
-      let c = chunk.trim();
-      if (!c) return;
-      const labelMatch = c.match(/^(Technical Skills|Technical \/ Core Skills|Core Skills|Core Competencies|Data Visualization|Reporting & Visualization|BI Tools|Tools\s*&\s*Platforms|Tools\s*\/\s*Platforms|Tools|Platforms|Technologies|Software|Development Tools|Domain Knowledge|Areas of Expertise|Functional Expertise|Business Knowledge|Programming Languages)\s*:\s*/i);
-      const label = labelMatch ? labelMatch[1] : "";
-      const bucket = normalizeLabel(label) || "technical";
-      if (label) seenLabels.add(label);
-      c = c.replace(/^(Technical Skills|Technical \/ Core Skills|Core Skills|Core Competencies|Data Visualization|Reporting & Visualization|BI Tools|Tools\s*&\s*Platforms|Tools\s*\/\s*Platforms|Tools|Platforms|Technologies|Software|Development Tools|Domain Knowledge|Areas of Expertise|Functional Expertise|Business Knowledge|Programming Languages)\s*:\s*/i, "").trim();
+    // Some resumes cram several "Label: a, b   Label2: c, d" groups on one line.
+    // After removing the first label, re-scan the remainder for additional
+    // "  Word...:" groups and split there, carrying each group's own bucket.
+    const INNER = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
+    let segments = [];
+    let lastIdx = 0, lastBucket = bucket, im;
+    while ((im = INNER.exec(line)) !== null) {
+      if (looksLikeLabel(im[1]) && looksLikeSkillList(line.slice(im.index + im[0].length))) {
+        segments.push({ text: line.slice(lastIdx, im.index), bucket: lastBucket });
+        seenLabels.add(im[1].trim());
+        lastBucket = normalizeLabel(im[1]) || "technical";
+        lastIdx = im.index + im[0].length;
+      }
+    }
+    segments.push({ text: line.slice(lastIdx), bucket: lastBucket });
 
-      c.split(/[,;|••]/).map(x => x.trim()).filter(Boolean).forEach(item => addToBucket(item, bucket));
+    segments.forEach(seg => {
+      seg.text.split(/[,;|••]/).map(x => x.trim()).filter(Boolean).forEach(item => addToBucket(item, seg.bucket));
     });
   });
 
@@ -1405,13 +1473,142 @@ function getSuggestedSkills(field, jobPost) {
   const uniqueSkills = Array.from(new Set(base));
   return jobPost && jobPost.trim() ? sortSkillsByJobPost(uniqueSkills, jobPost) : uniqueSkills;
 }
+// v12.2.1: Strip boilerplate from a pasted job posting BEFORE scoring, so the
+// match percentage reflects real role/skill overlap instead of legal, benefits,
+// and "Life at [company]" filler. This is used only for the match calculation —
+// the text the user sees in the paste box is never modified.
+function cleanJobPostingForScoring(raw) {
+  let text = String(raw || "");
+  if (!text.trim()) return text;
+  // Phrases that mark the start of a boilerplate block. Once one appears, we drop
+  // from that point to the next blank-line gap (or to the end for closing legalese).
+  const BLOCK_MARKERS = [
+    /equal opportunity employer/i,
+    /equal employment opportunity/i,
+    /\beeo\b/i,
+    /affirmative action/i,
+    /life at [a-z0-9&.\- ]{2,30}/i,
+    /reasonable accommodation/i,
+    /accommodation for (?:the|those|people|individuals)/i,
+    /you will never be asked to submit a payment/i,
+    /suspect (?:that )?you(?:'| ha)?ve been contacted by a scammer/i,
+    /internet crime complaint center/i,
+    /privacy policy/i,
+    /how your personal data will be processed/i,
+    /we are committed to (?:making|building|creating|diversity)/i,
+    /benefits (?:and perks|package|include|overview)/i,
+    /perks and benefits/i,
+    /compensation (?:range|and benefits)/i,
+    /(?:e[- ]?verify|visa sponsorship|work authorization)/i,
+    /applicants? (?:with|who require|needing)/i,
+    /background check/i,
+    /to all recruitment agencies/i,
+    /agencies? (?:are asked|should not|please)/i,
+  ];
+  // v12.2.3: short page-chrome / navigation / ATS-footer lines. These are matched
+  // against whole lines (usually short and standalone) so we don't clip real
+  // sentences — e.g. "Jobs powered by Lever", "Palantir Technologies Home Page",
+  // "Apply for this job", social/share links, cookie notices.
+  const FOOTER_LINE_MARKERS = [
+    /powered by\s+(?:lever|greenhouse|workday|ashby|icims|smartrecruiters|jobvite|taleo|bamboohr)/i,
+    /^jobs powered by/i,
+    /home\s?page$/i,
+    /^apply(?: for this job| now| here)?\b/i,
+    /^back to (?:jobs|all jobs|search|listings|careers)/i,
+    /^(?:view|see) (?:all )?(?:open )?(?:jobs|roles|openings|positions)/i,
+    /^share (?:this )?(?:job|posting|role)/i,
+    /^(?:share on|follow us)/i,
+    /(?:facebook|twitter|linkedin|instagram)\s+(?:logo|icon)?$/i,
+    /\blogo$/i,
+    /^cookie(?:s| policy| settings| preferences)/i,
+    /we use cookies/i,
+    /^©|\ball rights reserved\b/i,
+    /^powered by\b/i,
+    /^(?:sign in|log in|create account|register)\b/i,
+    /^\s*(?:home|careers|about|contact|blog|press|team|company)\s*$/i,
+    /^save (?:this )?job/i,
+    /^email (?:this|to a friend)/i,
+    /^print (?:this )?(?:job|posting|page)/i,
+  ];
+  // Split into paragraphs on blank lines; drop any paragraph that begins with (or
+  // is dominated by) a boilerplate marker. This keeps responsibilities/requirements
+  // intact while removing the trailing legal and culture sections.
+  const paragraphs = text.split(/\n\s*\n/);
+  const kept = paragraphs.filter(p => {
+    const head = p.slice(0, 200);
+    return !BLOCK_MARKERS.some(rx => rx.test(head));
+  });
+  let cleaned = kept.join("\n\n");
+  // Drop single boilerplate lines and short page-chrome/footer lines that may sit
+  // inside a kept block. Footer patterns only apply to short lines (<= 60 chars)
+  // so we never remove a real requirement sentence that happens to contain a word.
+  cleaned = cleaned.split(/\n/).filter(line => {
+    const l = line.trim();
+    if (!l) return true;
+    if (BLOCK_MARKERS.some(rx => rx.test(l))) return false;
+    if (l.length <= 60 && FOOTER_LINE_MARKERS.some(rx => rx.test(l))) return false;
+    return true;
+  }).join("\n");
+  // If stripping removed almost everything (e.g. a posting that was mostly one
+  // block), fall back to the original so we never score against empty text.
+  if (cleaned.replace(/\s+/g, "").length < Math.max(60, text.replace(/\s+/g, "").length * 0.15)) return text;
+  return cleaned;
+}
+
 function analyzeBuilderOptimization(data) {
   const resumeText = collectResumeText(data);
   const resumeLower = resumeText.toLowerCase();
-  const jobPost = data.jobPost || "";
+  // v12.2.9: smarter skill-presence matching used everywhere below. The old checks
+  // were literal substring tests on the resume, producing false gaps two ways:
+  //   (1) punctuation/hyphen/spacing — "High-Performance Computing" (posting) vs
+  //       "High Performance Computing" (resume) failed on the hyphen;
+  //   (2) concept vs. keyword — a resume full of PyTorch/TensorFlow/CNN obviously
+  //       demonstrates "Machine Learning" but never spells that exact phrase.
+  // resumeHasSkill normalizes both sides and credits a skill when the resume shows
+  // the skill itself OR specific, unambiguous evidence terms for it.
+  const normForMatch = (s) => String(s || "").toLowerCase().replace(/[-_/.,]+/g, " ").replace(/\s+/g, " ").trim();
+  const resumeNorm = normForMatch(resumeText);
+  const SKILL_EVIDENCE_RAW = {
+    "machine learning": ["pytorch", "tensorflow", "scikit-learn", "scikit learn", "keras", "neural network", "deep learning", "cnn", "resnet", "classification model", "model training", "trained cnn", "xgboost", "random forest", "supervised learning"],
+    "deep learning": ["pytorch", "tensorflow", "keras", "cnn", "resnet", "vgg", "googlenet", "neural network", "fcnn"],
+    "high performance computing": ["cuda", "mpi", "slurm", "hpc", "gpu-accelerated", "gpu accelerated", "supercomputer", "lonestar", "tacc", "parallel computing"],
+    "vector search": ["faiss", "vector database", "embedding retrieval", "nearest neighbor", "ann index"],
+    "artificial intelligence": ["pytorch", "tensorflow", "machine learning", "deep learning", "neural network", "llm", "nlp"],
+    "data structures": ["algorithms", "scheduling simulator", "round robin", "data structure"],
+    "ci/cd": ["github actions", "gitlab ci", "jenkins", "continuous integration", "continuous deployment", "ci cd"],
+    "rest apis": ["fastapi", "flask", "rest api", "restful", "endpoint", "api"],
+    "apis": ["fastapi", "flask", "rest api", "restful", "graphql", "endpoint"],
+    "parallel computing": ["cuda", "mpi", "openmp", "slurm", "gpu", "distributed computing"],
+    "distributed systems": ["distributed", "raft", "consensus", "kubernetes", "microservices"],
+    "cloud computing": ["aws", "azure", "gcp", "ec2", "lambda", "s3", "cloud"],
+    "containerization": ["docker", "kubernetes", "container"],
+  };
+  // Normalize the KEYS too, so a lookup by a normalized skill name (e.g. "CI/CD" ->
+  // "ci cd") finds its evidence list.
+  const SKILL_EVIDENCE = {};
+  Object.keys(SKILL_EVIDENCE_RAW).forEach(k => { SKILL_EVIDENCE[normForMatch(k)] = SKILL_EVIDENCE_RAW[k]; });
+  const resumeHasSkill = (skill) => {
+    const n = normForMatch(skill);
+    if (!n) return false;
+    if (resumeNorm.includes(n)) return true;
+    const ev = SKILL_EVIDENCE[n];
+    if (ev && ev.some(term => resumeNorm.includes(normForMatch(term)))) return true;
+    return false;
+  };
+  const jobPostRaw = data.jobPost || "";
+  // Score against a boilerplate-stripped copy; the paste box keeps the original.
+  let jobPost = cleanJobPostingForScoring(jobPostRaw);
+  // Remove the employer's own name from scoring — it repeats often in postings
+  // and otherwise shows up as a "missing term" the resume can't reasonably match.
+  const companyGuess = (jobPostRaw.match(/(?:at|join|about)\s+([A-Z][A-Za-z0-9&.\-]{2,20})(?:['’]s)?\b/) || [])[1]
+    || (jobPostRaw.match(/([A-Z][A-Za-z0-9&.\-]{2,20})\s+is\s+(?:an?\s+)?(?:equal opportunity|committed|looking|seeking|hiring)/) || [])[1]
+    || "";
+  if (companyGuess && companyGuess.length >= 3) {
+    jobPost = jobPost.replace(new RegExp("\\b" + companyGuess.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:['’]s)?\\b", "gi"), " ");
+  }
   const fieldSkills = getSuggestedSkills(data.field, jobPost);
-  const skillsAlready = fieldSkills.filter(s => resumeLower.includes(s.toLowerCase()));
-  const suggestedMissing = fieldSkills.filter(s => !resumeLower.includes(s.toLowerCase())).slice(0, 12);
+  const skillsAlready = fieldSkills.filter(s => resumeHasSkill(s));
+  const suggestedMissing = fieldSkills.filter(s => !resumeHasSkill(s)).slice(0, 12);
   let keyword = null;
   if (jobPost.trim()) {
     const jobFreq = tokenizeImportant(jobPost);
@@ -1420,24 +1617,103 @@ function analyzeBuilderOptimization(data) {
     const ranked = (recurring.length >= 8 ? recurring : Object.keys(jobFreq)).sort((a,b) => jobFreq[b] - jobFreq[a]).slice(0, 25);
     const present = ranked.filter(w => resumeWords.has(w));
     const missing = ranked.filter(w => !resumeWords.has(w));
+    // v12.2.6: ALLOWLIST for the "missing repeated terms" card. Instead of showing
+    // every repeated word minus an ever-growing blocklist (which always trails real
+    // postings and even let garbage tokens like "fdes" through), we now show a term
+    // only if it LOOKS like a skill/tool. A term qualifies if any of:
+    //   (a) it appears in ANY field's SKILL_BANK (a known skill), or
+    //   (b) it's a known tech/tool token, or
+    //   (c) it appears Capitalized or ALL-CAPS in the original posting (proper noun
+    //       / technology name, e.g. "Kafka", "AWS"), or
+    //   (d) it contains skill-shaped punctuation (c++, ci/cd, node.js).
+    // Everything else — generic lowercase English (commitment, solutions, reality,
+    // fdes) — is dropped. This ends the blocklist whack-a-mole permanently.
+    const allBankSkills = new Set(Object.values(SKILL_BANK).flat().flatMap(s => s.toLowerCase().split(/[\s\/\-]+/)).filter(w => w.length >= 2));
+    const TECHY_TOKENS = new Set(["api","apis","sql","aws","gcp","azure","css","html","json","yaml","xml","sdk","cli","ci","cd","ci/cd","etl","ml","ai","llm","nlp","rest","grpc","graphql","oauth","jwt","saas","paas","iaas","devops","kubernetes","docker","linux","unix","bash","git","github","gitlab","jira","figma","react","angular","vue","node","nodejs","django","flask","spring","kafka","redis","mongodb","postgresql","mysql","nosql","terraform","ansible","jenkins","numpy","pandas","pytorch","tensorflow","scala","kotlin","swift","rust","golang","typescript","javascript","python","java","ruby","php","perl","matlab","tableau","looker","powerbi","excel","hadoop","spark","snowflake","airflow","selenium","cypress","pytest","junit","webpack","npm","yarn","raft","erp","crm","sla","hipaa","gdpr","soc","saml","ldap","dns","tcp","http","https","ssl","vpn","iam","ec2","s3","lambda","rds"]);
+    const looksLikeSkill = (w) => {
+      const t = String(w || "").toLowerCase();
+      if (t.length < 2) return false;
+      if (TECHY_TOKENS.has(t)) return true;
+      if (allBankSkills.has(t)) return true;
+      if (/[+#./]/.test(w)) return true; // c++, ci/cd, node.js, .net
+      // Proper noun / technology name: appears Capitalized or ALL-CAPS in the
+      // original posting, in a position that isn't just sentence-start.
+      const COMMON_CAP = /^(the|a|an|we|our|us|you|your|this|that|these|those|please|if|when|why|how|it|its|they|their|and|or|but|for|with|as|is|are)$/i;
+      if (COMMON_CAP.test(t)) return false;
+      const mid = new RegExp("[a-z0-9,;:\\)\\]]\\s+(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\b");
+      const m = jobPostRaw.match(mid);
+      if (m && (/^[A-Z]/.test(m[1]) || m[1] === m[1].toUpperCase())) return true;
+      return false;
+    };
+    // Show only skill-like missing terms; fall back to the raw list only if the
+    // allowlist finds nothing (so the card is never mysteriously empty when there
+    // genuinely are skill-shaped gaps we failed to classify).
+    const missingDisplayFiltered = missing.filter(looksLikeSkill);
+    const missingDisplay = missingDisplayFiltered.length ? missingDisplayFiltered : [];
+    // v12.2.9: skill-presence matching (resumeHasSkill) is defined at the top of
+    // this function and used for all gap checks below.
     const mentionedSkills = fieldSkills.filter(s => jobPost.toLowerCase().includes(s.toLowerCase()));
-    const missingSkills = mentionedSkills.filter(s => !resumeLower.includes(s.toLowerCase()));
+    const missingSkills = mentionedSkills.filter(s => !resumeHasSkill(s));
     const requiredSkills = mentionedSkills.filter(s => sectionMentionType(jobPost, s) === "Required");
     const preferredSkills = mentionedSkills.filter(s => sectionMentionType(jobPost, s) === "Preferred");
-    const requiredMissing = requiredSkills.filter(s => !resumeLower.includes(s.toLowerCase()));
-    const preferredMissing = preferredSkills.filter(s => !resumeLower.includes(s.toLowerCase()));
+    const requiredMissing = requiredSkills.filter(s => !resumeHasSkill(s));
+    const preferredMissing = preferredSkills.filter(s => !resumeHasSkill(s));
     const titleMatch = (jobPost.match(/(?:job title|position|role)\s*[:\-]\s*([^\n]{3,80})/i) || [])[1] || "Target Job";
     const matchPct = ranked.length ? Math.round((present.length / ranked.length) * 100) : 0;
     const projectedPct = Math.min(98, matchPct + Math.min(18, (missingSkills.length ? 8 : 4) + Math.min(10, missing.length)));
     const topSkills = mentionedSkills.slice(0, 10);
+    // v12.2.2 (fixed): Role-fit check with field ADJACENCY. A missing skill is
+    // "cross-domain" only when it belongs to a field in a genuinely DIFFERENT
+    // cluster than the user's — not merely a different field. Technical fields
+    // (CS, Cloud/DevOps, Data/AI, Cybersecurity, QA, IT, Product) are one cluster,
+    // so Kubernetes/CI-CD for a CS grad is NOT cross-domain, but Supply Chain / SLA
+    // for a CS grad IS. This prevents false "wrong role" warnings on adjacent tech
+    // roles while still catching true domain mismatches.
+    const FIELD_CLUSTERS = [
+      ["Technology / CS / Engineering", "Data / Analytics / AI/ML", "AI / Machine Learning / HPC", "Cloud / DevOps", "Cybersecurity", "Quality Assurance / QA Testing", "Help Desk / IT Support", "Technical Support Specialist", "IT Specialist", "Product Management"],
+      ["Business / Finance / Marketing", "Accounting", "Finance", "Project Management", "Supply Chain / Operations", "Human Resources"],
+      ["Healthcare / Nursing", "Public Health", "Healthcare Administration"],
+      ["Creative / Design / Media"],
+      ["Sciences / Research", "Engineering (non-software)"],
+      ["Law / Legal"],
+      ["Social Work / Counseling", "Education / Public Service"],
+    ];
+    const myCluster = FIELD_CLUSTERS.find(c => c.includes(data.field)) || [data.field];
+    const myClusterSkillSet = new Set();
+    myCluster.forEach(f => (SKILL_BANK[f] || []).forEach(s => myClusterSkillSet.add(s.toLowerCase())));
+    const hasAdjacentEvidence = (skill) => {
+      const s = skill.toLowerCase();
+      if (resumeLower.includes(s)) return true;
+      const words = s.split(/[\s\/\-]+/).filter(w => w.length >= 4);
+      return words.length > 0 && words.every(w => resumeLower.includes(w));
+    };
+    // Cross-domain = the skill is NOT in the user's cluster's combined skill set,
+    // it exists in some other cluster's bank, and the resume shows no evidence.
+    const anyOtherClusterSet = new Set();
+    Object.keys(SKILL_BANK).forEach(f => { if (!myCluster.includes(f)) (SKILL_BANK[f] || []).forEach(s => anyOtherClusterSet.add(s.toLowerCase())); });
+    const crossDomainGaps = missingSkills.filter(s => {
+      const sl = s.toLowerCase();
+      return !myClusterSkillSet.has(sl) && anyOtherClusterSet.has(sl) && !hasAdjacentEvidence(s);
+    });
+    const inFieldGaps = missingSkills.filter(s => !crossDomainGaps.includes(s));
+    // v12.2.3: Fire on 2+ cross-domain gaps regardless of how many in-field gaps
+    // sit alongside them. In-field gaps (Java, Data Structures for a CS grad) are
+    // usually trivial label artifacts a candidate can add in seconds — they should
+    // NOT dilute or mask a genuine domain mismatch. Two real cross-domain domain
+    // skills (Supply Chain + Operations) is the disqualifying signal on its own.
+    // (The earlier percentage gate wrongly suppressed the warning when trivial
+    // in-field gaps inflated the denominator.)
+    const fitWarning = (crossDomainGaps.length >= 2)
+      ? { skills: crossDomainGaps.slice(0, 6), inFieldGaps: inFieldGaps.slice(0, 6) }
+      : null;
     const suggestions = [
       missingSkills.length ? "Add only truthful missing skills from the posting where the resume has real evidence: " + missingSkills.slice(0, 6).join(", ") + "." : "Keep the skills section aligned with the job posting; the strongest listed skills are already visible.",
-      missing.length ? "Use employer language naturally in the summary, skills, projects, or experience: " + missing.slice(0, 6).join(", ") + "." : "Keyword coverage is strong; focus on proof and metrics rather than adding more terms.",
+      missingDisplay.length ? "Use employer language naturally in the summary, skills, projects, or experience: " + missingDisplay.slice(0, 6).join(", ") + "." : "Keyword coverage is strong; focus on proof and metrics rather than adding more terms.",
       "Reorder the skills section so the job posting's most repeated required tools and skills appear first.",
       "Rewrite 1-2 bullets to show the same problems, tools, or outcomes emphasized in the posting.",
       "Do not add unsupported keywords; every added term should connect to coursework, projects, experience, certifications, or volunteer work."
     ];
-    keyword = { ranked, present, missing, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct };
+    keyword = { ranked, present, missing, missingDisplay, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct, fitWarning, crossDomainGaps, inFieldGaps };
   }
   return { resumeText, fieldSkills, skillsAlready, suggestedMissing, keyword };
 }
@@ -3109,6 +3385,9 @@ function App() {
   const [showRecruiterReview, setShowRecruiterReview] = useState(false);
   const [showCoachReview, setShowCoachReview] = useState(false);
   const [activeWorkshopSection, setActiveWorkshopSection] = useState("Job Match");
+  // v12.2.0: ATS score captured when the user first reaches the workspace, so
+  // ATS Inspection can show a real before/after against their edits.
+  const [atsBaseline, setAtsBaseline] = useState(null);
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -3956,15 +4235,19 @@ function App() {
       <button onClick={onAdd} style={{ fontSize: 12, color: "#2563eb", border: "none", background: "none", cursor: "pointer", padding: 0 }}>+ Add bullet</button>
     </div>
   ), [iC]);
+  // v12.2.0: steps are gated now, so "scroll to a section" means "activate that
+  // gated step and scroll to the top of the workspace". Kept as a thin wrapper so
+  // existing callers (header progress chips, "Customize for a Job") keep working.
   const scrollToWorkshopSection = (sectionName) => {
     setActiveWorkshopSection(sectionName);
     setShowRecruiterReview(false);
     setShowCoachReview(false);
     setShowBuilderWorkspace(true);
     setTimeout(() => {
-      const el = document.querySelector('[data-workshop-section="' + sectionName + '"]');
+      const el = document.querySelector('[data-workshop-top="1"]');
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 60);
   };
 
   const fetchJobPostingUrl = async () => {
@@ -4007,6 +4290,37 @@ function App() {
     </div>
   ), [Card]);
 
+  // v12.2.0: Steps 5–8 are now gated one-at-a-time (like steps 1–4) instead of
+  // stacking on one scrolling page. This ordered list drives Back/Next nav.
+  const WORKSHOP_STEPS = ["Job Match", "Resume Workshop", "ATS Inspection", "Export"];
+  const goToWorkshopStep = useCallback((sectionName) => {
+    setActiveWorkshopSection(sectionName);
+    setShowRecruiterReview(false);
+    setShowCoachReview(false);
+    setShowBuilderWorkspace(true);
+    // Jump to the top of the workspace so a gated step always starts at its heading.
+    setTimeout(() => {
+      const el = document.querySelector('[data-workshop-top="1"]');
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 60);
+  }, []);
+
+  // Shared Back / Next bar rendered at the bottom of every gated step.
+  // backLabel/backTo let a step point backward (e.g. ATS -> Workshop) with a
+  // clearly labelled, user-chosen move — never an automatic loop.
+  const WorkshopNav = useCallback(({ backTo, backLabel, nextTo, nextLabel, nextIsDone }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 16, paddingTop: 14, borderTop: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+      {backTo ? (
+        <button onClick={() => goToWorkshopStep(backTo)} style={{ padding: "9px 14px", fontSize: 12.5, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", fontWeight: 700, cursor: "pointer" }}>← {backLabel}</button>
+      ) : <span />}
+      {nextTo ? (
+        <button onClick={() => goToWorkshopStep(nextTo)} style={{ padding: "9px 16px", fontSize: 13, borderRadius: 8, border: "none", background: nextIsDone ? "#16a34a" : "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>{nextIsDone ? "✓ " : ""}{nextLabel} →</button>
+      ) : <span />}
+    </div>
+  ), [goToWorkshopStep]);
+
+
   const AddBtn = useCallback(({ label, onClick }) => (
     <button onClick={onClick} style={{ width: "100%", marginTop: 4, padding: "8px 0", fontSize: 14, fontWeight: 500, color: "#1F3864", border: "1px dashed #cbd5e1", borderRadius: 8, background: "none", cursor: "pointer" }}>+ {label}</button>
   ), []);
@@ -4016,6 +4330,26 @@ function App() {
   const recruiterReadability = useMemo(() => analyzeRecruiterReadability(data, resumeStrength), [data, resumeStrength]);
   const sectionFeedback = useMemo(() => sectionRecruiterFeedback(data), [data]);
   const atsScore = useMemo(() => atsCompatibilityScore(data, resumeStrength), [data, resumeStrength]);
+  // v12.2.0: capture the ATS score the first time the workspace opens, as the
+  // "before" baseline for the ATS Inspection re-check. Reset when leaving.
+  useEffect(() => {
+    if (showBuilderWorkspace && atsBaseline === null) setAtsBaseline(atsScore);
+    if (!showBuilderWorkspace && atsBaseline !== null) setAtsBaseline(null);
+    // eslint-disable-next-line
+  }, [showBuilderWorkspace]);
+  // Real, checkable findings mirroring the atsCompatibilityScore rules.
+  const atsFindings = useMemo(() => {
+    const out = [];
+    const detected = (data.order || []).filter(k => !data.hidden[k]).length;
+    out.push({ ok: detected >= 3, text: detected + " sections detected" + (detected >= 3 ? " and readable" : " — add more so the resume looks complete") });
+    out.push({ ok: !!(data.name && data.contact && data.contact.email), text: (data.name && data.contact && data.contact.email) ? "Name and contact information parse cleanly" : "Add your name and a professional email so ATS parsers capture them" });
+    out.push({ ok: !!data.summary, text: data.summary ? "Professional summary present" : "Add a 2–3 line summary near the top" });
+    const hasSkillsBlock = !!(data.skills && (data.skills.technical || data.skills.tools || data.skills.domain || data.skills.dataVisualization));
+    out.push({ ok: hasSkillsBlock, text: hasSkillsBlock ? "Skills section detected" : "Add a Skills section — ATS keyword matching relies on it" });
+    const bulletCount = [...(data.experience || []).flatMap(e => e.bullets || []), ...(data.projects || []).flatMap(p => p.bullets || [])].filter(Boolean).length;
+    out.push({ ok: bulletCount > 0, text: bulletCount > 0 ? bulletCount + " accomplishment bullets found" : "Add bullet points under experience or projects" });
+    return out;
+  }, [data, resumeStrength]);
   const topPriorities = useMemo(() => {
     const out = [];
     const seenTopics = new Set();
@@ -5022,6 +5356,59 @@ function App() {
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
 
+  // v12.2.0: guidance rail. Brings the Coach's star-ranked improvements, the
+  // recruiter tips, and (when a job is loaded) the job-specific priorities into
+  // the Resume Workshop so the student doesn't have to bounce back to steps 3–4.
+  const TipsRail = useCallback(({ collapsibleAtTop }) => {
+    const coachItems = (coachReview && Array.isArray(coachReview.improvements)) ? coachReview.improvements.slice(0, 3) : [];
+    const recruiterItems = (recruiterReview && Array.isArray(recruiterReview.improvements)) ? recruiterReview.improvements.slice(0, 3) : [];
+    const jobMissingSkills = (optimizer && optimizer.keyword && optimizer.keyword.missingSkills) ? optimizer.keyword.missingSkills.slice(0, 4) : [];
+    const jobMissingTerms = (optimizer && optimizer.keyword && optimizer.keyword.missingDisplay) ? optimizer.keyword.missingDisplay.slice(0, 3) : [];
+    const hasJob = !!(optimizer && optimizer.keyword);
+    const cardStyle = { borderRadius: 12, padding: "12px 14px", marginBottom: 10, textAlign: "left" };
+    return (
+      <div>
+        <div style={{ ...cardStyle, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 13 }}>★</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864" }}>Coach Jeff's priorities</span>
+          </div>
+          {coachItems.length ? (
+            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#334155" }}>
+              {coachItems.map((im, i) => <li key={i} style={{ marginBottom: 5 }}><b>{im.title || im.label}</b>{im.stars ? " " + "★".repeat(im.stars) : ""}{im.why ? " — " + im.why : ""}</li>)}
+            </ul>
+          ) : <p style={{ fontSize: 11.5, color: "#64748b", margin: 0 }}>Complete the Coach Review to see ranked priorities here.</p>}
+        </div>
+
+        <div style={{ ...cardStyle, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 13 }}>👁</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864" }}>Recruiter tips</span>
+          </div>
+          {recruiterItems.length ? (
+            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#334155" }}>
+              {recruiterItems.map((im, i) => <li key={i} style={{ marginBottom: 5 }}><b>{im.title || im.label}</b>{im.why ? " — " + im.why : (im.detail ? " — " + im.detail : "")}</li>)}
+            </ul>
+          ) : <p style={{ fontSize: 11.5, color: "#64748b", margin: 0 }}>Complete the Recruiter Review to see recruiter tips here.</p>}
+        </div>
+
+        {hasJob && (
+          <div style={{ ...cardStyle, background: "#fffbeb", border: "1px solid #fde68a" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 13 }}>🎯</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#92400e" }}>Job-specific priorities</span>
+            </div>
+            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#92400e" }}>
+              {jobMissingSkills.map((n, i) => <li key={i} style={{ marginBottom: 4 }}>Add evidence for {n} only if it is true.</li>)}
+              {jobMissingTerms.map((n, i) => <li key={"kw" + i} style={{ marginBottom: 4 }}>Use the employer's language naturally: {n}.</li>)}
+              <li>Connect each bullet to the employer's required qualifications.</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }, [coachReview, recruiterReview, optimizer]);
+
   const workflowSteps = ['Upload','Resume Snapshot','Recruiter Review','Coach Review','Job Match','Resume Workshop','ATS Inspection','Export'];
   const currentWorkflowStepIndex = !hasStarted ? 0 : (showRecruiterReview ? 2 : (showCoachReview ? 3 : (showBuilderWorkspace ? (activeWorkshopSection === "Job Match" ? 4 : activeWorkshopSection === "Resume Workshop" ? 5 : activeWorkshopSection === "ATS Inspection" ? 6 : activeWorkshopSection === "Export" ? 7 : 1) : 1)));
   const nextWorkflowStep = workflowSteps[Math.min(workflowSteps.length - 1, currentWorkflowStepIndex + 1)];
@@ -5631,12 +6018,20 @@ function App() {
         </div>
       ) : null}
 
-      <div className="no-print" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px", display: hasStarted && showBuilderWorkspace ? "grid" : "none", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
+      <div className="no-print" style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px", display: hasStarted && showBuilderWorkspace ? "grid" : "none", gridTemplateColumns: activeWorkshopSection === "Resume Workshop" ? "1fr 340px" : "1fr", gap: 24, alignItems: "start" }}>
         <div>
-          <div style={{ marginBottom: 12, padding: "10px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, color: "#475569", fontSize: 12.5, fontWeight: 800, textAlign: "left" }}>
-            Analysis Complete ✓ &nbsp; Next: tailor the resume to a specific job posting before editing.
+          <div data-workshop-top="1" />
+          <div style={{ marginBottom: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {WORKSHOP_STEPS.map((step, i) => {
+              const active = activeWorkshopSection === step;
+              const stepNum = i + 5;
+              return (
+                <button key={step} onClick={() => goToWorkshopStep(step)} title={"Go to " + step} style={{ fontSize: 12, padding: "6px 11px", borderRadius: 8, cursor: "pointer", border: "1px solid " + (active ? "#1F3864" : "#e2e8f0"), background: active ? "#eff6ff" : "#f8fafc", color: active ? "#1F3864" : "#64748b", fontWeight: active ? 800 : 600 }}>{stepNum}. {step}</button>
+              );
+            })}
           </div>
 
+          {activeWorkshopSection === "Job Match" && (
           <WorkshopCard title="Job Match" onClear={() => clearSection("jobPost")}>
             <div style={{ padding: 12, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, marginBottom: 10, textAlign: "left" }}>
               <div style={{ fontSize: 11, fontWeight: 900, color: "#1F3864", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Customize Before You Edit</div>
@@ -5653,6 +6048,7 @@ function App() {
               </div>
               <div>
                 <label style={lC}>Or Paste Job Description Text</label>
+                <p style={{ fontSize: 11, color: "#64748b", margin: "2px 0 6px", lineHeight: 1.45, textAlign: "left" }}>Paste the role's <b>responsibilities, requirements, and qualifications</b>. You can skip "Life at [company]," benefits, and the legal or application boilerplate at the end — Coach Jeff ignores those automatically when scoring.</p>
                 <textarea rows={8} style={{ ...iC, resize: "vertical", lineHeight: 1.45 }} placeholder="Paste the full job description here…" value={data.jobPost || ""} onChange={(e) => set({ jobPost: e.target.value })} />
               </div>
             </div>
@@ -5669,7 +6065,7 @@ function App() {
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a" }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "#92400e", textTransform: "uppercase" }}>Biggest Gap</div>
-                <div style={{ fontSize: 12, lineHeight: 1.45, color: "#92400e", marginTop: 6 }}>{optimizer.keyword.missingSkills.length ? optimizer.keyword.missingSkills.slice(0, 5).join(", ") : (optimizer.keyword.missing.length ? optimizer.keyword.missing.slice(0, 5).join(", ") : "No major keyword gap detected")}</div>
+                <div style={{ fontSize: 12, lineHeight: 1.45, color: "#92400e", marginTop: 6 }}>{optimizer.keyword.missingSkills.length ? optimizer.keyword.missingSkills.slice(0, 5).join(", ") : ((optimizer.keyword.missingDisplay && optimizer.keyword.missingDisplay.length) ? optimizer.keyword.missingDisplay.slice(0, 5).join(", ") : "No major keyword gap detected")}</div>
               </div>
             </div> : <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", fontSize: 12, textAlign: "left" }}>Paste a job posting above to generate a role-specific match analysis.</div>}
             {optimizer.keyword && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 10, textAlign: "left" }}>
@@ -5679,22 +6075,39 @@ function App() {
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0" }}>
                 <b style={{ fontSize: 12, color: "#92400e" }}>Missing repeated terms</b>
-                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{optimizer.keyword.missing.slice(0, 12).join(", ") || "No major repeated terms missing."}</p>
+                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{(optimizer.keyword.missingDisplay && optimizer.keyword.missingDisplay.length ? optimizer.keyword.missingDisplay.slice(0, 12).join(", ") : "") || "No major skill-related terms missing."}</p>
               </div>
               <div style={{ padding: 12, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0" }}>
                 <b style={{ fontSize: 12, color: "#991b1b" }}>Missing skills/tools</b>
                 <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{optimizer.keyword.missingSkills.slice(0, 10).join(", ") || "No major suggested skill gaps from the posting."}</p>
               </div>
             </div>}
+            {optimizer.keyword && optimizer.keyword.fitWarning && <div style={{ marginTop: 12, padding: 14, borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fca5a5", textAlign: "left" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 18 }}>⚠️</span>
+                <b style={{ fontSize: 13.5, color: "#991b1b" }}>Before you tailor: this may be a different kind of role</b>
+              </div>
+              <p style={{ fontSize: 12, color: "#7f1d1d", lineHeight: 1.55, margin: "0 0 8px" }}>
+                Several of the biggest gaps here — <b>{optimizer.keyword.fitWarning.skills.join(", ")}</b> — don't appear anywhere in this resume, not just as keywords but as actual experience. These belong to a different field than the one you're optimizing for ({data.field || "your selected field"}). When the gap is the <i>type of work</i> rather than the wording, tailoring can't truthfully close it.
+              </p>
+              <p style={{ fontSize: 12, color: "#7f1d1d", lineHeight: 1.55, margin: "0 0 8px" }}>
+                The "projected after tailoring" estimate above assumes you can add those skills truthfully. If the underlying experience isn't there, that projected score isn't realistically reachable — and adding the terms anyway tends to surface in interviews.
+              </p>
+              <p style={{ fontSize: 12, color: "#7f1d1d", lineHeight: 1.55, margin: 0 }}>
+                <b>It's your call.</b> If there's a real reason to pursue this role, keep going. Otherwise, it may be worth weighing this against roles where your core strengths match more directly before spending time tailoring.
+                {optimizer.keyword.inFieldGaps && optimizer.keyword.inFieldGaps.length ? <span> A few gaps here <i>are</i> closeable in your field ({optimizer.keyword.inFieldGaps.join(", ")}) — add those only if they're genuinely true of your background.</span> : null}
+              </p>
+            </div>}
             {optimizer.keyword && <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", textAlign: "left" }}>
               <b style={{ fontSize: 12, color: "#1F3864" }}>Coach Jeff tailoring guidance</b>
               <ol style={{ margin: "8px 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.55, color: "#334155" }}>{optimizer.keyword.suggestions.map((n, i) => <li key={i} style={{ marginBottom: 4 }}>{n}</li>)}</ol>
             </div>}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-              <button onClick={() => scrollToWorkshopSection("Resume Workshop")} style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Continue to Resume Workshop →</button>
-            </div>
+            <WorkshopNav backTo={null} nextTo="Resume Workshop" nextLabel="Continue to Resume Workshop" />
           </WorkshopCard>
+          )}
 
+          {activeWorkshopSection === "Resume Workshop" && (
+          <React.Fragment>
           <WorkshopCard title="Resume Workshop">
             <div style={{ padding: 12, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, marginBottom: 10, textAlign: "left" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
@@ -5715,33 +6128,11 @@ function App() {
                 </details>
               </div>
             </div>
-            {optimizer.keyword && <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", marginBottom: 10, textAlign: "left" }}>
-              <b style={{ fontSize: 12, color: "#92400e" }}>Use these job-specific priorities while editing:</b>
-              <ul style={{ margin: "8px 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#92400e" }}>
-                {optimizer.keyword.missingSkills.slice(0, 4).map((n, i) => <li key={i}>Add evidence for {n} only if it is true.</li>)}
-                {optimizer.keyword.missing.slice(0, 3).map((n, i) => <li key={"kw"+i}>Use the employer's language naturally: {n}.</li>)}
-                <li>Rewrite bullets to connect your evidence to the employer's required qualifications.</li>
-              </ul>
-            </div>}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-              <button onClick={() => scrollToWorkshopSection("ATS Inspection")} style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Continue to ATS Inspection →</button>
-            </div>
+            <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.5, margin: 0, textAlign: "left" }}>Edit your resume section by section below. Coach, recruiter, and job-specific tips stay beside you as you work — no need to go back to earlier screens.</p>
           </WorkshopCard>
 
-          <WorkshopCard title="ATS Inspection">
-            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 8, textAlign: "left" }}>Final validation step after tailoring and workshop edits: confirm the resume can be read cleanly by ATS software and that the main sections are detected.</p>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 11, lineHeight: 1.45, textAlign: "left" }}><b>Current ATS compatibility estimate:</b> {atsScore}/100. Check section detection, contact information, bullet structure, and export formatting before applying.</div>
-          </WorkshopCard>
-
-
-          <WorkshopCard title="Export">
-            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 10, textAlign: "left" }}>Download a clean Word version or print/save as PDF. Export now strips pasted bullet symbols so Word does not create duplicate bullets.</p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={exportDocxReal} disabled={busy} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
-              <button onClick={printPdf} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print / Save PDF</button>
-            </div>
-          </WorkshopCard>
-
+          <div className="workshop-editor-grid" style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14, alignItems: "start", marginTop: 12 }}>
+            <div className="workshop-editor-col">
           <Card title="Header & Contact" onClear={() => clearSection("contact")}>
             <label style={lC}>Full Name</label>
             <input style={iC} placeholder="First Last" value={data.name} onChange={(e) => set({ name: e.target.value })} />
@@ -5944,8 +6335,62 @@ function App() {
             );
             return null;
           })}
+            </div>
+            <div className="workshop-tips-col" style={{ position: "sticky", top: 80 }}>
+              <TipsRail />
+            </div>
+          </div>
+          <WorkshopNav backTo="Job Match" backLabel="Back to Job Match" nextTo="ATS Inspection" nextLabel="Continue to ATS Inspection" />
+          </React.Fragment>
+          )}
+
+          {activeWorkshopSection === "ATS Inspection" && (
+          <WorkshopCard title="ATS Inspection">
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 18 }}>🔁</span>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1F3864" }}>Re-checked your edited resume</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center", marginBottom: 14 }}>
+              {(() => { const before = (atsBaseline === null ? atsScore : atsBaseline); return (
+              <React.Fragment>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: "#64748b" }}>Before your edits</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: before >= 75 ? "#16a34a" : before >= 50 ? "#d97706" : "#dc2626" }}>{before}</div>
+              </div>
+              <div style={{ fontSize: 22, color: "#94a3b8", textAlign: "center" }}>→</div>
+              <div style={{ background: atsScore >= before ? "#f0fdf4" : "#fff7ed", border: "1px solid " + (atsScore >= before ? "#bbf7d0" : "#fed7aa"), borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: atsScore >= before ? "#166534" : "#9a3412" }}>After your edits</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: atsScore >= 75 ? "#16a34a" : atsScore >= 50 ? "#d97706" : "#dc2626" }}>{atsScore}</div>
+              </div>
+              </React.Fragment>
+              ); })()}
+            </div>
+            <div style={{ padding: 12, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", textAlign: "left", marginBottom: 6 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864", marginBottom: 8 }}>What the ATS check found</div>
+              {atsFindings.map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, lineHeight: 1.45, color: f.ok ? "#166534" : "#9a3412", marginBottom: 6 }}>
+                  <span>{f.ok ? "✓" : "⚠"}</span><span>{f.text}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.5, textAlign: "left", margin: "4px 0 0" }}>If anything still needs work, go back to the Workshop and fix it — the score re-checks each time you return here. When it looks good, you're done.</p>
+            <WorkshopNav backTo="Resume Workshop" backLabel="Back to Workshop to fix" nextTo="Export" nextLabel="Looks good — I'm done" nextIsDone={true} />
+          </WorkshopCard>
+          )}
+
+          {activeWorkshopSection === "Export" && (
+          <WorkshopCard title="Export">
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 10, textAlign: "left" }}>Download a clean Word version or print/save as PDF. Export now strips pasted bullet symbols so Word does not create duplicate bullets.</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={exportDocxReal} disabled={busy} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
+              <button onClick={printPdf} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print / Save PDF</button>
+            </div>
+            <WorkshopNav backTo="ATS Inspection" backLabel="Back to ATS Inspection" nextTo={null} nextLabel="" />
+          </WorkshopCard>
+          )}
         </div>
 
+        {activeWorkshopSection === "Resume Workshop" && (
         <div style={{ position: "sticky", top: 80 }}>
           <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, marginBottom: 12 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Section Order</h3>
@@ -6010,6 +6455,7 @@ function App() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <Preview data={data} />
