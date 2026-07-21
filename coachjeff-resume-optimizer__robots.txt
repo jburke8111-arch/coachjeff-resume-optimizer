@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://coachjeff-resume-optimizer.netlify.app/sitemap.xml
