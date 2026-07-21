@@ -79,6 +79,24 @@
 <body>
 <div id="root" style="padding:40px;text-align:center;color:#64748b;">Loading the resume builder…</div>
 
+<div style="max-width:620px;margin:8px auto 0;padding-top:24px;border-top:1px solid #e2e8f0;">
+  <div style="max-width:620px;margin:0 auto 32px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+    <div style="font-weight:600;font-size:15px;color:#1e293b;margin-bottom:4px;">Quick feedback on the Resume Optimizer?</div>
+    <div style="font-size:13.5px;color:#64748b;margin-bottom:14px;">Tell me what worked or what you'd change — I read every note.</div>
+    <form name="resume-feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="setTimeout(function(){document.getElementById('rz-fb-thanks').style.display='block';document.getElementById('rz-fb-form').style.display='none';},100)" id="rz-fb-form">
+      <input type="hidden" name="form-name" value="resume-feedback" />
+      <input type="hidden" name="tool" value="resume-optimizer" />
+      <p style="display:none"><label>Skip: <input name="bot-field" /></label></p>
+      <textarea name="message" required placeholder="Your feedback…" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1e293b;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:9px;min-height:70px;resize:vertical;background:#fff;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+        <input type="email" name="email" placeholder="Email (optional, for a reply)" style="flex:1;min-width:180px;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1e293b;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:9px;background:#fff;" />
+        <button type="submit" style="font-family:inherit;font-weight:600;font-size:14px;color:#fff;background:#1f5c8f;border:none;padding:10px 20px;border-radius:9px;cursor:pointer;">Send</button>
+      </div>
+    </form>
+    <div id="rz-fb-thanks" style="display:none;padding:12px 14px;border-radius:9px;background:#eaf4ec;border:1px solid #bfe0c6;color:#1f5c33;font-size:14px;font-weight:500;">Thanks — got it. I appreciate the feedback.</div>
+  </div>
+</div>
+
 <script type="text/jsx-app" id="app-source">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
