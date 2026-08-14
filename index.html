@@ -8,6 +8,7 @@
 <!-- v12.1.4-note: build stamp bumped to v12.1.3. -->
 <!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
+<!-- v12.3.0: PARSER + PUBLICATION-DETECTION FIXES. (1) Publication false-positive: bare "IEEE"/"ACM" tokens (student-chapter/club mentions like "IEEE EUI") no longer trigger the "Published Work" strength — they now require a real container (IEEE Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access); "presented at" now requires an ALL-CAPS venue acronym so "presented at the client meeting" no longer fires; doi: tightened to "doi: 10.". (2) Wrapped-line bullet splitting: bullets that wrap onto a second physical line (e.g. "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch.") were counted as separate bullets, inflating the bullet count and tripping a false "inconsistent capitalization / starts lowercase" flag. New _isBulletContinuation() merges unmarked continuation lines into the previous bullet, in BOTH the primary date-header parse path (makeEntryFromChunk) and the fallback experience path, and in the projects parser (merge now runs BEFORE title detection so a wrap isn't misread as a structural title). (3) Abbreviated-month dates: the date-range regex allowed "June 2026" but not "Aug. 2025"/"Sept. 2024" — the period blocked the match, so abbreviated-month job headers weren't detected and multiple jobs collapsed into one entry (causing the false "only one paid role is visible" flag). Added optional-period tolerance ([a-z]*\.?\s+20\d{2}) to all five date regexes. (4) En-dash bullets: recognized internally as markers so parsing segments correctly; flagged to the user as a "Bullet style" formatting issue (ATS risk) via analyzeMechanics; and normalized to standard "•" on docx export. Verified end-to-end on Aya Elghayaty's resume: 4 experience entries, 3 projects, 6 project bullets, 0 lowercase-start bullets, en-dash flag present, no false Published Work strength. BUILD_VERSION bumped so the report footer distinguishes this build from v12.2.9. -->
 <!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
 <!-- v12.2.8: SKILLS PARSER — switched from a hard-coded label list to GENERIC label-shape detection, ending the label whack-a-mole. Any "Short Label:" sub-heading is now recognized by shape (a short 1-4 word phrase + colon, followed by a comma-list of skills), so novel labels like "Machine Learning & AI:", "High-Performance Computing:", "Infrastructure & DevOps:", "Networking & Storage:" are stripped and bucketed correctly without being enumerated. A guard requires the post-colon content to look like a skill list (not prose), so a real skill/line containing a colon is not mistaken for a label. Verified on two real resumes (Soham, Samuel) plus dash/bullet/numbered/classic formats. Known minor edge case: a single flattened line cramming multiple label groups with no delimiters can still mis-bucket one trailing label word; this format is prevented by the v12.1.3 line reconstruction in the normal PDF path. -->
 <!-- v12.2.7: PARSER FIX for imported skills. Two root-cause bugs made lines like "- Languages: Python, C++..." import as a garbled blob in Technical Skills: (1) a leading bullet/dash/number marker was never stripped before label detection, so the label was never recognized and the whole line (dash + "Languages :" + values) fell through as raw text; (2) the recognized-label list was too narrow (missing "Languages", "Frameworks & Libraries", "Databases & Tools", "Cloud & DevOps", etc.). Now leading markers are stripped first, the label set is much broader, compound labels ("Programming Languages") are matched before their substrings ("Languages") so no word is orphaned, and label-splitting only happens at real boundaries. Verified across dash/bullet/numbered/classic/combined skill formats. Note: the grey "Power BI, Tableau, Looker" text in empty skill fields is placeholder text, not imported data. -->
@@ -102,7 +103,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.2.9";
+const BUILD_VERSION = "v12.3.0";
 
 const NAVY = "1F3864";
 const GRAY = "595959";
@@ -874,9 +875,9 @@ function _looksLikeDateRange(line) {
 }
 function _splitDateRange(line) {
   const clean = String(line || "").replace(/\|\s*\d+\s*hours?\/week/ig, "").trim();
-  const dateRange = clean.match(/((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2})\s*[–—-]\s*((?:present|current)|(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}))/i);
+  const dateRange = clean.match(/((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2})\s*[–—-]\s*((?:present|current)|(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))/i);
   if (dateRange) return { start: dateRange[1].trim(), end: dateRange[2].trim() };
-  const single = clean.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}|\b20\d{2}\b/i);
+  const single = clean.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}|\b20\d{2}\b/i);
   return { start: single ? single[0].trim() : "", end: "" };
 }
 function _looksLikeOrgLocation(line) {
@@ -945,7 +946,10 @@ function _parseExperienceEntries(lines) {
 
   function extractDateRangeFromLine(line) {
     const s = String(line || "").trim();
-    const re = /((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2})\s*[–—-]\s*((?:present|current)|(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}))/i;
+    // Allow an optional "." after abbreviated months ("Aug. 2025", "Sept. 2024") — without
+    // \.? the period blocks the match and every abbreviated-month job header is missed, which
+    // collapses multiple jobs into a single entry and undercounts roles.
+    const re = /((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2})\s*[–—-]\s*((?:present|current)|(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))/i;
     const m = s.match(re);
     if (!m) return null;
     return {
@@ -999,12 +1003,30 @@ function _parseExperienceEntries(lines) {
       const s = String(l || "").replace(/^\s*[•\-*·]\s*/, "").trim();
       return /^(published|presented|co-authored|authored|developed|designed|built|created|led|lead|managed|conducted|analyzed|implemented|introduced|achieved|ran|benchmark|supported|tutored|mentored|coordinated|organized|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|facilitated|spearheaded|launched|contributed|engineered|optimized|architected|systematized|benchmarked|containerized|codified|quantified|executed|evaluated|validated|strengthened|configured|integrated|streamlined|automated)\b/i.test(s);
     };
-    const bullets = chunk.slice(bulletStart).filter((l, k) =>
-      l &&
-      !isHardSectionHeading(l) &&
-      !extractDateRangeFromLine(l) &&
-      ((chunkMarks && chunkMarks[bulletStart + k]) || looksLikeContentBullet(l) || !(_looksLikeOrgLocation(l) && l.length < 90))
+    // Keep qualifying content lines, preserving whether each was bullet-marked so we can
+    // distinguish a real new bullet from a wrapped continuation line.
+    const keptPairs = chunk.slice(bulletStart).map((l, k) => ({
+      text: l,
+      marked: !!(chunkMarks && chunkMarks[bulletStart + k])
+    })).filter(({ text, marked }) =>
+      text &&
+      !isHardSectionHeading(text) &&
+      !extractDateRangeFromLine(text) &&
+      (marked || looksLikeContentBullet(text) || !(_looksLikeOrgLocation(text) && text.length < 90))
     );
+    // Merge wrapped continuation lines: an UNMARKED kept line that continues the previous
+    // bullet (see _isBulletContinuation) is joined to it rather than counted as its own
+    // bullet. This is what keeps a bullet that wraps onto a second physical line — e.g.
+    // "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch." — as ONE bullet,
+    // preventing an inflated bullet count and a false "starts lowercase" capitalization flag.
+    const bullets = keptPairs.reduce((acc, { text, marked }) => {
+      if (!marked && acc.length && _isBulletContinuation(text, acc[acc.length - 1])) {
+        acc[acc.length - 1] = (acc[acc.length - 1] + " " + text).replace(/\s+/g, " ").trim();
+      } else {
+        acc.push(text);
+      }
+      return acc;
+    }, []);
 
     return {
       id: _newId(),
@@ -1193,7 +1215,7 @@ function _looksLikeProjectTitle(line) {
 }
 function _parseProjectLine(line) {
   const s = String(line || "").trim();
-  const dateMatch = s.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+20\d{2}))?|\b20\d{2}\b/i);
+  const dateMatch = s.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?|\b20\d{2}\b/i);
   if (dateMatch) {
     const idx = dateMatch.index;
     return { name: s.slice(0, idx).replace(/[–—-]\s*$/,"").trim(), date: s.slice(idx).trim() };
@@ -1224,6 +1246,23 @@ function _parseProjectEntries(lines) {
       for (let k = i + 1; k < clean.length; k++) { if (clean[k]) return marked[k]; }
       return false;
     })();
+    // Wrapped-line merge FIRST: a wrapped continuation ("...tracker, planner), each with
+    // dedicated tools...") is unmarked, short, and often sits right before the next marked
+    // bullet — which is exactly the shape of `structuralTitle` below. If we let the title
+    // branch run first it splits one project into several garbled entries. So absorb genuine
+    // continuations into the previous bullet before any title test. _isBulletContinuation is
+    // the tie-breaker: a real title starts capitalized and reads as a fresh clause, while a
+    // wrap starts lowercase / with a connective or follows a bullet left grammatically open.
+    if (!isBulletMarked && current && current.bullets.length &&
+        _isBulletContinuation(line, current.bullets[current.bullets.length - 1])) {
+      const li = current.bullets.length - 1;
+      current.bullets[li] = (current.bullets[li] + " " + line).replace(/\s+/g, " ").trim();
+      return;
+    }
+    // An UNMARKED line is a project title if either it reads like one (keywords/
+    // date) OR it structurally sits as a header: not bullet-marked, and the next
+    // non-empty line IS bullet-marked. This rescues short brand-style titles like
+    // "TritonStore.ai" that carry no title keyword.
     const structuralTitle = !isBulletMarked && current && current.bullets.length > 0 && nextMarked && line.length < 80;
     if (!isBulletMarked && (_looksLikeProjectTitle(line) || structuralTitle)) {
       if (current) entries.push(current);
@@ -1236,13 +1275,6 @@ function _parseProjectEntries(lines) {
       // container, but treat the line as a bullet under an unnamed project.
       current = { id: _newId(), name: isBulletMarked ? "" : line, date: "", bullets: [] };
       if (isBulletMarked) current.bullets.push(line);
-      return;
-    }
-    // Wrapped-line merge: an unmarked line after an existing bullet is its continuation
-    // (see _parseExperienceEntries for the rationale).
-    if (!isBulletMarked && current.bullets.length && _isBulletContinuation(line, current.bullets[current.bullets.length - 1])) {
-      const li = current.bullets.length - 1;
-      current.bullets[li] = (current.bullets[li] + " " + line).replace(/\s+/g, " ").trim();
       return;
     }
     current.bullets.push(line);
