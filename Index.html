@@ -908,14 +908,36 @@ function _looksLikeJobTitle(line) {
   if (/^(professional summary|professional profile|core competencies|technical skills)$/i.test(s)) return false;
   return /(trainer|specialist|technician|intern|assistant|associate|analyst|coordinator|representative|manager|cashier|server|tutor|researcher|consultant|ambassador|developer|engineer|clerk|advisor|aide|processor|executive|president|vice president|support|help desk|customer|information technology|student worker|strategy planning)/i.test(s);
 }
+// True when `line` (already stripped of any marker) is the wrapped continuation of the
+// preceding bullet rather than a new bullet. Heuristic: an unmarked line whose previous
+// bullet did NOT end in sentence-final punctuation, OR which itself begins lowercase / with
+// a conjunction or connective — the shapes a mid-sentence wrap takes when a PDF is read
+// line-by-line. Callers must only pass UNMARKED lines (a real marker always starts a bullet).
+function _isBulletContinuation(line, prevBullet) {
+  const l = String(line || "").trim();
+  const prev = String(prevBullet || "").trim();
+  if (!l || !prev) return false;
+  // Starts like a fresh, properly-formed bullet (Capital letter + looks like a full clause)?
+  // Only treat as continuation if there's positive evidence of a wrap.
+  const prevEndsOpen = !/[.!?:;]$/.test(prev) && !/[.!?]["')\]]$/.test(prev);
+  const startsLower = /^[a-z]/.test(l);
+  const startsConnective = /^(and|or|but|to|with|for|of|in|on|using|including|by|that|which|while|then|so|as|from|across|enabling|achieving|resulting|leading|based)\b/i.test(l);
+  // A wrap almost always begins lowercase or with a connective. If the previous bullet was
+  // left grammatically open (no terminal punctuation), that's corroborating evidence.
+  return startsLower || startsConnective || prevEndsOpen;
+}
 function _parseExperienceEntries(lines) {
   // Keep the raw lines (with any leading bullet markers) alongside the cleaned
   // text. The marker is the most reliable signal that a line is a bullet, not an
   // org/location header — without it, a first bullet like "Implemented AdaDecay
   // in PyTorch, boosting sparsity 12%" can be misread as the org line.
   const rawLines = (lines || []).map(l => String(l || "")).filter(l => l.trim());
-  const clean = rawLines.map(l => l.replace(/^[••·\-\*]\s*/, "").trim()).filter(Boolean);
-  const isMarkedBullet = (l) => /^\s*[•·\-\*]\s+/.test(String(l || ""));
+  const clean = rawLines.map(l => l.replace(/^[•·▪◦‣\-–—\*]\s*/, "").trim()).filter(Boolean);
+  // Recognize en-dash (–) and em-dash (—) as bullet markers, not just hyphen/•/*.
+  // Many resumes (incl. LaTeX/Overleaf exports) use "– " as the bullet glyph; without
+  // this, every bullet reads as "unmarked" and wrapped continuation lines get split into
+  // their own bullets — inflating the bullet count and tripping false capitalization flags.
+  const isMarkedBullet = (l) => /^\s*[•·▪◦‣\-–—\*]\s+/.test(String(l || ""));
 
   function isHardSectionHeading(line) {
     return /^(projects|education|skills|certifications|awards|awards & recognition|publications|leadership|leadership & volunteering|leadership and volunteering)$/i.test(String(line || "").trim());
@@ -1059,6 +1081,18 @@ function _parseExperienceEntries(lines) {
       return;
     }
 
+    // Wrapped-line merge: an UNMARKED line that follows an existing bullet is almost always
+    // the continuation of that bullet wrapping onto a second physical line (common when a PDF
+    // is extracted line-by-line). Joining it to the previous bullet — rather than pushing it as
+    // a new one — is what keeps "achieving +65% ... using PyTorch." attached to the "Developed
+    // ..." bullet it belongs to, instead of registering as a separate lowercase-start bullet.
+    // A MARKED line always starts a fresh bullet and never merges.
+    if (!marked && current.bullets.length && _isBulletContinuation(line, current.bullets[current.bullets.length - 1])) {
+      const li = current.bullets.length - 1;
+      current.bullets[li] = (current.bullets[li] + " " + line).replace(/\s+/g, " ").trim();
+      return;
+    }
+
     current.bullets.push(line);
   });
 
@@ -1173,8 +1207,9 @@ function _parseProjectEntries(lines) {
   // pipeline...") from being misread as new project names when their leading
   // verb isn't in the guard list. Unmarked lines use the keyword heuristic.
   const raw = (lines || []).map(l => String(l || ""));
-  const marked = raw.map(l => /^\s*[•·\-\*]\s+/.test(l));
-  const clean = raw.map(l => l.replace(/^\s*[•·\-\*]\s*/, "").trim());
+  // Include en-dash (–) and em-dash (—) as bullet markers (see _parseExperienceEntries).
+  const marked = raw.map(l => /^\s*[•·▪◦‣\-–—\*]\s+/.test(l));
+  const clean = raw.map(l => l.replace(/^\s*[•·▪◦‣\-–—\*]\s*/, "").trim());
 
   const entries = [];
   let current = null;
@@ -1201,6 +1236,13 @@ function _parseProjectEntries(lines) {
       // container, but treat the line as a bullet under an unnamed project.
       current = { id: _newId(), name: isBulletMarked ? "" : line, date: "", bullets: [] };
       if (isBulletMarked) current.bullets.push(line);
+      return;
+    }
+    // Wrapped-line merge: an unmarked line after an existing bullet is its continuation
+    // (see _parseExperienceEntries for the rationale).
+    if (!isBulletMarked && current.bullets.length && _isBulletContinuation(line, current.bullets[current.bullets.length - 1])) {
+      const li = current.bullets.length - 1;
+      current.bullets[li] = (current.bullets[li] + " " + line).replace(/\s+/g, " ").trim();
       return;
     }
     current.bullets.push(line);
@@ -2295,6 +2337,20 @@ function analyzeMechanics(data, rawImportText) {
       add("Spelling", "\u201C" + bad + "\u201D looks like a typo \u2014 did you mean \u201C" + good + "\u201D?", bad + " \u2192 " + good);
     }
   });
+
+  // (f) Non-standard bullet glyphs. En-dash (–) or em-dash (—) used as list markers is a
+  // real formatting problem: some ATS parsers don't treat them as bullets (so items can be
+  // concatenated or dropped on import), and to a recruiter they read as an un-cleaned
+  // LaTeX/Overleaf default. Detect from the RAW import text, before markers are stripped.
+  // Require 2+ such lines so a single mid-sentence dash isn't mistaken for a bullet style.
+  const dashBulletLines = String(rawImportText || "")
+    .split(/\n/)
+    .filter(l => /^\s*[–—]\s+\S/.test(l)).length;
+  if (dashBulletLines >= 2) {
+    add("Bullet style",
+      "Your bullets use en-dashes (\u2013) instead of standard bullet markers. Some ATS parsers don't recognize \u2013 as a list bullet, so items can get merged or dropped \u2014 switch to standard bullets (\u2022). The export here does this automatically, but fix it in your source file too.",
+      "\u2013 item  \u2192  \u2022 item");
+  }
 
   let score = 100;
   if (findings.length === 1) score = 88;
@@ -4016,7 +4072,7 @@ function App() {
   ], { tabRight: true, after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
   const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "1F3864" }), { border: true, before: 240, after: 120, keepNext: true });
   const xBullet = (t) => {
-    const stripped = String(t).replace(/^([••\-\*]\s*)+/, "").replace(/^\s*•\s*/, "");
+    const stripped = String(t).replace(/^([•·▪◦‣\-–—\*]\s*)+/, "").replace(/^\s*•\s*/, "");
     const clean = tidyBullet(stripped);
     const pPr = '<w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:hanging="360"/></w:pPr>';
     return '<w:p>' + pPr + '<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">•\t</w:t></w:r>' + xRun(clean, { size: 11 }) + '</w:p>';
@@ -4914,7 +4970,17 @@ function App() {
     // bullet inside Experience/Projects rather than a dedicated Publications section, since that's
     // a common and easy-to-miss case for research-track candidates.
     const pubSectionCount = (data.publications || []).filter(p => String((p && (p.name || p.title)) || "").trim().length > 3).length;
-    const pubMentionRe = /\b(published in|publication in|peer[- ]reviewed|in the proceedings of|presented at [A-Z]|accepted (to|at)|doi:|journal of|conference on|\bIEEE\b|\bACM\b(?![- ]?SIG)|co-authored|first author)\b/i;
+    // Publication signals. Two regexes on purpose:
+    //  - pubMentionRe (/i): phrases that are safe regardless of letter case.
+    //  - pubMentionReCase (case-sensitive on the acronym): a real venue is an ALL-CAPS
+    //    acronym (CVPR, CSCE, ICML), which distinguishes "presented at CVPR" (a talk) from
+    //    "presented at the client meeting" (ordinary work). The verb stays case-flexible.
+    // NOTE: bare "IEEE"/"ACM" were REMOVED as standalone triggers — on technical resumes they
+    // almost always denote student-chapter membership or event organizing (e.g. "IEEE EUI",
+    // "ACM student chapter"), not authorship. They now count only when followed by a real
+    // publication container (Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access).
+    const pubMentionRe = /\b(published in|publication in|peer[- ]reviewed|in the proceedings of|accepted (?:to|at) (?:the )?[A-Z]|doi:\s*10\.|journal of|conference on|co-authored|first author|(?:IEEE|ACM)\s+(?:Transactions|Journal|Conference|Proceedings|Symposium|Letters|Access\b))\b/i;
+    const pubMentionReCase = /[Pp]resented at (?:[Tt]he )?[A-Z]{2,}/;
     // Scan ALL text-bearing fields across every section — a publication can land as a bullet,
     // an entry title, or an award line depending on how the resume was structured on import.
     const collectText = (obj) => {
@@ -4928,7 +4994,7 @@ function App() {
       data.experience, data.projects, data.awards, data.activities,
       data.volunteer, data.education, data.publications, data.summary
     ].flatMap(collectText).map(x => String(x || ""));
-    const pubMentioned = pubScanText.some(t => pubMentionRe.test(t));
+    const pubMentioned = pubScanText.some(t => pubMentionRe.test(t) || pubMentionReCase.test(t));
     if (pubSectionCount || pubMentioned) {
       addStrength("Published Work", pubMentioned && !pubSectionCount
         ? "You mention published/peer-reviewed work in your experience — that's rare at this stage and signals real depth. Consider giving it its own \"Publications\" line so it's not buried; recruiters and hiring managers notice it immediately."
