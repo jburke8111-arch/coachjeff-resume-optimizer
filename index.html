@@ -42,7 +42,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="google-site-verification" content="UvSx3JNmC06bBb-PposrVoCBYkXVRzZFklco-yvN1oA" />
 <title>Free Resume Optimizer — No Login | Coach Jeff</title>
-<meta name="description" content="Optimize your resume against any job description in seconds. Free ATS resume checker for new graduates — no login, no signup. Built by Coach Jeff, Experience Career System." />
+<meta name="description" content="Optimize your resume against any job description in seconds. Free ATS resume checker for new graduates — no login, no signup. Built by Coach Jeff, Experience Career System™." />
 <meta name="author" content="Jeff Burke — Experience Career System" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Free Resume Optimizer — No Login Required" />
@@ -53,10 +53,10 @@
 <meta name="twitter:description" content="Optimize your resume against any job description in seconds. Free, built for new graduates." />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f2f2f3; color: #1d1f20; }
   input, textarea, select, button { font-family: inherit; }
-  .navy { color: #1F3864; }
-  .bg-navy { background: #1F3864; }
+  .navy { color: #5980a6; }
+  .bg-navy { background: #5980a6; }
   @media print {
     .no-print { display: none !important; }
     .print-only { display: block !important; }
@@ -64,8 +64,8 @@
   }
   .print-only { display: none; }
   .spin { animation: pulse 1.2s ease-in-out infinite; }
-  .cj-step { padding: 7px 10px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-size: 11px; font-weight: 800; white-space: nowrap; }
-  .cj-step.active { background: #1F3864; color: #fff; border-color: #1F3864; }
+  .cj-step { padding: 7px 10px; border-radius: 0; border: 1px solid #b9b9bd; background: #fff; color: #3a3d3f; font-size: 11px; font-weight: 800; white-space: nowrap; }
+  .cj-step.active { background: #5980a6; color: #fff; border-color: #5980a6; }
   /* v12.2.0: Resume Workshop editor + tips. Sidebar on wide screens; on narrow
      screens the tips rail moves above the editor so it stays visible on phones. */
   @media (max-width: 900px) {
@@ -74,27 +74,42 @@
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb { background: #b9b9bd; border-radius: 0; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;600&display=swap" />
+<style id="cj-industry-skin">
+  :root { --cj-accent:#5980a6; --cj-ink:#1d1f20; --cj-ground:#f2f2f3; }
+  body { background: var(--cj-ground) !important; color: var(--cj-ink);
+         font-family: 'Barlow', system-ui, sans-serif !important; }
+  h1,h2,h3,h4,h5,h6,button,select { font-family: 'Barlow Condensed','Barlow',sans-serif !important; letter-spacing: .01em; }
+  button, a[style], input, select, textarea { border-radius: 0 !important; }
+  button, a.btn { min-height: 44px; }
+  input, select, textarea { min-height: 44px; }
+  *:focus-visible { outline: 2px solid var(--cj-accent) !important; outline-offset: 2px; }
+  ::selection { background: rgba(89,128,166,.22); }
+  ::-webkit-scrollbar-thumb { background: #b9b9bd !important; border-radius: 0 !important; }
 </style>
 </head>
 <body>
-<div id="root" style="padding:40px;text-align:center;color:#64748b;">Loading the resume builder…</div>
+<div id="root" style="padding:40px;text-align:center;color:#6d7073;">Loading the resume builder…</div>
 
-<div style="max-width:620px;margin:8px auto 0;padding-top:24px;border-top:1px solid #e2e8f0;">
-  <div style="max-width:620px;margin:0 auto 32px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-    <div style="font-weight:600;font-size:15px;color:#1e293b;margin-bottom:4px;">Quick feedback on the Resume Optimizer?</div>
-    <div style="font-size:13.5px;color:#64748b;margin-bottom:14px;">Tell me what worked or what you'd change — I read every note.</div>
+<div style="max-width:620px;margin:8px auto 0;padding-top:24px;border-top:1px solid #d6d6d8;">
+  <div style="max-width:620px;margin:0 auto 32px;padding:18px 20px;background:#e9e9ea;border:1px solid #d6d6d8;border-radius: 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+    <div style="font-weight:600;font-size:15px;color:#1d1f20;margin-bottom:4px;">Quick feedback on the Resume Optimizer?</div>
+    <div style="font-size:13.5px;color:#6d7073;margin-bottom:14px;">Tell me what worked or what you'd change — I read every note.</div>
     <form name="resume-feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="setTimeout(function(){document.getElementById('rz-fb-thanks').style.display='block';document.getElementById('rz-fb-form').style.display='none';},100)" id="rz-fb-form">
       <input type="hidden" name="form-name" value="resume-feedback" />
       <input type="hidden" name="tool" value="resume-optimizer" />
       <p style="display:none"><label>Skip: <input name="bot-field" /></label></p>
-      <textarea name="message" required placeholder="Your feedback…" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1e293b;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:9px;min-height:70px;resize:vertical;background:#fff;"></textarea>
+      <textarea name="message" required placeholder="Your feedback…" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1d1f20;padding:10px 12px;border:1.5px solid #b9b9bd;border-radius: 0;min-height:70px;resize:vertical;background:#fff;"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
-        <input type="email" name="email" placeholder="Email (optional, for a reply)" style="flex:1;min-width:180px;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1e293b;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:9px;background:#fff;" />
-        <button type="submit" style="font-family:inherit;font-weight:600;font-size:14px;color:#fff;background:#1f5c8f;border:none;padding:10px 20px;border-radius:9px;cursor:pointer;">Send</button>
+        <input type="email" name="email" placeholder="Email (optional, for a reply)" style="flex:1;min-width:180px;box-sizing:border-box;font-family:inherit;font-size:14px;color:#1d1f20;padding:10px 12px;border:1.5px solid #b9b9bd;border-radius: 0;background:#fff;" />
+        <button type="submit" style="font-family:inherit;font-weight:600;font-size:14px;color:#fff;background:#5980a6;border:none;padding:10px 20px;border-radius: 0;cursor:pointer;">Send</button>
       </div>
     </form>
-    <div id="rz-fb-thanks" style="display:none;padding:12px 14px;border-radius:9px;background:#eaf4ec;border:1px solid #bfe0c6;color:#1f5c33;font-size:14px;font-weight:500;">Thanks — got it. I appreciate the feedback.</div>
+    <div id="rz-fb-thanks" style="display:none;padding:12px 14px;border-radius: 0;background:#eaf4ec;border:1px solid #bfe0c6;color:#1f5c33;font-size:14px;font-weight:500;">Thanks — got it. I appreciate the feedback.</div>
   </div>
 </div>
 
@@ -105,7 +120,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 // exact version that produced it. Bump this whenever logic changes.
 const BUILD_VERSION = "v12.3.0";
 
-const NAVY = "1F3864";
+const NAVY = "5980A6";
 const GRAY = "595959";
 
 const EXTRA = ["certifications", "awards", "publications", "volunteer"];
@@ -3733,7 +3748,7 @@ function App() {
       const c = data.contact;
       const parts = [];
       // Header section
-      const headerHtml = (t) => '<p style="margin:10pt 0 4pt 0;border-bottom:1pt solid #1F3864;"><span style="font-size:13pt;font-weight:bold;color:#1F3864;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
+      const headerHtml = (t) => '<p style="margin:10pt 0 4pt 0;border-bottom:1pt solid #5980a6;"><span style="font-size:13pt;font-weight:bold;color:#5980a6;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
       // Two-column row via a borderless full-width table
       const twoCol = (l, r, o = {}) =>
         '<table style="width:100%;border-collapse:collapse;margin:0;"><tr>' +
@@ -3744,7 +3759,7 @@ function App() {
       const bullet = (t) => '<p style="margin:0 0 0pt 18pt;font-size:11pt;font-family:Arial,sans-serif;text-indent:-18pt;">&#8226;&nbsp;' + escapeHtml(t).replace(/^([••\-\*]\s*)+/, "") + '</p>';
 
       // Name + contact (centered)
-      parts.push('<p style="margin:0 0 2pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#1F3864;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
+      parts.push('<p style="margin:0 0 2pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#5980a6;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
       const cp = [];
       if (c.cityState) cp.push(escapeHtml(c.cityState));
       if (c.phone) cp.push(escapeHtml(c.phone));
@@ -3814,11 +3829,11 @@ function App() {
   const buildCoachReportHtml = () => {
     const esc = (s) => String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const P  = (s, extra) => s ? '<p style="margin:0 0 9pt 0;font-size:11pt;color:#1e293b;line-height:1.5;' + (extra || "") + '">' + esc(s) + '</p>' : "";
-    const H2 = (s) => '<h2 style="font-size:15pt;color:#1F3864;border-bottom:1.5pt solid #1F3864;padding-bottom:3pt;margin:20pt 0 8pt 0;">' + esc(s) + '</h2>';
-    const H3 = (s) => '<h3 style="font-size:12.5pt;color:#334155;margin:14pt 0 5pt 0;">' + esc(s) + '</h3>';
+    const P  = (s, extra) => s ? '<p style="margin:0 0 9pt 0;font-size:11pt;color:#1d1f20;line-height:1.5;' + (extra || "") + '">' + esc(s) + '</p>' : "";
+    const H2 = (s) => '<h2 style="font-size:15pt;color:#5980a6;border-bottom:1.5pt solid #5980a6;padding-bottom:3pt;margin:20pt 0 8pt 0;">' + esc(s) + '</h2>';
+    const H3 = (s) => '<h3 style="font-size:12.5pt;color:#3a3d3f;margin:14pt 0 5pt 0;">' + esc(s) + '</h3>';
     const UL = (arr, fn) => (Array.isArray(arr) && arr.length)
-      ? '<ul style="margin:0 0 9pt 0;padding-left:18pt;">' + arr.map(x => '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;">' + (fn ? fn(x) : esc(x)) + '</li>').join("") + '</ul>'
+      ? '<ul style="margin:0 0 9pt 0;padding-left:18pt;">' + arr.map(x => '<li style="font-size:11pt;color:#3a3d3f;line-height:1.5;margin:0 0 4pt 0;">' + (fn ? fn(x) : esc(x)) + '</li>').join("") + '</ul>'
       : "";
 
     const parts = [];
@@ -3828,9 +3843,9 @@ function App() {
     const who = (data && data.name) ? data.name : (cr.firstName || "");
 
     // Cover / header
-    parts.push('<h1 style="font-size:22pt;color:#1F3864;margin:0 0 2pt 0;">Resume Review Report</h1>');
-    parts.push('<p style="font-size:10.5pt;color:#64748b;margin:0 0 2pt 0;">' + (who ? esc(who) + ' &middot; ' : '') + esc(today) + '</p>');
-    parts.push('<p style="font-size:10.5pt;color:#64748b;margin:0 0 4pt 0;">Prepared with the Coach Jeff Resume Optimizer</p>');
+    parts.push('<h1 style="font-size:22pt;color:#5980a6;margin:0 0 2pt 0;">Resume Review Report</h1>');
+    parts.push('<p style="font-size:10.5pt;color:#6d7073;margin:0 0 2pt 0;">' + (who ? esc(who) + ' &middot; ' : '') + esc(today) + '</p>');
+    parts.push('<p style="font-size:10.5pt;color:#6d7073;margin:0 0 4pt 0;">Prepared with the Coach Jeff Resume Optimizer</p>');
 
     // 2. Resume Snapshot — kept lean: strengths + opportunities, not the raw parse.
     parts.push(H2("Resume Snapshot"));
@@ -3870,24 +3885,24 @@ function App() {
       const rows = sc.categories.map(c => {
         const dots = "\u25CF".repeat(c.dots) + "\u25CB".repeat(5 - c.dots);
         return '<tr>' +
-          '<td style="padding:4pt 8pt;font-size:11pt;color:#334155;border-bottom:0.5pt solid #e2e8f0;">' + esc(c.key) + '</td>' +
-          '<td style="padding:4pt 8pt;font-size:11pt;color:#1F3864;border-bottom:0.5pt solid #e2e8f0;letter-spacing:2px;">' + dots + '</td>' +
-          '<td style="padding:4pt 8pt;font-size:11pt;color:#64748b;border-bottom:0.5pt solid #e2e8f0;text-align:right;">' + c.score + '/100</td>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#3a3d3f;border-bottom:0.5pt solid #d6d6d8;">' + esc(c.key) + '</td>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#5980a6;border-bottom:0.5pt solid #d6d6d8;letter-spacing:2px;">' + dots + '</td>' +
+          '<td style="padding:4pt 8pt;font-size:11pt;color:#6d7073;border-bottom:0.5pt solid #d6d6d8;text-align:right;">' + c.score + '/100</td>' +
           '</tr>';
       }).join("");
       parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;">' +
         '<tr>' +
-        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Category</th>' +
-        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Rating</th>' +
-        '<th style="text-align:right;padding:4pt 8pt;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #1F3864;">Score</th>' +
+        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;">Category</th>' +
+        '<th style="text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;">Rating</th>' +
+        '<th style="text-align:right;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;">Score</th>' +
         '</tr>' + rows +
         '<tr>' +
-        '<td style="padding:6pt 8pt;font-size:11pt;color:#1F3864;font-weight:700;border-top:1pt solid #1F3864;">OVERALL</td>' +
-        '<td style="padding:6pt 8pt;border-top:1pt solid #1F3864;"></td>' +
-        '<td style="padding:6pt 8pt;font-size:11pt;color:#1F3864;font-weight:700;text-align:right;border-top:1pt solid #1F3864;">' + sc.overall + '/100</td>' +
+        '<td style="padding:6pt 8pt;font-size:11pt;color:#5980a6;font-weight:700;border-top:1pt solid #5980a6;">OVERALL</td>' +
+        '<td style="padding:6pt 8pt;border-top:1pt solid #5980a6;"></td>' +
+        '<td style="padding:6pt 8pt;font-size:11pt;color:#5980a6;font-weight:700;text-align:right;border-top:1pt solid #5980a6;">' + sc.overall + '/100</td>' +
         '</tr>' +
         '</table>');
-      parts.push(P("Market readiness: " + sc.tier, "font-weight:700;color:#1F3864;"));
+      parts.push(P("Market readiness: " + sc.tier, "font-weight:700;color:#5980a6;"));
       if (sc.tierNote) parts.push(P(sc.tierNote, "color:#475569;"));
     }
 
@@ -3909,9 +3924,9 @@ function App() {
     // 3d. Interview Conversion estimate — relative, caveated (manual eval §31).
     if (cr.conversion) {
       parts.push(H2("Interview Conversion Outlook"));
-      parts.push(P("Estimated conversion for suitably-matched roles: " + cr.conversion.band, "font-weight:700;color:#1F3864;"));
+      parts.push(P("Estimated conversion for suitably-matched roles: " + cr.conversion.band, "font-weight:700;color:#5980a6;"));
       parts.push(P(cr.conversion.note));
-      parts.push(P(cr.conversion.disclaimer, "font-style:italic;color:#64748b;font-size:10pt;"));
+      parts.push(P(cr.conversion.disclaimer, "font-style:italic;color:#6d7073;font-size:10pt;"));
     }
 
     // 4. Coach Review
@@ -3936,17 +3951,17 @@ function App() {
       parts.push('<ol style="margin:0 0 9pt 0;padding-left:18pt;">' + cr.roadmap.map(stop => {
         const label = typeof stop === "string" ? stop : stop.step;
         const action = typeof stop === "string" ? "" : stop.action;
-        return '<li style="font-size:11pt;color:#334155;line-height:1.5;margin:0 0 4pt 0;"><b>' + esc(label) + '</b>' + (action ? ' — ' + esc(action) : '') + '</li>';
+        return '<li style="font-size:11pt;color:#3a3d3f;line-height:1.5;margin:0 0 4pt 0;"><b>' + esc(label) + '</b>' + (action ? ' — ' + esc(action) : '') + '</li>';
       }).join("") + '</ol>');
     }
     if (Array.isArray(cr.examples) && cr.examples.length) {
       parts.push(H3("Before → After: coaching examples"));
       cr.examples.forEach((ex) => {
-        parts.push('<p style="margin:0 0 2pt 0;font-size:9.5pt;color:#64748b;text-transform:uppercase;letter-spacing:.5pt;">' + esc(ex.section || "") + '</p>');
+        parts.push('<p style="margin:0 0 2pt 0;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;">' + esc(ex.section || "") + '</p>');
         parts.push('<p style="margin:0 0 2pt 0;font-size:11pt;color:#7f1d1d;font-style:italic;">' + (ex.kind === "tighten" ? "Your line: " : "Weak: ") + '&ldquo;' + esc(ex.weak) + '&rdquo;</p>');
         parts.push('<p style="margin:0 0 10pt 0;font-size:11pt;color:#14532d;font-weight:600;">' + (ex.kind === "tighten" ? "Tighten: " + esc(ex.note) : "Better: &ldquo;" + esc(ex.better) + "&rdquo;") + '</p>');
       });
-      parts.push(P("Only ever use numbers and details that are true for you.", "font-size:9.5pt;color:#94a3b8;"));
+      parts.push(P("Only ever use numbers and details that are true for you.", "font-size:9.5pt;color:#8b8e91;"));
     }
     // ---- Credibility & Mechanics Check (manual-eval Sections 6,7,14,15,16,19,22,24) ----
     const mech = cr.mechanics || {};
@@ -3971,7 +3986,7 @@ function App() {
     const soa = cr.sectionOrderAdvice || {};
     if (soa.applies) {
       parts.push(H2("Section Order"));
-      parts.push(P(soa.headline, "font-weight:700;color:#1F3864;"));
+      parts.push(P(soa.headline, "font-weight:700;color:#5980a6;"));
       parts.push(P(soa.body));
       if (soa.caveat) parts.push(P(soa.caveat, "font-style:italic;color:#475569;"));
     }
@@ -4021,9 +4036,9 @@ function App() {
       parts.push(UL(cr.limitations.items));
     }
     if (cr.together)   { parts.push(H3("If we worked together")); parts.push(P(cr.together)); }
-    if (cr.motivation) parts.push(P(cr.motivation, "font-weight:600;color:#1F3864;"));
+    if (cr.motivation) parts.push(P(cr.motivation, "font-weight:600;color:#5980a6;"));
 
-    parts.push('<p style="margin:26pt 0 0 0;font-size:9pt;color:#94a3b8;border-top:0.75pt solid #e2e8f0;padding-top:6pt;">Prepared with the Coach Jeff Resume Optimizer &middot; coachjeff-resume-optimizer.netlify.app &middot; Build ' + BUILD_VERSION + ' &middot; ' + esc(today) + '</p>');
+    parts.push('<p style="margin:26pt 0 0 0;font-size:9pt;color:#8b8e91;border-top:0.75pt solid #d6d6d8;padding-top:6pt;">Prepared with the Coach Jeff Resume Optimizer &middot; coachjeff-resume-optimizer.netlify.app &middot; Build ' + BUILD_VERSION + ' &middot; ' + esc(today) + '</p>');
 
     return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
       '<head><meta charset="utf-8"><title>Resume Review Report</title>' +
@@ -4089,7 +4104,7 @@ function App() {
   const xPar = (runs, o = {}) => {
     let pPr = '<w:pPr>';
     if (o.align) pPr += '<w:jc w:val="' + o.align + '"/>';
-    if (o.border) pPr += '<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="1F3864"/></w:pBdr>';
+    if (o.border) pPr += '<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="5980A6"/></w:pBdr>';
     if (o.indent != null) pPr += '<w:ind w:left="' + o.indent + '" w:hanging="' + (o.hanging || 0) + '"/>';
     if (o.keepNext) pPr += '<w:keepNext/>';
     if (o.keepLines) pPr += '<w:keepLines/>';
@@ -4102,7 +4117,7 @@ function App() {
     xRun(l || "", { bold: !!o.lb, size: 11 }),
     r ? xRun("\t", { size: 11 }) + xRun(noWrapText(r), { size: 11 }) : ""
   ], { tabRight: true, after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
-  const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "1F3864" }), { border: true, before: 240, after: 120, keepNext: true });
+  const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "5980A6" }), { border: true, before: 240, after: 120, keepNext: true });
   const xBullet = (t) => {
     const stripped = String(t).replace(/^([•·▪◦‣\-–—\*]\s*)+/, "").replace(/^\s*•\s*/, "");
     const clean = tidyBullet(stripped);
@@ -4115,7 +4130,7 @@ function App() {
     const c = data.contact;
     const P = [];
 
-    P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "1F3864" }), { align: "center", after: 120 }));
+    P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "5980A6" }), { align: "center", after: 120 }));
 
     const contactParts = [c.cityState, c.phone, c.email].filter(Boolean).map(x => xRun(x, { size: 11, color: "595959" }));
     if (c.linkedin) contactParts.push(xHyperlink("LinkedIn", c.linkedin));
@@ -4320,32 +4335,32 @@ function App() {
     if (key === "volunteer") set({ volunteer: [emptyVol()] });
   };
 
-  const iC = useMemo(() => ({ width: "100%", padding: "6px 10px", fontSize: 14, background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, outline: "none" }), []);
-  const lC = useMemo(() => ({ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "#64748b", marginBottom: 2, display: "block" }), []);
+  const iC = useMemo(() => ({ width: "100%", padding: "6px 10px", fontSize: 14, background: "#fff", border: "1px solid #b9b9bd", borderRadius: 0, outline: "none" }), []);
+  const lC = useMemo(() => ({ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "#6d7073", marginBottom: 2, display: "block" }), []);
 
   const Card = useCallback(({ title, children, onClear }) => (
-    <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,.04)", padding: 16, marginBottom: 18 }}>
+    <div style={{ background: "#fff", borderRadius: 0, border: "1px solid #d6d6d8", boxShadow: "0 1px 2px rgba(0,0,0,.04)", padding: 16, marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1F3864" }}>{title}</h2>
-        {onClear && <button onClick={onClear} style={{ fontSize: 11, color: "#64748b", border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>Clear</button>}
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: "#5980a6" }}>{title}</h2>
+        {onClear && <button onClick={onClear} style={{ fontSize: 11, color: "#6d7073", border: "1px solid #b9b9bd", background: "#fff", borderRadius: 0, padding: "4px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>Clear</button>}
       </div>
       {children}
     </div>
   ), []);
   const Entry = useCallback(({ children, onDelete, canDelete }) => (
-    <div style={{ position: "relative", border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, marginBottom: 12, background: "#f8fafc" }}>
-      {canDelete && <button onClick={onDelete} title="Remove" style={{ position: "absolute", top: 8, right: 8, border: "none", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16 }}>✕</button>}
+    <div style={{ position: "relative", border: "1px solid #d6d6d8", borderRadius: 0, padding: 12, marginBottom: 12, background: "#e9e9ea" }}>
+      {canDelete && <button onClick={onDelete} title="Remove" style={{ position: "absolute", top: 8, right: 8, border: "none", background: "none", color: "#8b8e91", cursor: "pointer", fontSize: 16 }}>✕</button>}
       {children}
     </div>
   ), []);
   const Bullets = useCallback(({ bullets, onChange, onAdd, onDel, hint }) => (
     <div style={{ marginTop: 8 }}>
-      <p style={{ fontSize: 10, color: "#94a3b8", fontStyle: "italic", marginBottom: 4 }}>{hint}</p>
+      <p style={{ fontSize: 10, color: "#8b8e91", fontStyle: "italic", marginBottom: 4 }}>{hint}</p>
       {bullets.map((b, i) => (
         <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
-          <span style={{ color: "#94a3b8", marginTop: 6, fontSize: 12 }}>•</span>
+          <span style={{ color: "#8b8e91", marginTop: 6, fontSize: 12 }}>•</span>
           <textarea rows={1} style={{ ...iC, resize: "vertical" }} value={b} onChange={(e) => onChange(i, e.target.value)} />
-          {bullets.length > 1 && <button onClick={() => onDel(i)} title="Remove bullet" style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", marginTop: 4 }}>✕</button>}
+          {bullets.length > 1 && <button onClick={() => onDel(i)} title="Remove bullet" style={{ border: "none", background: "none", color: "#b9b9bd", cursor: "pointer", marginTop: 4 }}>✕</button>}
         </div>
       ))}
       <button onClick={onAdd} style={{ fontSize: 12, color: "#2563eb", border: "none", background: "none", cursor: "pointer", padding: 0 }}>+ Add bullet</button>
@@ -4426,19 +4441,19 @@ function App() {
   // backLabel/backTo let a step point backward (e.g. ATS -> Workshop) with a
   // clearly labelled, user-chosen move — never an automatic loop.
   const WorkshopNav = useCallback(({ backTo, backLabel, nextTo, nextLabel, nextIsDone }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 16, paddingTop: 14, borderTop: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 16, paddingTop: 14, borderTop: "1px solid #d6d6d8", flexWrap: "wrap" }}>
       {backTo ? (
-        <button onClick={() => goToWorkshopStep(backTo)} style={{ padding: "9px 14px", fontSize: 12.5, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", fontWeight: 700, cursor: "pointer" }}>← {backLabel}</button>
+        <button onClick={() => goToWorkshopStep(backTo)} style={{ padding: "9px 14px", fontSize: 12.5, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#3a3d3f", fontWeight: 700, cursor: "pointer" }}>← {backLabel}</button>
       ) : <span />}
       {nextTo ? (
-        <button onClick={() => goToWorkshopStep(nextTo)} style={{ padding: "9px 16px", fontSize: 13, borderRadius: 8, border: "none", background: nextIsDone ? "#16a34a" : "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>{nextIsDone ? "✓ " : ""}{nextLabel} →</button>
+        <button onClick={() => goToWorkshopStep(nextTo)} style={{ padding: "9px 16px", fontSize: 13, borderRadius: 0, border: "none", background: nextIsDone ? "#16a34a" : "#5980a6", color: "#fff", fontWeight: 800, cursor: "pointer" }}>{nextIsDone ? "✓ " : ""}{nextLabel} →</button>
       ) : <span />}
     </div>
   ), [goToWorkshopStep]);
 
 
   const AddBtn = useCallback(({ label, onClick }) => (
-    <button onClick={onClick} style={{ width: "100%", marginTop: 4, padding: "8px 0", fontSize: 14, fontWeight: 500, color: "#1F3864", border: "1px dashed #cbd5e1", borderRadius: 8, background: "none", cursor: "pointer" }}>+ {label}</button>
+    <button onClick={onClick} style={{ width: "100%", marginTop: 4, padding: "8px 0", fontSize: 14, fontWeight: 500, color: "#5980a6", border: "1px dashed #b9b9bd", borderRadius: 0, background: "none", cursor: "pointer" }}>+ {label}</button>
   ), []);
   const grid2 = useMemo(() => ({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }), []);
   const optimizer = useMemo(() => analyzeBuilderOptimization(data), [data]);
@@ -4546,14 +4561,14 @@ function App() {
   const addSkillToTechnical = useCallback((skill) => set({ skills: { ...data.skills, technical: addUniqueCsv(data.skills.technical, skill) } }), [data.skills]);
   const addSkillToTools = useCallback((skill) => set({ skills: { ...data.skills, tools: addUniqueCsv(data.skills.tools, skill) } }), [data.skills]);
 
-  const saveBadge = { idle: ["Draft", "#94a3b8"], saving: ["Saving…", "#d97706"], saved: ["Saved", "#16a34a"], error: ["Save failed", "#dc2626"] }[saveState];
+  const saveBadge = { idle: ["Draft", "#8b8e91"], saving: ["Saving…", "#d97706"], saved: ["Saved", "#16a34a"], error: ["Save failed", "#dc2626"] }[saveState];
 
   const scoreStatus = (score) => score >= 90 ? "Excellent" : score >= 80 ? "Strong" : score >= 70 ? "Good" : score >= 60 ? "Needs Improvement" : "Major Improvements Needed";
   const snapshotCard = (title, children, footer) => (
-    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 18, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
-      <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 10px", textAlign: "left" }}>{title}</h3>
+    <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 18, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+      <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 10px", textAlign: "left" }}>{title}</h3>
       {children}
-      {footer && <div style={{ marginTop: 12, fontSize: 11, color: "#64748b", textAlign: "left" }}>{footer}</div>}
+      {footer && <div style={{ marginTop: 12, fontSize: 11, color: "#6d7073", textAlign: "left" }}>{footer}</div>}
     </div>
   );
   const countCsv = (s) => String(s || "").split(/[,;|]/).map(x => x.trim()).filter(Boolean).length;
@@ -5491,31 +5506,31 @@ function App() {
     const jobMissingSkills = (optimizer && optimizer.keyword && optimizer.keyword.missingSkills) ? optimizer.keyword.missingSkills.slice(0, 4) : [];
     const jobMissingTerms = (optimizer && optimizer.keyword && optimizer.keyword.missingDisplay) ? optimizer.keyword.missingDisplay.slice(0, 3) : [];
     const hasJob = !!(optimizer && optimizer.keyword);
-    const cardStyle = { borderRadius: 12, padding: "12px 14px", marginBottom: 10, textAlign: "left" };
+    const cardStyle = { borderRadius: 0, padding: "12px 14px", marginBottom: 10, textAlign: "left" };
     return (
       <div>
-        <div style={{ ...cardStyle, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+        <div style={{ ...cardStyle, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
             <span style={{ fontSize: 13 }}>★</span>
-            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864" }}>Coach Jeff's priorities</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#5980a6" }}>Coach Jeff's priorities</span>
           </div>
           {coachItems.length ? (
-            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#334155" }}>
+            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#3a3d3f" }}>
               {coachItems.map((im, i) => <li key={i} style={{ marginBottom: 5 }}><b>{im.title || im.label}</b>{im.stars ? " " + "★".repeat(im.stars) : ""}{im.why ? " — " + im.why : ""}</li>)}
             </ul>
-          ) : <p style={{ fontSize: 11.5, color: "#64748b", margin: 0 }}>Complete the Coach Review to see ranked priorities here.</p>}
+          ) : <p style={{ fontSize: 11.5, color: "#6d7073", margin: 0 }}>Complete the Coach Review to see ranked priorities here.</p>}
         </div>
 
-        <div style={{ ...cardStyle, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+        <div style={{ ...cardStyle, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
             <span style={{ fontSize: 13 }}>👁</span>
-            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864" }}>Recruiter tips</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: "#5980a6" }}>Recruiter tips</span>
           </div>
           {recruiterItems.length ? (
-            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#334155" }}>
+            <ul style={{ margin: "0 0 0 16px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#3a3d3f" }}>
               {recruiterItems.map((im, i) => <li key={i} style={{ marginBottom: 5 }}><b>{im.title || im.label}</b>{im.why ? " — " + im.why : (im.detail ? " — " + im.detail : "")}</li>)}
             </ul>
-          ) : <p style={{ fontSize: 11.5, color: "#64748b", margin: 0 }}>Complete the Recruiter Review to see recruiter tips here.</p>}
+          ) : <p style={{ fontSize: 11.5, color: "#6d7073", margin: 0 }}>Complete the Recruiter Review to see recruiter tips here.</p>}
         </div>
 
         {hasJob && (
@@ -5558,51 +5573,51 @@ function App() {
 
   return (
     <div>
-      <div className="no-print" style={{ position: "sticky", top: 0, zIndex: 20, background: "#fff", borderBottom: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}>
+      <div className="no-print" style={{ position: "sticky", top: 0, zIndex: 20, background: "#fff", borderBottom: "1px solid #d6d6d8", boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#1F3864", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>CJ</div>
+            <div style={{ width: 32, height: 32, borderRadius: 0, background: "#5980a6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>CJ</div>
             <div style={{ textAlign: "left" }}>
               <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.1, textAlign: "left" }}>Coach Jeff</div>
-              <div style={{ fontSize: 11, color: "#64748b", textAlign: "left" }}>Resume Optimizer · Import • Analyze • Customize • Improve • Validate • Export · Build {BUILD_VERSION}</div>
+              <div style={{ fontSize: 11, color: "#6d7073", textAlign: "left" }}>Resume Optimizer · Import • Analyze • Customize • Improve • Validate • Export · Build {BUILD_VERSION}</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className={saveState === "saving" ? "spin" : ""} style={{ fontSize: 11, fontWeight: 600, color: saveBadge[1] }}>{saveBadge[0]}</span>
-            <button onClick={saveNow} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid " + (justSaved ? "#16a34a" : "#cbd5e1"), background: justSaved ? "#16a34a" : "#fff", color: justSaved ? "#fff" : "#1e293b", fontWeight: justSaved ? 600 : 400, cursor: "pointer", transition: "all .15s" }}>{justSaved ? "Saved ✓" : "Save"}</button>
-            <button onClick={reset} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Reset</button>
-            <a href="https://coachjeff-coverletter.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Cover Letter →</a>
-            <a href="https://coachjeff-jobfinder.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Job Finder →</a>
-            <button onClick={printPdf} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print / PDF</button>
-            <button onClick={exportDocxReal} disabled={busy} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 600, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
+            <button onClick={saveNow} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 0, border: "1px solid " + (justSaved ? "#16a34a" : "#b9b9bd"), background: justSaved ? "#16a34a" : "#fff", color: justSaved ? "#fff" : "#1d1f20", fontWeight: justSaved ? 600 : 400, cursor: "pointer", transition: "all .15s" }}>{justSaved ? "Saved ✓" : "Save"}</button>
+            <button onClick={reset} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Reset</button>
+            <a href="https://coachjeff-coverletter.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 0, border: "1px solid #5980a6", background: "#fff", color: "#5980a6", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Cover Letter →</a>
+            <a href="https://coachjeff-jobfinder.netlify.app/" style={{ padding: "8px 12px", fontSize: 14, borderRadius: 0, border: "1px solid #5980a6", background: "#fff", color: "#5980a6", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>Job Finder →</a>
+            <button onClick={printPdf} style={{ padding: "8px 12px", fontSize: 14, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Print / PDF</button>
+            <button onClick={exportDocxReal} disabled={busy} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 600, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
           </div>
         </div>
       </div>
 
       {!hasStarted ? (<div className="no-print" style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 16px" }}>
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 18, padding: 28, boxShadow: "0 1px 6px rgba(0,0,0,.05)", display: "grid", gridTemplateColumns: "1.05fr .95fr", gap: 24, alignItems: "start" }}>
+        <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 28, boxShadow: "0 1px 6px rgba(0,0,0,.05)", display: "grid", gridTemplateColumns: "1.05fr .95fr", gap: 24, alignItems: "start" }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 900, color: "#1F3864", textTransform: "uppercase", letterSpacing: .6, marginBottom: 8 }}>Step 1 of 8</div>
-            <h1 style={{ fontSize: 36, lineHeight: 1.1, color: "#1F3864", margin: "0 0 10px" }}>Start here.</h1>
-            <p style={{ fontSize: 17, lineHeight: 1.55, color: "#334155", marginBottom: 18 }}>Start by choosing the type of role you're targeting. Coach Jeff will use that choice throughout the entire optimization process—from Snapshot through Job Match, Resume Workshop, ATS Inspection, and Export.</p>
-            <div style={{ background: "#eff6ff", borderLeft: "5px solid #1F3864", borderRadius: 12, padding: 14, color: "#1e3a8a", fontSize: 13, lineHeight: 1.45 }}><b>Coach Jeff's Insight:</b> The goal is not a perfect score. The goal is a resume that is clear, honest, recruiter-friendly, and ready to submit.</div>
+            <div style={{ fontSize: 12, fontWeight: 900, color: "#5980a6", textTransform: "uppercase", letterSpacing: .6, marginBottom: 8 }}>Step 1 of 8</div>
+            <h1 style={{ fontSize: 36, lineHeight: 1.1, color: "#5980a6", margin: "0 0 10px" }}>Start here.</h1>
+            <p style={{ fontSize: 17, lineHeight: 1.55, color: "#3a3d3f", marginBottom: 18 }}>Start by choosing the type of role you're targeting. Coach Jeff will use that choice throughout the entire optimization process—from Snapshot through Job Match, Resume Workshop, ATS Inspection, and Export.</p>
+            <div style={{ background: "#e6ecf3", borderLeft: "5px solid #5980a6", borderRadius: 0, padding: 14, color: "#3f5f7f", fontSize: 13, lineHeight: 1.45 }}><b>Coach Jeff's Insight:</b> The goal is not a perfect score. The goal is a resume that is clear, honest, recruiter-friendly, and ready to submit.</div>
           </div>
-          <div style={{ padding: 18, background: "#f8fafc", border: "1px dashed #94a3b8", borderRadius: 14 }}>
-            <div style={{ marginBottom: 14, padding: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Target Field / Industry</label>
-              <p style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.35, marginBottom: 8, textAlign: "left" }}>Choose your target role once before importing your resume. Coach Jeff will personalize the entire workflow using this selection.</p>
+          <div style={{ padding: 18, background: "#e9e9ea", border: "1px dashed #8b8e91", borderRadius: 0 }}>
+            <div style={{ marginBottom: 14, padding: 12, background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0 }}>
+              <label style={{ fontSize: 12, fontWeight: 800, color: "#6d7073", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Target Field / Industry</label>
+              <p style={{ fontSize: 11.5, color: "#6d7073", lineHeight: 1.35, marginBottom: 8, textAlign: "left" }}>Choose your target role once before importing your resume. Coach Jeff will personalize the entire workflow using this selection.</p>
               <select value={data.field} onChange={(e) => applyPreset(e.target.value)} style={iC}>
                 <option value="">— What type of role are you targeting? —</option>
                 {Object.keys(FIELD_PRESETS).map((f) => <option key={f}>{f}</option>)}
               </select>
             </div>
-            <label style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>{currentResumeName ? "Current Resume" : "Upload Resume"}</label>
+            <label style={{ fontSize: 12, fontWeight: 800, color: "#6d7073", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>{currentResumeName ? "Current Resume" : "Upload Resume"}</label>
             <input ref={resumeFileInputRef} type="file" accept=".docx,.pdf,.txt,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/json" onChange={handleResumeImportFile} style={{ width: "100%", fontSize: 13, marginBottom: 8 }} />
             {importFileStatus && <p style={{ fontSize: 11, color: importBlocked || importFileStatus.includes("Could not") || importFileStatus.includes("Unsupported") || importFileStatus.includes("appears to be") ? "#dc2626" : "#16a34a", marginTop: 5, lineHeight: 1.35, textAlign: "left" }}>{importFileStatus}</p>}
             <textarea rows={7} style={{ ...iC, resize: "vertical", lineHeight: 1.45, marginTop: 8 }} placeholder="Or paste the full existing resume here…" value={importText} onChange={(e) => { setImportText(e.target.value); setImportPreview(null); setImportFileStatus(""); setImportBlocked(false); setImportLinks(null); }} />
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <button onClick={previewImport} disabled={importBlocked} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 700, cursor: importBlocked ? "not-allowed" : "pointer", opacity: importBlocked ? .45 : 1 }}>Review Import</button>
-              <button onClick={applyImport} disabled={importBlocked} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: importBlocked ? "not-allowed" : "pointer", opacity: importBlocked ? .45 : 1 }}>Begin Guided Review</button>
+              <button onClick={previewImport} disabled={importBlocked} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 0, border: "1px solid #5980a6", background: "#fff", color: "#5980a6", fontWeight: 700, cursor: importBlocked ? "not-allowed" : "pointer", opacity: importBlocked ? .45 : 1 }}>Review Import</button>
+              <button onClick={applyImport} disabled={importBlocked} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", fontWeight: 800, cursor: importBlocked ? "not-allowed" : "pointer", opacity: importBlocked ? .45 : 1 }}>Begin Guided Review</button>
             </div>
           </div>
         </div>
@@ -5611,34 +5626,34 @@ function App() {
 
       {hasStarted ? (
         <div className="no-print" style={{ maxWidth: 1100, margin: "0 auto", padding: "12px 16px 0" }}>
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 12, boxShadow: "0 1px 5px rgba(0,0,0,.05)" }}>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 12, boxShadow: "0 1px 5px rgba(0,0,0,.05)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
               <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 800 }}>Coach Jeff &gt; Resume Optimizer &gt; {showRecruiterReview ? "Recruiter Review" : (showCoachReview ? "Coach Review" : (showBuilderWorkspace ? activeWorkshopSection : "Resume Snapshot"))}</div>
-                <div style={{ fontSize: 15, fontWeight: 900, color: "#1F3864", marginTop: 3 }}>{currentResumeName || data.name || "Current resume"}</div>
+                <div style={{ fontSize: 11, color: "#6d7073", fontWeight: 800 }}>Coach Jeff &gt; Resume Optimizer &gt; {showRecruiterReview ? "Recruiter Review" : (showCoachReview ? "Coach Review" : (showBuilderWorkspace ? activeWorkshopSection : "Resume Snapshot"))}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: "#5980a6", marginTop: 3 }}>{currentResumeName || data.name || "Current resume"}</div>
                 <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>Imported successfully • Target: {data.field || "Not selected"}</div>
               </div>
-              <div style={{ textAlign: "right", fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
+              <div style={{ textAlign: "right", fontSize: 11, color: "#6d7073", lineHeight: 1.4 }}>
                 <div><b>Sections detected:</b> {data.order.filter(k => !data.hidden[k]).length}</div>
                 <div><b>Import confidence:</b> {importPreview || importIntelligence ? "High" : "Draft"}</div>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 10 }}>
-              <div style={{ padding: "9px 11px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}><div style={{ fontSize: 10.5, color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}>Resume Health</div><div style={{ fontSize: 24, fontWeight: 900, color: "#1F3864" }}>{resumeStrength.overall}</div><div style={{ fontSize: 11, color: "#64748b" }}>Overall resume quality</div></div>
-              <div style={{ padding: "9px 11px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 10.5, color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "ATS Compatibility" : "Import Quality"}</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: "#1F3864" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? atsScore : ((importPreview || importIntelligence) ? "High" : "Draft")}</div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "Technical formatting and parsing check" : (data.order.filter(k => !data.hidden[k]).length + " sections detected")}</div>
+              <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}><div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>Resume Health</div><div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{resumeStrength.overall}</div><div style={{ fontSize: 11, color: "#6d7073" }}>Overall resume quality</div></div>
+              <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
+                <div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "ATS Compatibility" : "Import Quality"}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? atsScore : ((importPreview || importIntelligence) ? "High" : "Draft")}</div>
+                <div style={{ fontSize: 11, color: "#6d7073" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "Technical formatting and parsing check" : (data.order.filter(k => !data.hidden[k]).length + " sections detected")}</div>
               </div>
-              <div style={{ padding: "9px 11px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 10.5, color: "#64748b", fontWeight: 900, textTransform: "uppercase" }}>{thirdSummaryCard.title}</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: "#1F3864" }}>{thirdSummaryCard.value}</div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{thirdSummaryCard.sub}</div>
+              <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
+                <div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>{thirdSummaryCard.title}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{thirdSummaryCard.value}</div>
+                <div style={{ fontSize: 11, color: "#6d7073" }}>{thirdSummaryCard.sub}</div>
               </div>
             </div>
 
-            <div style={{ marginBottom: 10, padding: "8px 10px", borderRadius: 12, background: "#eff6ff", color: "#1e3a8a", fontSize: 11.5, lineHeight: 1.35 }}><b>Score guide:</b> Resume Health = overall resume quality. Import Quality = how well the resume was parsed. Job Match appears after a posting is loaded. ATS Compatibility appears during the final technical validation step.</div>
+            <div style={{ marginBottom: 10, padding: "8px 10px", borderRadius: 0, background: "#e6ecf3", color: "#3f5f7f", fontSize: 11.5, lineHeight: 1.35 }}><b>Score guide:</b> Resume Health = overall resume quality. Import Quality = how well the resume was parsed. Job Match appears after a posting is loaded. ATS Compatibility appears during the final technical validation step.</div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               {workflowSteps.map((s, i) => {
@@ -5664,44 +5679,44 @@ function App() {
         <div className="no-print" style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 16px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "end", flexWrap: "wrap", marginBottom: 10 }}>
             <div style={{ textAlign: "left" }}>
-              <h2 style={{ fontSize: 28, lineHeight: 1.15, color: "#1F3864", margin: 0 }}>Resume Snapshot</h2>
-              <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>A quick coaching dashboard: strengths, opportunities, completeness, and the best next action.</p>
+              <h2 style={{ fontSize: 28, lineHeight: 1.15, color: "#5980a6", margin: 0 }}>Resume Snapshot</h2>
+              <p style={{ fontSize: 13, color: "#6d7073", marginTop: 4 }}>A quick coaching dashboard: strengths, opportunities, completeness, and the best next action.</p>
             </div>
-            <button onClick={printPdf} style={{ padding: "8px 12px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print Snapshot</button>
+            <button onClick={printPdf} style={{ padding: "8px 12px", fontSize: 13, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Print Snapshot</button>
           </div>
 
-          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderLeft: "5px solid #16a34a", borderRadius: 14, padding: 12, color: "#1e293b", fontSize: 12.5, lineHeight: 1.4, marginBottom: 10, textAlign: "left" }}>
+          <div style={{ background: "#e9e9ea", border: "1px solid #d6d6d8", borderLeft: "5px solid #16a34a", borderRadius: 0, padding: 12, color: "#1d1f20", fontSize: 12.5, lineHeight: 1.4, marginBottom: 10, textAlign: "left" }}>
             <b>Overall Assessment:</b> ✓ Ready for further optimization. This resume has a solid foundation; focus on the recommendations below before submitting applications.
           </div>
 
-          <div style={{ background: "#eff6ff", borderLeft: "5px solid #1F3864", borderRadius: 14, padding: 15, color: "#1e3a8a", fontSize: 14, lineHeight: 1.45, marginBottom: 12, textAlign: "left" }}>
+          <div style={{ background: "#e6ecf3", borderLeft: "5px solid #5980a6", borderRadius: 0, padding: 15, color: "#3f5f7f", fontSize: 14, lineHeight: 1.45, marginBottom: 12, textAlign: "left" }}>
             <b>💬 Coach Jeff's First Impression:</b> Your resume already shows useful experience and relevant skills. Your selected target is {data.field || "the target field"}, but the resume itself should state that direction clearly near the top. Before applying, add measurable accomplishments so recruiters can quickly understand the value you bring.
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "0.85fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 6px" }}>Resume Health</h3>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 6px" }}>Resume Health</h3>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <div style={{ fontSize: 42, fontWeight: 900, color: "#1F3864" }}>{resumeStrength.overall}</div>
+                <div style={{ fontSize: 42, fontWeight: 900, color: "#5980a6" }}>{resumeStrength.overall}</div>
                 <div style={{ fontSize: 13, fontWeight: 900, color: resumeStrength.overall >= 80 ? "#166534" : "#854d0e" }}>🟢 {scoreStatus(resumeStrength.overall)}</div>
               </div>
-              <div style={{ height: 8, background: "#e2e8f0", borderRadius: 99, overflow: "hidden", marginTop: 8 }}>
-                <div style={{ height: "100%", width: Math.min(100, resumeStrength.overall) + "%", background: "#1F3864" }}></div>
+              <div style={{ height: 8, background: "#d6d6d8", borderRadius: 0, overflow: "hidden", marginTop: 8 }}>
+                <div style={{ height: "100%", width: Math.min(100, resumeStrength.overall) + "%", background: "#5980a6" }}></div>
               </div>
-              <div style={{ marginTop: 9, fontSize: 11, color: "#64748b" }}>Recruiter confidence: High</div>
+              <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: High</div>
             </div>
 
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>{snapshotStrengths.length === 1 ? "Top Strength" : `Top ${snapshotStrengths.length || 1} Strengths`}</h3>
-              <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>These are the areas recruiters are most likely to notice first.</p>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 4px" }}>{snapshotStrengths.length === 1 ? "Top Strength" : `Top ${snapshotStrengths.length || 1} Strengths`}</h3>
+              <p style={{ fontSize: 11, color: "#6d7073", margin: "0 0 6px" }}>These are the areas recruiters are most likely to notice first.</p>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55, fontSize: 12.5 }}>
                 {snapshotStrengths.length ? snapshotStrengths.map((s,i) => <li key={i}>✅ {s}</li>) : <li>Resume content imported successfully.</li>}
               </ul>
             </div>
 
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>{snapshotOpportunities.length === 1 ? "Top Opportunity" : `Top ${snapshotOpportunities.length || 1} Opportunities`}</h3>
-              <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px" }}>Addressing these items should improve recruiter confidence fastest.</p>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 4px" }}>{snapshotOpportunities.length === 1 ? "Top Opportunity" : `Top ${snapshotOpportunities.length || 1} Opportunities`}</h3>
+              <p style={{ fontSize: 11, color: "#6d7073", margin: "0 0 6px" }}>Addressing these items should improve recruiter confidence fastest.</p>
               <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.55, fontSize: 12.5 }}>
                 {snapshotOpportunities.length ? snapshotOpportunities.map((s,i) => <li key={i}>🟡 {s}</li>) : <li>Continue to Recruiter Review for deeper feedback.</li>}
               </ol>
@@ -5709,8 +5724,8 @@ function App() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1.25fr .75fr", gap: 12, marginBottom: 12 }}>
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left" }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 9px" }}>Resume Completeness</h3>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left" }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 9px" }}>Resume Completeness</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))", gap: 7, fontSize: 12 }}>
                 {[
                   ["Contact Information", data.name && data.contact && data.contact.email ? "✓" : "✕"],
@@ -5722,31 +5737,31 @@ function App() {
                   ["Education History", hasEducation ? "✓" : "○"],
                   ["Leadership", leadershipCount ? "✓" : "○"],
                   ["Certifications", certCount ? "✓" : "○"]
-                ].map(([label,status]) => <div key={label} style={{ padding: "8px 9px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc", fontWeight: 800, color: status === "✓" ? "#166534" : "#64748b" }}>{status} {label}</div>)}
+                ].map(([label,status]) => <div key={label} style={{ padding: "8px 9px", borderRadius: 0, border: "1px solid #d6d6d8", background: "#e9e9ea", fontWeight: 800, color: status === "✓" ? "#166534" : "#6d7073" }}>{status} {label}</div>)}
               </div>
             </div>
 
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left" }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 9px" }}>Resume Statistics</h3>
-              {[["Skills", skillCount],["Experience bullets", expBulletCount],["Projects", projectCount],["Leadership", leadershipCount],["Certifications", certCount]].map(([label,value]) => <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f1f5f9", fontSize: 12.5 }}><span style={{ color: "#64748b", fontWeight: 700 }}>{label}</span><b style={{ color: "#1F3864" }}>{value}</b></div>)}
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left" }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 9px" }}>Resume Statistics</h3>
+              {[["Skills", skillCount],["Experience bullets", expBulletCount],["Projects", projectCount],["Leadership", leadershipCount],["Certifications", certCount]].map(([label,value]) => <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f2f2f3", fontSize: 12.5 }}><span style={{ color: "#6d7073", fontWeight: 700 }}>{label}</span><b style={{ color: "#5980a6" }}>{value}</b></div>)}
             </div>
           </div>
 
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 12, textAlign: "left", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 12, textAlign: "left", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
             <div>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 5px" }}>Today's Top Priority</h3>
-              <div style={{ fontSize: 14.5, fontWeight: 900, color: "#1e293b" }}>{todaysRecommendation.label}</div>
-              <p style={{ fontSize: 12.5, color: "#334155", lineHeight: 1.45, marginTop: 5 }}>{todaysRecommendation.detail}</p>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 5px" }}>Today's Top Priority</h3>
+              <div style={{ fontSize: 14.5, fontWeight: 900, color: "#1d1f20" }}>{todaysRecommendation.label}</div>
+              <p style={{ fontSize: 12.5, color: "#3a3d3f", lineHeight: 1.45, marginTop: 5 }}>{todaysRecommendation.detail}</p>
             </div>
-            <div style={{ minWidth: 145, padding: 12, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 11.5, color: "#64748b", fontWeight: 800 }}>
+            <div style={{ minWidth: 145, padding: 12, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8", fontSize: 11.5, color: "#6d7073", fontWeight: 800 }}>
               <div>Estimated time: 5–10 min</div>
               <div>Impact: High</div>
             </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-            <button onClick={() => { setShowBuilderWorkspace(true); setShowCoachReview(false); setShowRecruiterReview(false); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Improve Resume</button>
-            <button onClick={() => { setShowRecruiterReview(true); setShowCoachReview(false); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Next Step: Recruiter Review →</button>
+            <button onClick={() => { setShowBuilderWorkspace(true); setShowCoachReview(false); setShowRecruiterReview(false); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Improve Resume</button>
+            <button onClick={() => { setShowRecruiterReview(true); setShowCoachReview(false); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Next Step: Recruiter Review →</button>
           </div>
         </div>
       ) : null}
@@ -5756,63 +5771,63 @@ function App() {
         <div className="no-print" style={{ maxWidth: 820, margin: "0 auto", padding: "16px 16px 0" }}>
           {/* 1. Header */}
           <div style={{ textAlign: "left", marginBottom: 18 }}>
-            <h2 style={{ fontSize: 28, lineHeight: 1.15, color: "#1F3864", margin: 0 }}>Recruiter Review</h2>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Simulating a 30–60 second recruiter screening.</p>
+            <h2 style={{ fontSize: 28, lineHeight: 1.15, color: "#5980a6", margin: 0 }}>Recruiter Review</h2>
+            <p style={{ fontSize: 14, color: "#6d7073", marginTop: 6 }}>Simulating a 30–60 second recruiter screening.</p>
           </div>
 
           {/* 1b. Recruiter's Decision — emotional anchor */}
-          <div style={{ background: "linear-gradient(180deg,#1F3864 0%,#243f73 100%)", borderRadius: 18, padding: "22px 22px 20px", color: "#fff", textAlign: "left", marginBottom: 16, boxShadow: "0 4px 18px rgba(31,56,100,.28)" }}>
+          <div style={{ background: "linear-gradient(180deg,#5980a6 0%,#243f73 100%)", borderRadius: 0, padding: "22px 22px 20px", color: "#fff", textAlign: "left", marginBottom: 16, boxShadow: "0 4px 18px rgba(31,56,100,.28)" }}>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#bfdbfe" }}>Recruiter's Decision</div>
             <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "6px 14px", marginTop: 8 }}>
               <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.1 }}>{recruiterReview.outcome}</div>
             </div>
             <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ flex: 1, height: 12, borderRadius: 999, background: "rgba(255,255,255,.18)", overflow: "hidden" }}>
-                <div style={{ width: recruiterReview.confidence + "%", height: "100%", borderRadius: 999, background: recruiterReview.confidence >= 90 ? "#22c55e" : recruiterReview.confidence >= 80 ? "#facc15" : recruiterReview.confidence >= 70 ? "#fb923c" : "#f87171" }} />
+              <div style={{ flex: 1, height: 12, borderRadius: 0, background: "rgba(255,255,255,.18)", overflow: "hidden" }}>
+                <div style={{ width: recruiterReview.confidence + "%", height: "100%", borderRadius: 0, background: recruiterReview.confidence >= 90 ? "#22c55e" : recruiterReview.confidence >= 80 ? "#facc15" : recruiterReview.confidence >= 70 ? "#fb923c" : "#f87171" }} />
               </div>
               <div style={{ fontSize: 20, fontWeight: 900, whiteSpace: "nowrap" }}>{recruiterReview.confidence}%</div>
             </div>
             <div style={{ fontSize: 11.5, color: "#bfdbfe", marginTop: 4, fontWeight: 700 }}>Recruiter Confidence</div>
-            <div style={{ marginTop: 14, background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ marginTop: 14, background: "rgba(255,255,255,.10)", borderRadius: 0, padding: "12px 14px" }}>
               <div style={{ fontSize: 13, color: "#e0e7ff", lineHeight: 1.55 }}><i>{recruiterReview.emotionalRead}</i></div>
               <div style={{ fontSize: 13.5, color: "#fff", lineHeight: 1.55, marginTop: 8 }}>If this resume landed in my queue today, I would {recruiterReview.queueAction}</div>
             </div>
           </div>
 
           {/* 2. The First Thing I Noticed */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>👀 The First Thing I Noticed</h3>
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: 0 }}>{recruiterReview.firstNoticed}</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>👀 The First Thing I Noticed</h3>
+            <p style={{ fontSize: 14, color: "#3a3d3f", lineHeight: 1.6, margin: 0 }}>{recruiterReview.firstNoticed}</p>
           </div>
 
           {/* 3. What Made Me Pause */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #f59e0b", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>🤔 What Made Me Pause</h3>
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: 0 }}>{recruiterReview.paused}</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #f59e0b", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>🤔 What Made Me Pause</h3>
+            <p style={{ fontSize: 14, color: "#3a3d3f", lineHeight: 1.6, margin: 0 }}>{recruiterReview.paused}</p>
           </div>
 
           {/* 4. What Increased My Confidence */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #16a34a", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>⭐ What Increased My Confidence</h3>
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: 0 }}>{recruiterReview.confidenceText}</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #16a34a", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>⭐ What Increased My Confidence</h3>
+            <p style={{ fontSize: 14, color: "#3a3d3f", lineHeight: 1.6, margin: 0 }}>{recruiterReview.confidenceText}</p>
           </div>
 
           {/* 5. Recruiter Confidence Timeline */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>📊 Recruiter Confidence Timeline</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>How my confidence moved as I read, second by second.</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>📊 Recruiter Confidence Timeline</h3>
+            <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>How my confidence moved as I read, second by second.</p>
             {recruiterReview.timeline.map((t,i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < recruiterReview.timeline.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < recruiterReview.timeline.length - 1 ? "1px solid #f2f2f3" : "none" }}>
                 <div style={{ flex: "0 0 22px", fontSize: 16, lineHeight: 1.4 }}>{t.up ? "📈" : "📉"}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 900, color: /Final decision/i.test(t.stage) ? "#1F3864" : "#1e293b" }}>{t.stage}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 900, color: /Final decision/i.test(t.stage) ? "#5980a6" : "#1d1f20" }}>{t.stage}</div>
                     <div style={{ fontSize: 13, fontWeight: 900, color: t.pct >= 90 ? "#16a34a" : t.pct >= 80 ? "#ca8a04" : t.pct >= 70 ? "#ea580c" : "#dc2626", whiteSpace: "nowrap" }}>{t.pct}%</div>
                   </div>
-                  <div style={{ height: 6, borderRadius: 999, background: "#f1f5f9", overflow: "hidden", margin: "6px 0 4px" }}>
-                    <div style={{ width: t.pct + "%", height: "100%", borderRadius: 999, background: t.pct >= 90 ? "#22c55e" : t.pct >= 80 ? "#facc15" : t.pct >= 70 ? "#fb923c" : "#f87171" }} />
+                  <div style={{ height: 6, borderRadius: 0, background: "#f2f2f3", overflow: "hidden", margin: "6px 0 4px" }}>
+                    <div style={{ width: t.pct + "%", height: "100%", borderRadius: 0, background: t.pct >= 90 ? "#22c55e" : t.pct >= 80 ? "#facc15" : t.pct >= 70 ? "#fb923c" : "#f87171" }} />
                   </div>
-                  <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.5 }}>{t.note}</div>
+                  <div style={{ fontSize: 12.5, color: "#6d7073", marginTop: 2, lineHeight: 1.5 }}>{t.note}</div>
                 </div>
               </div>
             ))}
@@ -5820,63 +5835,63 @@ function App() {
 
           {/* 5b. Five Major Areas Review */}
           {Array.isArray(coachReview.fiveMajorAreas) && coachReview.fiveMajorAreas.length ? (
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-              <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 5px" }}>🔍 Five Major Areas Review</h3>
-              <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px", lineHeight: 1.5 }}>A concise check of five areas covered more granularly in a full manual resume audit.</p>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+              <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 5px" }}>🔍 Five Major Areas Review</h3>
+              <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px", lineHeight: 1.5 }}>A concise check of five areas covered more granularly in a full manual resume audit.</p>
               {coachReview.fiveMajorAreas.map((item, i) => (
-                <div key={i} style={{ padding: "10px 0", borderBottom: i < coachReview.fiveMajorAreas.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                <div key={i} style={{ padding: "10px 0", borderBottom: i < coachReview.fiveMajorAreas.length - 1 ? "1px solid #f2f2f3" : "none" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 900, color: "#1e293b" }}>{i + 1}. {item.title}</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 900, color: "#1F3864", background: "#eff6ff", borderRadius: 999, padding: "3px 8px" }}>{item.status}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 900, color: "#1d1f20" }}>{i + 1}. {item.title}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 900, color: "#5980a6", background: "#e6ecf3", borderRadius: 0, padding: "3px 8px" }}>{item.status}</div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5, marginTop: 4 }}>{item.note}</div>
+                  <div style={{ fontSize: 12.5, color: "#6d7073", lineHeight: 1.5, marginTop: 4 }}>{item.note}</div>
                 </div>
               ))}
             </div>
           ) : null}
 
           {/* 6. My Decision */}
-          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 16, padding: "18px 20px", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>✅ My Decision</h3>
-            <p style={{ fontSize: 14, color: "#1e3a8a", lineHeight: 1.6, margin: "0 0 6px" }}><i>{recruiterReview.decisionIntro}</i></p>
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: 0 }}>{recruiterReview.decisionBody}</p>
+          <div style={{ background: "#e6ecf3", border: "1px solid #bfdbfe", borderRadius: 0, padding: "18px 20px", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>✅ My Decision</h3>
+            <p style={{ fontSize: 14, color: "#3f5f7f", lineHeight: 1.6, margin: "0 0 6px" }}><i>{recruiterReview.decisionIntro}</i></p>
+            <p style={{ fontSize: 14, color: "#3a3d3f", lineHeight: 1.6, margin: 0 }}>{recruiterReview.decisionBody}</p>
           </div>
 
           {/* 7. If I Interviewed You Tomorrow */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 10px" }}>💬 If I Interviewed You Tomorrow…</h3>
-            <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7, fontSize: 14, color: "#334155" }}>{recruiterReview.questions.slice(0,5).map((q,i) => <li key={i} style={{ marginBottom: 4 }}>{q}</li>)}</ol>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 10px" }}>💬 If I Interviewed You Tomorrow…</h3>
+            <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7, fontSize: 14, color: "#3a3d3f" }}>{recruiterReview.questions.slice(0,5).map((q,i) => <li key={i} style={{ marginBottom: 4 }}>{q}</li>)}</ol>
           </div>
 
           {/* 8. Here's What Would Increase My Confidence */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 10px" }}>📈 Here's What Would Increase My Confidence</h3>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 10px" }}>📈 Here's What Would Increase My Confidence</h3>
             {recruiterReview.improvements.slice(0,3).map((item,i) => (
-              <div key={i} style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: i < Math.min(recruiterReview.improvements.length,3) - 1 ? "1px solid #f1f5f9" : "none" }}>
-                <div style={{ flex: "0 0 26px", fontSize: 15, fontWeight: 900, color: "#1F3864" }}>{i + 1}.</div>
+              <div key={i} style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: i < Math.min(recruiterReview.improvements.length,3) - 1 ? "1px solid #f2f2f3" : "none" }}>
+                <div style={{ flex: "0 0 26px", fontSize: 15, fontWeight: 900, color: "#5980a6" }}>{i + 1}.</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 900, color: "#1e293b" }}>{item.label}</div>
-                  <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.5 }}>{item.detail}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 900, color: "#1d1f20" }}>{item.label}</div>
+                  <div style={{ fontSize: 12.5, color: "#6d7073", marginTop: 2, lineHeight: 1.5 }}>{item.detail}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* 9. Where I Landed */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 12 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>📝 Where I Landed</h3>
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.65, margin: 0 }}>{recruiterReview.closing}</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", marginBottom: 12 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>📝 Where I Landed</h3>
+            <p style={{ fontSize: 14, color: "#3a3d3f", lineHeight: 1.65, margin: 0 }}>{recruiterReview.closing}</p>
           </div>
 
           {/* 9b. Educational note */}
-          <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 12, padding: "12px 14px", textAlign: "left", marginBottom: 16 }}>
-            <p style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.5, margin: 0 }}>💡 Recruiter reviews are first impressions, not final hiring decisions.</p>
+          <div style={{ background: "#e9e9ea", border: "1px dashed #b9b9bd", borderRadius: 0, padding: "12px 14px", textAlign: "left", marginBottom: 16 }}>
+            <p style={{ fontSize: 12.5, color: "#6d7073", lineHeight: 1.5, margin: 0 }}>💡 Recruiter reviews are first impressions, not final hiring decisions.</p>
           </div>
 
           {/* Navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-            <button onClick={() => { setShowRecruiterReview(false); setShowCoachReview(false); setShowBuilderWorkspace(false); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>← Back to Resume Snapshot</button>
-            <button onClick={() => { setShowRecruiterReview(false); setShowCoachReview(true); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Continue to Coach Review →</button>
+            <button onClick={() => { setShowRecruiterReview(false); setShowCoachReview(false); setShowBuilderWorkspace(false); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>← Back to Resume Snapshot</button>
+            <button onClick={() => { setShowRecruiterReview(false); setShowCoachReview(true); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Continue to Coach Review →</button>
           </div>
         </div>
       ) : null}
@@ -5888,28 +5903,28 @@ function App() {
           {/* Header */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: "#1F3864", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 15 }}>CJ</div>
+              <div style={{ width: 42, height: 42, borderRadius: 0, background: "#5980a6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 15 }}>CJ</div>
               <div>
-                <h2 style={{ fontSize: 28, lineHeight: 1.1, color: "#1F3864", margin: 0 }}>Coach Review</h2>
-                <p style={{ fontSize: 13.5, color: "#64748b", margin: "4px 0 0" }}>A one-on-one coaching session: exactly what to improve, why it matters, and what to do first.</p>
+                <h2 style={{ fontSize: 28, lineHeight: 1.1, color: "#5980a6", margin: 0 }}>Coach Review</h2>
+                <p style={{ fontSize: 13.5, color: "#6d7073", margin: "4px 0 0" }}>A one-on-one coaching session: exactly what to improve, why it matters, and what to do first.</p>
               </div>
             </div>
           </div>
 
           {/* 1. Coach Jeff's Opening Thoughts */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #1F3864", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: ".06em", textTransform: "uppercase", color: "#64748b", marginBottom: 6 }}>Coach Jeff's Opening Thoughts</div>
-            <p style={{ fontSize: 15.5, color: "#1e293b", lineHeight: 1.6, margin: 0 }}>{coachReview.opening}</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #5980a6", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: ".06em", textTransform: "uppercase", color: "#6d7073", marginBottom: 6 }}>Coach Jeff's Opening Thoughts</div>
+            <p style={{ fontSize: 15.5, color: "#1d1f20", lineHeight: 1.6, margin: 0 }}>{coachReview.opening}</p>
           </div>
 
           {/* 2. ⭐ Coach Jeff's Game Plan (signature feature) */}
-          <div style={{ background: "linear-gradient(180deg,#1F3864 0%,#243f73 100%)", borderRadius: 18, padding: "22px 22px 20px", color: "#fff", marginBottom: 16, boxShadow: "0 4px 18px rgba(31,56,100,.28)" }}>
+          <div style={{ background: "linear-gradient(180deg,#5980a6 0%,#243f73 100%)", borderRadius: 0, padding: "22px 22px 20px", color: "#fff", marginBottom: 16, boxShadow: "0 4px 18px rgba(31,56,100,.28)" }}>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#bfdbfe" }}>⭐ Coach Jeff's Game Plan</div>
             <div style={{ fontSize: 20, fontWeight: 900, margin: "6px 0 4px" }}>Today's Coaching Plan</div>
             <div style={{ fontSize: 12.5, color: "#dbeafe", marginBottom: 14 }}>Do these three, in this order. That's the session.</div>
             {coachReview.planForToday.map((p, i) => (
-              <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "13px 15px", marginBottom: 10 }}>
-                <div style={{ flex: "0 0 30px", width: 30, height: 30, borderRadius: 999, background: "#fbbf24", color: "#1F3864", fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
+              <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(255,255,255,.10)", borderRadius: 0, padding: "13px 15px", marginBottom: 10 }}>
+                <div style={{ flex: "0 0 30px", width: 30, height: 30, borderRadius: 0, background: "#fbbf24", color: "#5980a6", fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1.3 }}>{p.title}</div>
                   <div style={{ fontSize: 12.5, color: "#dbeafe", marginTop: 3, lineHeight: 1.5 }}>{p.why}</div>
@@ -5918,11 +5933,11 @@ function App() {
               </div>
             ))}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-              <div style={{ flex: "1 1 200px", background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ flex: "1 1 200px", background: "rgba(255,255,255,.10)", borderRadius: 0, padding: "12px 14px" }}>
                 <div style={{ fontSize: 11, color: "#bfdbfe", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".05em" }}>Total Coaching Time</div>
                 <div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>~{coachReview.totalMinutes} minutes</div>
               </div>
-              <div style={{ flex: "1 1 200px", background: "rgba(255,255,255,.10)", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ flex: "1 1 200px", background: "rgba(255,255,255,.10)", borderRadius: 0, padding: "12px 14px" }}>
                 <div style={{ fontSize: 11, color: "#bfdbfe", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".05em" }}>Expected Recruiter Confidence</div>
                 <div style={{ fontSize: 22, fontWeight: 900, marginTop: 2 }}>{coachReview.conf}% <span style={{ color: "#93c5fd" }}>→</span> <span style={{ color: "#4ade80" }}>{coachReview.targetConf}%</span></div>
               </div>
@@ -5930,12 +5945,12 @@ function App() {
           </div>
 
           {/* 3. What's Already Working */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #16a34a", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>✅ What's Already Working</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>Let's start with the parts you should protect. These are real strengths.</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #16a34a", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>✅ What's Already Working</h3>
+            <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>Let's start with the parts you should protect. These are real strengths.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
               {coachReview.strengths.map((s, i) => (
-                <div key={i} style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 14px" }}>
+                <div key={i} style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 0, padding: "12px 14px" }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#166534" }}>✓ {s.label}</div>
                   <div style={{ fontSize: 12.5, color: "#3f6212", marginTop: 4, lineHeight: 1.5 }}>{s.why}</div>
                 </div>
@@ -5944,45 +5959,45 @@ function App() {
           </div>
 
           {/* 4. Highest Impact Improvements (star-ranked) */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>🎯 Highest-Impact Improvements</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>Ranked by how much each would move a recruiter. More stars = more impact.</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🎯 Highest-Impact Improvements</h3>
+            <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>Ranked by how much each would move a recruiter. More stars = more impact.</p>
             {coachReview.improvements.map((imp, i) => (
-              <div key={i} style={{ padding: "12px 0", borderBottom: i < coachReview.improvements.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+              <div key={i} style={{ padding: "12px 0", borderBottom: i < coachReview.improvements.length - 1 ? "1px solid #f2f2f3" : "none" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}>{imp.title}</div>
-                  <div style={{ fontSize: 15, color: "#f59e0b", letterSpacing: 1, whiteSpace: "nowrap" }}>{"★".repeat(imp.stars)}<span style={{ color: "#e2e8f0" }}>{"★".repeat(5 - imp.stars)}</span></div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#1d1f20" }}>{imp.title}</div>
+                  <div style={{ fontSize: 15, color: "#f59e0b", letterSpacing: 1, whiteSpace: "nowrap" }}>{"★".repeat(imp.stars)}<span style={{ color: "#d6d6d8" }}>{"★".repeat(5 - imp.stars)}</span></div>
                 </div>
                 <div style={{ fontSize: 13, color: "#475569", marginTop: 4, lineHeight: 1.55 }}>{imp.why}</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b", background: "#f1f5f9", borderRadius: 999, padding: "3px 10px" }}>⏱ Effort: {imp.effort}</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#7c2d12", background: "#ffedd5", borderRadius: 999, padding: "3px 10px" }}>📈 Recruiter impact: {imp.impact}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#6d7073", background: "#f2f2f3", borderRadius: 0, padding: "3px 10px" }}>⏱ Effort: {imp.effort}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#7c2d12", background: "#ffedd5", borderRadius: 0, padding: "3px 10px" }}>📈 Recruiter impact: {imp.impact}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {/* 5. Improvement Roadmap */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>🗺 Your Improvement Roadmap</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>Think of this as the path we'd walk together, one stop at a time.</p>
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🗺 Your Improvement Roadmap</h3>
+            <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 14px" }}>Think of this as the path we'd walk together, one stop at a time.</p>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 0 }}>
               {coachReview.roadmap.map((stop, i) => {
                 const label = typeof stop === "string" ? stop : stop.step;
                 const action = typeof stop === "string" ? "" : stop.action;
                 return (
                 <div key={i}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: i === 0 ? "#eff6ff" : "#f8fafc", border: "1px solid " + (i === 0 ? "#bfdbfe" : "#e2e8f0"), borderRadius: 12, padding: "11px 14px" }}>
-                    <div style={{ flex: "0 0 26px", width: 26, height: 26, borderRadius: 999, background: i === coachReview.roadmap.length - 1 ? "#16a34a" : "#1F3864", color: "#fff", fontWeight: 900, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: i === 0 ? "#e6ecf3" : "#e9e9ea", border: "1px solid " + (i === 0 ? "#bfdbfe" : "#d6d6d8"), borderRadius: 0, padding: "11px 14px" }}>
+                    <div style={{ flex: "0 0 26px", width: 26, height: 26, borderRadius: 0, background: i === coachReview.roadmap.length - 1 ? "#16a34a" : "#5980a6", color: "#fff", fontWeight: 900, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1e293b" }}>{label}</div>
-                        {i === 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 900, color: "#1d4ed8", background: "#dbeafe", borderRadius: 999, padding: "2px 9px", textTransform: "uppercase", letterSpacing: ".05em" }}>Start here</span>}
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: "#1d1f20" }}>{label}</div>
+                        {i === 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 900, color: "#1d4ed8", background: "#dbeafe", borderRadius: 0, padding: "2px 9px", textTransform: "uppercase", letterSpacing: ".05em" }}>Start here</span>}
                       </div>
                       {action && <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.45, marginTop: 3 }}>{action}</div>}
                     </div>
                   </div>
-                  {i < coachReview.roadmap.length - 1 && <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 16, lineHeight: 1, padding: "3px 0" }}>↓</div>}
+                  {i < coachReview.roadmap.length - 1 && <div style={{ textAlign: "center", color: "#8b8e91", fontSize: 16, lineHeight: 1, padding: "3px 0" }}>↓</div>}
                 </div>
                 );
               })}
@@ -5990,14 +6005,14 @@ function App() {
           </div>
 
           {/* 6. Before / After Examples */}
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>✍️ Before → After: Coaching Examples</h3>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>{coachReview.examplesPersonalized
+          <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>✍️ Before → After: Coaching Examples</h3>
+            <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 14px" }}>{coachReview.examplesPersonalized
               ? "These are pulled straight from your resume. Where I could tighten the wording without changing the facts, I did. Where a line needs a detail only you have, I've flagged what to add."
               : "Your lines already read cleanly, so here are illustrative examples showing the pattern I'd coach toward."}</p>
             {coachReview.examples.map((ex, i) => (
-              <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: ".05em", background: "#f8fafc", padding: "6px 14px", borderBottom: "1px solid #e2e8f0" }}>{ex.section}</div>
+              <div key={i} style={{ border: "1px solid #d6d6d8", borderRadius: 0, overflow: "hidden", marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "#6d7073", textTransform: "uppercase", letterSpacing: ".05em", background: "#e9e9ea", padding: "6px 14px", borderBottom: "1px solid #d6d6d8" }}>{ex.section}</div>
                 <div style={{ padding: "12px 14px", borderLeft: "4px solid #f87171", background: "#fef2f2" }}>
                   <div style={{ fontSize: 10.5, fontWeight: 900, color: "#b91c1c", textTransform: "uppercase", marginBottom: 3 }}>{ex.kind === "tighten" ? "Your line" : "Weak"}</div>
                   <div style={{ fontSize: 13.5, color: "#7f1d1d", fontStyle: "italic" }}>"{ex.weak}"</div>
@@ -6015,7 +6030,7 @@ function App() {
                 )}
               </div>
             ))}
-            <div style={{ fontSize: 11.5, color: "#94a3b8", lineHeight: 1.5 }}>{coachReview.examplesPersonalized
+            <div style={{ fontSize: 11.5, color: "#8b8e91", lineHeight: 1.5 }}>{coachReview.examplesPersonalized
               ? "I never add facts you didn't provide. Where a number would help, I point to where you should add one truthfully — only ever use details that are true for you."
               : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
@@ -6030,22 +6045,22 @@ function App() {
             const total = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
             if (!total) return null;
             return (
-              <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #dc2626", borderRadius: 16, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
-                <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 4px" }}>🔍 Credibility & Mechanics Check</h3>
-                <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 14px" }}>The small, high-signal issues a careful recruiter uses to filter quickly. No new content needed — just cleanup before you apply.</p>
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #dc2626", borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🔍 Credibility & Mechanics Check</h3>
+                <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 14px" }}>The small, high-signal issues a careful recruiter uses to filter quickly. No new content needed — just cleanup before you apply.</p>
                 {mech.count && mech.findings && mech.findings.length ? (
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Mechanics (typos, casing, punctuation)</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3a3d3f", marginBottom: 4 }}>Mechanics (typos, casing, punctuation)</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       {mech.findings.map((f, i) => (
-                        <li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}><b>{f.label}:</b> {f.detail}</li>
+                        <li key={i} style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5, marginBottom: 3 }}><b>{f.label}:</b> {f.detail}</li>
                       ))}
                     </ul>
                   </div>
                 ) : null}
                 {mc.count && mc.flagged && mc.flagged.length ? (
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Metric credibility — can you defend each number?</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3a3d3f", marginBottom: 4 }}>Metric credibility — can you defend each number?</div>
                     {mc.flagged.map((f, i) => (
                       <div key={i} style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 12.5, color: "#7f1d1d", fontStyle: "italic" }}>On your resume: “{f.text}”</div>
@@ -6056,17 +6071,17 @@ function App() {
                 ) : null}
                 {tm.count && tm.flagged && tm.flagged.length ? (
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Job title vs. content</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3a3d3f", marginBottom: 4 }}>Job title vs. content</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {tm.flagged.map((f, i) => (<li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}>{f.note}</li>))}
+                      {tm.flagged.map((f, i) => (<li key={i} style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5, marginBottom: 3 }}>{f.note}</li>))}
                     </ul>
                   </div>
                 ) : null}
                 {sq.tips && sq.tips.length ? (
                   <div style={{ marginBottom: sq.goodNotes && sq.goodNotes.length ? 8 : 4 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>Section-quality opportunities</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3a3d3f", marginBottom: 4 }}>Section-quality opportunities</div>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {sq.tips.map((t, i) => (<li key={i} style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginBottom: 3 }}>{t.text}</li>))}
+                      {sq.tips.map((t, i) => (<li key={i} style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5, marginBottom: 3 }}>{t.text}</li>))}
                     </ul>
                   </div>
                 ) : null}
@@ -6075,8 +6090,8 @@ function App() {
                 )) : null}
                 {fn && fn.ok === false && fn.note ? (
                   <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#334155", marginBottom: 4 }}>File name</div>
-                    <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{fn.note}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3a3d3f", marginBottom: 4 }}>File name</div>
+                    <div style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5 }}>{fn.note}</div>
                   </div>
                 ) : null}
               </div>
@@ -6085,23 +6100,23 @@ function App() {
 
           {/* 7 + 8. Quick Wins and Bigger Projects */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #16a34a", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>⚡ Quick Wins</h3>
-              <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 10px" }}>Under 10 minutes each. Knock these out today.</p>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #16a34a", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 4px" }}>⚡ Quick Wins</h3>
+              <p style={{ fontSize: 12, color: "#6d7073", margin: "0 0 10px" }}>Under 10 minutes each. Knock these out today.</p>
               <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
                 {coachReview.quickWins.map((q, i) => (
-                  <li key={i} style={{ fontSize: 13.5, color: "#334155", lineHeight: 1.5, padding: "6px 0", borderBottom: i < coachReview.quickWins.length - 1 ? "1px solid #f1f5f9" : "none" }}>✓ {q}</li>
+                  <li key={i} style={{ fontSize: 13.5, color: "#3a3d3f", lineHeight: 1.5, padding: "6px 0", borderBottom: i < coachReview.quickWins.length - 1 ? "1px solid #f2f2f3" : "none" }}>✓ {q}</li>
                 ))}
               </ul>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderLeft: "5px solid #f59e0b", borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
-              <h3 style={{ fontSize: 17, color: "#1F3864", margin: "0 0 4px" }}>🏗 Bigger Projects</h3>
-              <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 10px" }}>Longer-term moves that compound over the next few weeks.</p>
+            <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #f59e0b", borderRadius: 0, padding: "18px 20px", boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+              <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 4px" }}>🏗 Bigger Projects</h3>
+              <p style={{ fontSize: 12, color: "#6d7073", margin: "0 0 10px" }}>Longer-term moves that compound over the next few weeks.</p>
               <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
                 {coachReview.bigger.map((b, i) => (
-                  <li key={i} style={{ padding: "7px 0", borderBottom: i < coachReview.bigger.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1e293b" }}>{b.label}</div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, lineHeight: 1.45 }}>{b.why}</div>
+                  <li key={i} style={{ padding: "7px 0", borderBottom: i < coachReview.bigger.length - 1 ? "1px solid #f2f2f3" : "none" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1d1f20" }}>{b.label}</div>
+                    <div style={{ fontSize: 12, color: "#6d7073", marginTop: 2, lineHeight: 1.45 }}>{b.why}</div>
                   </li>
                 ))}
               </ul>
@@ -6110,9 +6125,9 @@ function App() {
 
           {/* 8b. What this tool can't check — honest scope note */}
           {coachReview.limitations && Array.isArray(coachReview.limitations.items) ? (
-            <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: 16, padding: "18px 20px", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, color: "#334155", margin: "0 0 6px" }}>👁 {coachReview.limitations.title}</h3>
-              <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 10px", lineHeight: 1.5 }}>{coachReview.limitations.why}</p>
+            <div style={{ background: "#e9e9ea", border: "1px dashed #b9b9bd", borderRadius: 0, padding: "18px 20px", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, color: "#3a3d3f", margin: "0 0 6px" }}>👁 {coachReview.limitations.title}</h3>
+              <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 10px", lineHeight: 1.5 }}>{coachReview.limitations.why}</p>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {coachReview.limitations.items.map((it, i) => (
                   <li key={i} style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.5, marginBottom: 3 }}>{it}</li>
@@ -6122,23 +6137,23 @@ function App() {
           ) : null}
 
           {/* 9. If We Worked Together... */}
-          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 16, padding: "18px 20px", marginBottom: 16 }}>
-            <h3 style={{ fontSize: 18, color: "#1F3864", margin: "0 0 8px" }}>🤝 If We Worked Together…</h3>
-            <p style={{ fontSize: 14.5, color: "#1e3a8a", lineHeight: 1.65, margin: 0 }}>{coachReview.together}</p>
+          <div style={{ background: "#e6ecf3", border: "1px solid #bfdbfe", borderRadius: 0, padding: "18px 20px", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 8px" }}>🤝 If We Worked Together…</h3>
+            <p style={{ fontSize: 14.5, color: "#3f5f7f", lineHeight: 1.65, margin: 0 }}>{coachReview.together}</p>
           </div>
 
           {/* 10. Motivation Panel */}
-          <div style={{ background: "linear-gradient(180deg,#16a34a 0%,#15803d 100%)", borderRadius: 16, padding: "20px 22px", color: "#fff", marginBottom: 14, boxShadow: "0 4px 16px rgba(22,163,74,.25)" }}>
+          <div style={{ background: "linear-gradient(180deg,#16a34a 0%,#15803d 100%)", borderRadius: 0, padding: "20px 22px", color: "#fff", marginBottom: 14, boxShadow: "0 4px 16px rgba(22,163,74,.25)" }}>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#dcfce7", marginBottom: 6 }}>From Coach Jeff</div>
             <p style={{ fontSize: 16, lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{coachReview.motivation}</p>
           </div>
 
           {/* Navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
-            <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(true); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>← Back to Recruiter Review</button>
+            <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(true); setShowBuilderWorkspace(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "10px 14px", fontSize: 13, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>← Back to Recruiter Review</button>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button onClick={exportCoachReport} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 800, cursor: "pointer" }}>📄 Download This Review (Word)</button>
-              <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(false); setActiveWorkshopSection("Job Match"); setShowBuilderWorkspace(true); setTimeout(() => scrollToWorkshopSection("Job Match"), 50); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Customize for a Job →</button>
+              <button onClick={exportCoachReport} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "1px solid #5980a6", background: "#fff", color: "#5980a6", fontWeight: 800, cursor: "pointer" }}>📄 Download This Review (Word)</button>
+              <button onClick={() => { setShowCoachReview(false); setShowRecruiterReview(false); setActiveWorkshopSection("Job Match"); setShowBuilderWorkspace(true); setTimeout(() => scrollToWorkshopSection("Job Match"), 50); }} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", fontWeight: 800, cursor: "pointer" }}>Customize for a Job →</button>
             </div>
           </div>
         </div>
@@ -6152,63 +6167,63 @@ function App() {
               const active = activeWorkshopSection === step;
               const stepNum = i + 5;
               return (
-                <button key={step} onClick={() => goToWorkshopStep(step)} title={"Go to " + step} style={{ fontSize: 12, padding: "6px 11px", borderRadius: 8, cursor: "pointer", border: "1px solid " + (active ? "#1F3864" : "#e2e8f0"), background: active ? "#eff6ff" : "#f8fafc", color: active ? "#1F3864" : "#64748b", fontWeight: active ? 800 : 600 }}>{stepNum}. {step}</button>
+                <button key={step} onClick={() => goToWorkshopStep(step)} title={"Go to " + step} style={{ fontSize: 12, padding: "6px 11px", borderRadius: 0, cursor: "pointer", border: "1px solid " + (active ? "#5980a6" : "#d6d6d8"), background: active ? "#e6ecf3" : "#e9e9ea", color: active ? "#5980a6" : "#6d7073", fontWeight: active ? 800 : 600 }}>{stepNum}. {step}</button>
               );
             })}
           </div>
 
           {activeWorkshopSection === "Job Match" && (
           <WorkshopCard title="Job Match" onClear={() => clearSection("jobPost")}>
-            <div style={{ padding: 12, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, marginBottom: 10, textAlign: "left" }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: "#1F3864", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Customize Before You Edit</div>
-              <p style={{ fontSize: 12.5, color: "#334155", lineHeight: 1.5, margin: 0 }}>Paste the job description or paste a job posting URL. Coach Jeff will compare the resume to that posting, identify gaps, and feed the tailoring priorities into the Resume Workshop.</p>
+            <div style={{ padding: 12, background: "#e6ecf3", border: "1px solid #bfdbfe", borderRadius: 0, marginBottom: 10, textAlign: "left" }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: "#5980a6", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Customize Before You Edit</div>
+              <p style={{ fontSize: 12.5, color: "#3a3d3f", lineHeight: 1.5, margin: 0 }}>Paste the job description or paste a job posting URL. Coach Jeff will compare the resume to that posting, identify gaps, and feed the tailoring priorities into the Resume Workshop.</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
               <div>
                 <label style={lC}>Job Posting URL</label>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <input style={{ ...iC, flex: "1 1 360px" }} placeholder="https://company.com/careers/job-id" value={data.jobPostUrl || ""} onChange={(e) => { set({ jobPostUrl: e.target.value }); setJobUrlStatus(""); }} />
-                  <button onClick={fetchJobPostingUrl} style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 8, border: "1px solid #1F3864", background: "#fff", color: "#1F3864", fontWeight: 800, cursor: "pointer" }}>Load URL</button>
+                  <button onClick={fetchJobPostingUrl} style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 0, border: "1px solid #5980a6", background: "#fff", color: "#5980a6", fontWeight: 800, cursor: "pointer" }}>Load URL</button>
                 </div>
                 {jobUrlStatus && <p style={{ fontSize: 11, color: jobUrlStatus.includes("Could not") ? "#dc2626" : "#166534", marginTop: 5, lineHeight: 1.4 }}>{jobUrlStatus}</p>}
               </div>
               <div>
                 <label style={lC}>Or Paste Job Description Text</label>
-                <p style={{ fontSize: 11, color: "#64748b", margin: "2px 0 6px", lineHeight: 1.45, textAlign: "left" }}>Paste the role's <b>responsibilities, requirements, and qualifications</b>. You can skip "Life at [company]," benefits, and the legal or application boilerplate at the end — Coach Jeff ignores those automatically when scoring.</p>
+                <p style={{ fontSize: 11, color: "#6d7073", margin: "2px 0 6px", lineHeight: 1.45, textAlign: "left" }}>Paste the role's <b>responsibilities, requirements, and qualifications</b>. You can skip "Life at [company]," benefits, and the legal or application boilerplate at the end — Coach Jeff ignores those automatically when scoring.</p>
                 <textarea rows={8} style={{ ...iC, resize: "vertical", lineHeight: 1.45 }} placeholder="Paste the full job description here…" value={data.jobPost || ""} onChange={(e) => set({ jobPost: e.target.value })} />
               </div>
             </div>
             {optimizer.keyword ? <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 8 }}>
-              <div style={{ padding: 12, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Current Match</div>
+              <div style={{ padding: 12, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "#6d7073", textTransform: "uppercase" }}>Current Match</div>
                 <div style={{ fontSize: 34, fontWeight: 900, color: optimizer.keyword.matchPct >= 75 ? "#16a34a" : optimizer.keyword.matchPct >= 50 ? "#d97706" : "#dc2626" }}>{optimizer.keyword.matchPct}%</div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>Keyword and skill overlap</div>
+                <div style={{ fontSize: 11, color: "#6d7073" }}>Keyword and skill overlap</div>
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+              <div style={{ padding: 12, borderRadius: 0, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "#166534", textTransform: "uppercase" }}>Projected After Tailoring</div>
                 <div style={{ fontSize: 34, fontWeight: 900, color: "#166534" }}>{optimizer.keyword.projectedPct}%</div>
                 <div style={{ fontSize: 11, color: "#166534" }}>Estimate if suggested edits are made truthfully</div>
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a" }}>
+              <div style={{ padding: 12, borderRadius: 0, background: "#fffbeb", border: "1px solid #fde68a" }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: "#92400e", textTransform: "uppercase" }}>Biggest Gap</div>
                 <div style={{ fontSize: 12, lineHeight: 1.45, color: "#92400e", marginTop: 6 }}>{optimizer.keyword.missingSkills.length ? optimizer.keyword.missingSkills.slice(0, 5).join(", ") : ((optimizer.keyword.missingDisplay && optimizer.keyword.missingDisplay.length) ? optimizer.keyword.missingDisplay.slice(0, 5).join(", ") : "No major keyword gap detected")}</div>
               </div>
-            </div> : <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", fontSize: 12, textAlign: "left" }}>Paste a job posting above to generate a role-specific match analysis.</div>}
+            </div> : <div style={{ marginTop: 12, padding: 10, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8", color: "#6d7073", fontSize: 12, textAlign: "left" }}>Paste a job posting above to generate a role-specific match analysis.</div>}
             {optimizer.keyword && <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 10, textAlign: "left" }}>
-              <div style={{ padding: 12, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0" }}>
-                <b style={{ fontSize: 12, color: "#1F3864" }}>Matched job language</b>
-                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{optimizer.keyword.present.slice(0, 12).join(", ") || "Not enough overlap detected yet."}</p>
+              <div style={{ padding: 12, borderRadius: 0, background: "#fff", border: "1px solid #d6d6d8" }}>
+                <b style={{ fontSize: 12, color: "#5980a6" }}>Matched job language</b>
+                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#3a3d3f" }}>{optimizer.keyword.present.slice(0, 12).join(", ") || "Not enough overlap detected yet."}</p>
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ padding: 12, borderRadius: 0, background: "#fff", border: "1px solid #d6d6d8" }}>
                 <b style={{ fontSize: 12, color: "#92400e" }}>Missing repeated terms</b>
-                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{(optimizer.keyword.missingDisplay && optimizer.keyword.missingDisplay.length ? optimizer.keyword.missingDisplay.slice(0, 12).join(", ") : "") || "No major skill-related terms missing."}</p>
+                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#3a3d3f" }}>{(optimizer.keyword.missingDisplay && optimizer.keyword.missingDisplay.length ? optimizer.keyword.missingDisplay.slice(0, 12).join(", ") : "") || "No major skill-related terms missing."}</p>
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0" }}>
+              <div style={{ padding: 12, borderRadius: 0, background: "#fff", border: "1px solid #d6d6d8" }}>
                 <b style={{ fontSize: 12, color: "#991b1b" }}>Missing skills/tools</b>
-                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#334155" }}>{optimizer.keyword.missingSkills.slice(0, 10).join(", ") || "No major suggested skill gaps from the posting."}</p>
+                <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#3a3d3f" }}>{optimizer.keyword.missingSkills.slice(0, 10).join(", ") || "No major suggested skill gaps from the posting."}</p>
               </div>
             </div>}
-            {optimizer.keyword && optimizer.keyword.fitWarning && <div style={{ marginTop: 12, padding: 14, borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fca5a5", textAlign: "left" }}>
+            {optimizer.keyword && optimizer.keyword.fitWarning && <div style={{ marginTop: 12, padding: 14, borderRadius: 0, background: "#fef2f2", border: "1.5px solid #fca5a5", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 18 }}>⚠️</span>
                 <b style={{ fontSize: 13.5, color: "#991b1b" }}>Before you tailor: this may be a different kind of role</b>
@@ -6224,9 +6239,9 @@ function App() {
                 {optimizer.keyword.inFieldGaps && optimizer.keyword.inFieldGaps.length ? <span> A few gaps here <i>are</i> closeable in your field ({optimizer.keyword.inFieldGaps.join(", ")}) — add those only if they're genuinely true of your background.</span> : null}
               </p>
             </div>}
-            {optimizer.keyword && <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", textAlign: "left" }}>
-              <b style={{ fontSize: 12, color: "#1F3864" }}>Coach Jeff tailoring guidance</b>
-              <ol style={{ margin: "8px 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.55, color: "#334155" }}>{optimizer.keyword.suggestions.map((n, i) => <li key={i} style={{ marginBottom: 4 }}>{n}</li>)}</ol>
+            {optimizer.keyword && <div style={{ marginTop: 12, padding: 12, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8", textAlign: "left" }}>
+              <b style={{ fontSize: 12, color: "#5980a6" }}>Coach Jeff tailoring guidance</b>
+              <ol style={{ margin: "8px 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.55, color: "#3a3d3f" }}>{optimizer.keyword.suggestions.map((n, i) => <li key={i} style={{ marginBottom: 4 }}>{n}</li>)}</ol>
             </div>}
             <WorkshopNav backTo={null} nextTo="Resume Workshop" nextLabel="Continue to Resume Workshop" />
           </WorkshopCard>
@@ -6235,17 +6250,17 @@ function App() {
           {activeWorkshopSection === "Resume Workshop" && (
           <React.Fragment>
           <WorkshopCard title="Resume Workshop">
-            <div style={{ padding: 12, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, marginBottom: 10, textAlign: "left" }}>
+            <div style={{ padding: 12, background: "#e6ecf3", border: "1px solid #bfdbfe", borderRadius: 0, marginBottom: 10, textAlign: "left" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 900, color: "#1F3864", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Optimizing For</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "#1e293b" }}>{data.field || "Not selected"}</div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: "#5980a6", textTransform: "uppercase", letterSpacing: .4, marginBottom: 4 }}>Optimizing For</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: "#1d1f20" }}>{data.field || "Not selected"}</div>
                   <p style={{ fontSize: 11.5, color: "#475569", lineHeight: 1.4, marginTop: 6 }}>Your recommendations are personalized for this career goal and, when a job posting is loaded, the tailoring priorities from Job Match.</p>
                 </div>
                 <details style={{ textAlign: "right", minWidth: 160 }}>
-                  <summary style={{ fontSize: 11.5, color: "#1F3864", fontWeight: 800, cursor: "pointer", listStyle: "none" }}>Change</summary>
+                  <summary style={{ fontSize: 11.5, color: "#5980a6", fontWeight: 800, cursor: "pointer", listStyle: "none" }}>Change</summary>
                   <div style={{ marginTop: 8, textAlign: "left" }}>
-                    <div style={{ fontSize: 10.5, color: "#64748b", marginBottom: 5 }}>Only change this if the student's career direction changed.</div>
+                    <div style={{ fontSize: 10.5, color: "#6d7073", marginBottom: 5 }}>Only change this if the student's career direction changed.</div>
                     <select value={data.field} onChange={(e) => applyPreset(e.target.value)} style={iC}>
                       <option value="">— Select your field —</option>
                       {Object.keys(FIELD_PRESETS).map((f) => <option key={f}>{f}</option>)}
@@ -6266,7 +6281,7 @@ function App() {
               <div><label style={lC}>City, State</label><input style={iC} placeholder="City, ST" value={data.contact.cityState} onChange={(e) => set({ contact: { ...data.contact, cityState: e.target.value } })} /></div>
               <div><label style={lC}>Phone</label><input style={iC} placeholder="(555) 555-5555" value={data.contact.phone} onChange={(e) => set({ contact: { ...data.contact, phone: e.target.value } })} /></div>
               <div><label style={lC}>Email</label><input style={iC} placeholder="you@email.com" value={data.contact.email} onChange={(e) => set({ contact: { ...data.contact, email: e.target.value } })} />
-                <p style={{ fontSize: 10.5, color: "#1F3864", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, padding: "6px 8px", marginTop: 5, lineHeight: 1.35, textAlign: "left" }}><b>Professional email tip:</b> If you use a university email address (.edu), consider listing a professional Gmail or Outlook address on your resume instead. Personal email accounts remain available after graduation and are often a better long-term contact option for employers.</p>
+                <p style={{ fontSize: 10.5, color: "#5980a6", background: "#e6ecf3", border: "1px solid #bfdbfe", borderRadius: 0, padding: "6px 8px", marginTop: 5, lineHeight: 1.35, textAlign: "left" }}><b>Professional email tip:</b> If you use a university email address (.edu), consider listing a professional Gmail or Outlook address on your resume instead. Personal email accounts remain available after graduation and are often a better long-term contact option for employers.</p>
               </div>
               <div><label style={lC}>LinkedIn</label><input style={iC} placeholder="linkedin.com/in/yourname" value={data.contact.linkedin} onChange={(e) => set({ contact: { ...data.contact, linkedin: e.target.value } })} /></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={lC}>Portfolio / GitHub (optional)</label><input style={iC} placeholder="github.com/yourname" value={data.contact.portfolio} onChange={(e) => set({ contact: { ...data.contact, portfolio: e.target.value } })} /></div>
@@ -6282,7 +6297,7 @@ function App() {
             );
             if (key === "skills") return (
               <Card key={key} title="Skills" onClear={() => clearSection("skills")}>
-                <button onClick={() => set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] } })} style={{ float: "right", marginTop: -6, padding: "5px 9px", fontSize: 11, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Clear All Skills</button>
+                <button onClick={() => set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] } })} style={{ float: "right", marginTop: -6, padding: "5px 9px", fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Clear All Skills</button>
                 <label style={lC}>Technical Skills</label>
                 <input style={iC} value={data.skills.technical || ""} onChange={(e) => set({ skills: { ...data.skills, technical: e.target.value } })} placeholder="Python, SQL, ETL, Machine Learning" />
                 <label style={{ ...lC, marginTop: 8 }}>Data Visualization</label>
@@ -6292,44 +6307,44 @@ function App() {
                 <label style={{ ...lC, marginTop: 8 }}>Domain Knowledge</label>
                 <input style={iC} value={data.skills.domain || ""} onChange={(e) => set({ skills: { ...data.skills, domain: e.target.value } })} placeholder="Statistical Analysis, AI Risk Assessment, Responsible AI Governance" />
 
-                <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "#1F3864" }}>Additional skills to consider</div>
-                    <div style={{ fontSize: 10.5, color: "#64748b" }}>{Array.from(new Set([...technicalSuggestedSkills, "Tableau", "Looker", "Power BI", "Excel", ...toolSuggestedSkills, "Data Governance", "Risk Management", "Business Analysis", "Public Health Analytics", "AI Governance"])).filter(skill => !skillAlreadyOnResume(data, skill)).length} not yet on resume</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "#5980a6" }}>Additional skills to consider</div>
+                    <div style={{ fontSize: 10.5, color: "#6d7073" }}>{Array.from(new Set([...technicalSuggestedSkills, "Tableau", "Looker", "Power BI", "Excel", ...toolSuggestedSkills, "Data Governance", "Risk Management", "Business Analysis", "Public Health Analytics", "AI Governance"])).filter(skill => !skillAlreadyOnResume(data, skill)).length} not yet on resume</div>
                   </div>
-                  <div style={{ fontSize: 10.5, color: "#64748b", marginBottom: 6, textAlign: "left" }}>
+                  <div style={{ fontSize: 10.5, color: "#6d7073", marginBottom: 6, textAlign: "left" }}>
                     {data.jobPost && data.jobPost.trim() ? "Sorted by how often each skill/tool appears in the target job posting. Skills already on the resume are hidden here." : "Default suggestions shown until a target job posting is pasted. Skills already on the resume are hidden here."}
                   </div>
 
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 5, textAlign: "left" }}>Suggested Technical Skills</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3a3d3f", marginBottom: 5, textAlign: "left" }}>Suggested Technical Skills</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                     {technicalSuggestedSkills.filter(skill => !skillAlreadyOnResume(data, skill)).map(skill => { const count = skillMentionCount(data.jobPost, skill); const tag = sectionMentionType(data.jobPost, skill); return (
-                      <button key={skill} onClick={() => addSkillToTechnical(skill)} title="Add to Technical Skills" style={{ fontSize: 11, borderRadius: 999, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", padding: "4px 8px", cursor: "pointer" }}>+ {skill}{count > 0 ? " ×" + count : ""}{tag ? " · " + tag : ""}</button>
+                      <button key={skill} onClick={() => addSkillToTechnical(skill)} title="Add to Technical Skills" style={{ fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#3a3d3f", padding: "4px 8px", cursor: "pointer" }}>+ {skill}{count > 0 ? " ×" + count : ""}{tag ? " · " + tag : ""}</button>
                     ); })}
                   </div>
 
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 5, textAlign: "left" }}>Suggested Data Visualization</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3a3d3f", marginBottom: 5, textAlign: "left" }}>Suggested Data Visualization</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                     {["Tableau","Looker","Power BI","Excel"].filter(skill => !skillAlreadyOnResume(data, skill)).map(skill => (
-                      <button key={skill} onClick={() => set({ skills: { ...data.skills, dataVisualization: addUniqueCsv(data.skills.dataVisualization || "", skill) } })} title="Add to Data Visualization" style={{ fontSize: 11, borderRadius: 999, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", padding: "4px 8px", cursor: "pointer" }}>+ {skill}</button>
+                      <button key={skill} onClick={() => set({ skills: { ...data.skills, dataVisualization: addUniqueCsv(data.skills.dataVisualization || "", skill) } })} title="Add to Data Visualization" style={{ fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#3a3d3f", padding: "4px 8px", cursor: "pointer" }}>+ {skill}</button>
                     ))}
                   </div>
 
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 5, textAlign: "left" }}>Suggested Tools & Platforms</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3a3d3f", marginBottom: 5, textAlign: "left" }}>Suggested Tools & Platforms</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                     {toolSuggestedSkills.filter(skill => !skillAlreadyOnResume(data, skill)).map(skill => { const count = skillMentionCount(data.jobPost, skill); const tag = sectionMentionType(data.jobPost, skill); return (
-                      <button key={skill} onClick={() => addSkillToTools(skill)} title="Add to Tools & Platforms" style={{ fontSize: 11, borderRadius: 999, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", padding: "4px 8px", cursor: "pointer" }}>+ {skill}{count > 0 ? " ×" + count : ""}{tag ? " · " + tag : ""}</button>
+                      <button key={skill} onClick={() => addSkillToTools(skill)} title="Add to Tools & Platforms" style={{ fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#3a3d3f", padding: "4px 8px", cursor: "pointer" }}>+ {skill}{count > 0 ? " ×" + count : ""}{tag ? " · " + tag : ""}</button>
                     ); })}
                   </div>
 
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 5, textAlign: "left" }}>Suggested Domain Knowledge</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#3a3d3f", marginBottom: 5, textAlign: "left" }}>Suggested Domain Knowledge</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {["Data Governance","Risk Management","Business Analysis","Public Health Analytics","AI Governance"].filter(skill => !skillAlreadyOnResume(data, skill)).map(skill => (
-                      <button key={skill} onClick={() => set({ skills: { ...data.skills, domain: addUniqueCsv(data.skills.domain || "", skill) } })} title="Add to Domain Knowledge" style={{ fontSize: 11, borderRadius: 999, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", padding: "4px 8px", cursor: "pointer" }}>+ {skill}</button>
+                      <button key={skill} onClick={() => set({ skills: { ...data.skills, domain: addUniqueCsv(data.skills.domain || "", skill) } })} title="Add to Domain Knowledge" style={{ fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#3a3d3f", padding: "4px 8px", cursor: "pointer" }}>+ {skill}</button>
                     ))}
                   </div>
 
-                  <p style={{ fontSize: 10.5, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "7px 8px", marginTop: 8, lineHeight: 1.4, textAlign: "left" }}><b>Truth rule:</b> Only add keywords and skills that accurately reflect your background and can be supported through experience, projects, coursework, certifications, or other accomplishments.</p>
+                  <p style={{ fontSize: 10.5, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 0, padding: "7px 8px", marginTop: 8, lineHeight: 1.4, textAlign: "left" }}><b>Truth rule:</b> Only add keywords and skills that accurately reflect your background and can be supported through experience, projects, coursework, certifications, or other accomplishments.</p>
                 </div>
               </Card>
             );
@@ -6474,42 +6489,42 @@ function App() {
           <WorkshopCard title="ATS Inspection">
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 18 }}>🔁</span>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#1F3864" }}>Re-checked your edited resume</span>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: "#5980a6" }}>Re-checked your edited resume</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center", marginBottom: 14 }}>
               {(() => { const before = (atsBaseline === null ? atsScore : atsBaseline); return (
               <React.Fragment>
-              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: "#64748b" }}>Before your edits</div>
+              <div style={{ background: "#e9e9ea", border: "1px solid #d6d6d8", borderRadius: 0, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: "#6d7073" }}>Before your edits</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: before >= 75 ? "#16a34a" : before >= 50 ? "#d97706" : "#dc2626" }}>{before}</div>
               </div>
-              <div style={{ fontSize: 22, color: "#94a3b8", textAlign: "center" }}>→</div>
-              <div style={{ background: atsScore >= before ? "#f0fdf4" : "#fff7ed", border: "1px solid " + (atsScore >= before ? "#bbf7d0" : "#fed7aa"), borderRadius: 10, padding: 12, textAlign: "center" }}>
+              <div style={{ fontSize: 22, color: "#8b8e91", textAlign: "center" }}>→</div>
+              <div style={{ background: atsScore >= before ? "#f0fdf4" : "#fff7ed", border: "1px solid " + (atsScore >= before ? "#bbf7d0" : "#fed7aa"), borderRadius: 0, padding: 12, textAlign: "center" }}>
                 <div style={{ fontSize: 11, color: atsScore >= before ? "#166534" : "#9a3412" }}>After your edits</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: atsScore >= 75 ? "#16a34a" : atsScore >= 50 ? "#d97706" : "#dc2626" }}>{atsScore}</div>
               </div>
               </React.Fragment>
               ); })()}
             </div>
-            <div style={{ padding: 12, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", textAlign: "left", marginBottom: 6 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#1F3864", marginBottom: 8 }}>What the ATS check found</div>
+            <div style={{ padding: 12, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8", textAlign: "left", marginBottom: 6 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: "#5980a6", marginBottom: 8 }}>What the ATS check found</div>
               {atsFindings.map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, lineHeight: 1.45, color: f.ok ? "#166534" : "#9a3412", marginBottom: 6 }}>
                   <span>{f.ok ? "✓" : "⚠"}</span><span>{f.text}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.5, textAlign: "left", margin: "4px 0 0" }}>If anything still needs work, go back to the Workshop and fix it — the score re-checks each time you return here. When it looks good, you're done.</p>
+            <p style={{ fontSize: 11.5, color: "#6d7073", lineHeight: 1.5, textAlign: "left", margin: "4px 0 0" }}>If anything still needs work, go back to the Workshop and fix it — the score re-checks each time you return here. When it looks good, you're done.</p>
             <WorkshopNav backTo="Resume Workshop" backLabel="Back to Workshop to fix" nextTo="Export" nextLabel="Looks good — I'm done" nextIsDone={true} />
           </WorkshopCard>
           )}
 
           {activeWorkshopSection === "Export" && (
           <WorkshopCard title="Export">
-            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 10, textAlign: "left" }}>Download a clean Word version or print/save as PDF. Export now strips pasted bullet symbols so Word does not create duplicate bullets.</p>
+            <p style={{ fontSize: 12, color: "#6d7073", marginBottom: 10, textAlign: "left" }}>Download a clean Word version or print/save as PDF. Export now strips pasted bullet symbols so Word does not create duplicate bullets.</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={exportDocxReal} disabled={busy} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#1F3864", color: "#fff", fontWeight: 800, cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
-              <button onClick={printPdf} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>Print / Save PDF</button>
+              <button onClick={exportDocxReal} disabled={busy} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "none", background: "#5980a6", color: "#fff", fontWeight: 800, cursor: "pointer", opacity: busy ? .6 : 1 }}>{busy ? "Building…" : "Download Word"}</button>
+              <button onClick={printPdf} style={{ padding: "10px 16px", fontSize: 13, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Print / Save PDF</button>
             </div>
             <WorkshopNav backTo="ATS Inspection" backLabel="Back to ATS Inspection" nextTo={null} nextLabel="" />
           </WorkshopCard>
@@ -6518,13 +6533,13 @@ function App() {
 
         {activeWorkshopSection === "Resume Workshop" && (
         <div style={{ position: "sticky", top: 80 }}>
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, marginBottom: 12 }}>
+          <div style={{ background: "#fff", borderRadius: 0, border: "1px solid #d6d6d8", padding: 16, marginBottom: 12 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Section Order</h3>
-            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>All sections start in the recommended order for your field. Drag or use ▲▼ to reorder. Tap <b>Hide</b> on any section you don't need — and empty sections never appear on the finished resume anyway.</p>
-            <div style={{ fontSize: 10.5, color: "#475569", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 8, marginBottom: 10, lineHeight: 1.35, textAlign: "left" }}>
+            <p style={{ fontSize: 11, color: "#6d7073", marginBottom: 8 }}>All sections start in the recommended order for your field. Drag or use ▲▼ to reorder. Tap <b>Hide</b> on any section you don't need — and empty sections never appear on the finished resume anyway.</p>
+            <div style={{ fontSize: 10.5, color: "#475569", background: "#e9e9ea", border: "1px solid #d6d6d8", borderRadius: 0, padding: 8, marginBottom: 10, lineHeight: 1.35, textAlign: "left" }}>
               <b>Why this order?</b> {sectionOrderExplanation(data)}
               <div style={{ marginTop: 6 }}>
-                <button onClick={() => set({ order: smartRecommendedOrder(data) })} style={{ fontSize: 10.5, borderRadius: 7, border: "1px solid #cbd5e1", background: "#fff", color: "#1F3864", padding: "4px 7px", cursor: "pointer", fontWeight: 700 }}>Apply Smart Order</button>
+                <button onClick={() => set({ order: smartRecommendedOrder(data) })} style={{ fontSize: 10.5, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", color: "#5980a6", padding: "4px 7px", cursor: "pointer", fontWeight: 700 }}>Apply Smart Order</button>
               </div>
             </div>
             <ul style={{ listStyle: "none" }}>
@@ -6532,37 +6547,37 @@ function App() {
                 const meta = SECTION_META[key]; const hidden = !!data.hidden[key];
                 return (
                   <li key={key} draggable onDragStart={() => setDragIdx(i)} onDragOver={(e) => { e.preventDefault(); setOverIdx(i); }} onDrop={() => onDrop(i)} onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 8px", marginBottom: 6, borderRadius: 8, border: "1px solid " + (overIdx === i && dragIdx !== null ? "#60a5fa" : "#e2e8f0"), background: overIdx === i && dragIdx !== null ? "#eff6ff" : "#f8fafc", opacity: hidden ? .5 : 1, cursor: "grab" }}>
-                    <span style={{ color: "#94a3b8" }}>⋮⋮</span>
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 8px", marginBottom: 6, borderRadius: 0, border: "1px solid " + (overIdx === i && dragIdx !== null ? "#60a5fa" : "#d6d6d8"), background: overIdx === i && dragIdx !== null ? "#e6ecf3" : "#e9e9ea", opacity: hidden ? .5 : 1, cursor: "grab" }}>
+                    <span style={{ color: "#8b8e91" }}>⋮⋮</span>
                     <span style={{ fontSize: 14, flex: 1, textAlign: "left" }}>{meta.label}</span>
-                    <button onClick={() => move(i, -1)} title="Up" style={{ border: "none", background: "none", cursor: "pointer", color: "#64748b" }}>▲</button>
-                    <button onClick={() => move(i, 1)} title="Down" style={{ border: "none", background: "none", cursor: "pointer", color: "#64748b" }}>▼</button>
-                    {meta.removable && <button onClick={() => toggleHide(key)} title={hidden ? "Add this section" : "Hide this section"} style={{ border: "1px solid " + (hidden ? "#1F3864" : "#cbd5e1"), background: hidden ? "#1F3864" : "#fff", color: hidden ? "#fff" : "#64748b", cursor: "pointer", fontSize: 11, fontWeight: 600, borderRadius: 6, padding: "3px 8px", whiteSpace: "nowrap" }}>{hidden ? "+ Add" : "Hide"}</button>}
+                    <button onClick={() => move(i, -1)} title="Up" style={{ border: "none", background: "none", cursor: "pointer", color: "#6d7073" }}>▲</button>
+                    <button onClick={() => move(i, 1)} title="Down" style={{ border: "none", background: "none", cursor: "pointer", color: "#6d7073" }}>▼</button>
+                    {meta.removable && <button onClick={() => toggleHide(key)} title={hidden ? "Add this section" : "Hide this section"} style={{ border: "1px solid " + (hidden ? "#5980a6" : "#b9b9bd"), background: hidden ? "#5980a6" : "#fff", color: hidden ? "#fff" : "#6d7073", cursor: "pointer", fontSize: 11, fontWeight: 600, borderRadius: 0, padding: "3px 8px", whiteSpace: "nowrap" }}>{hidden ? "+ Add" : "Hide"}</button>}
                   </li>
                 );
               })}
             </ul>
           </div>
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16, marginBottom: 12 }}>
+          <div style={{ background: "#fff", borderRadius: 0, border: "1px solid #d6d6d8", padding: 16, marginBottom: 12 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Skills Coverage</h3>
-            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Analysis only. Add or edit skills in the main Skills section.</p>
+            <p style={{ fontSize: 11, color: "#6d7073", marginBottom: 10 }}>Analysis only. Add or edit skills in the main Skills section.</p>
             <div style={{ fontSize: 11, lineHeight: 1.55, textAlign: "left" }}>
               <div><b>Technical Skills:</b> {resumeStrength.skills.technicalCount}</div>
               <div><b>Data Visualization:</b> {resumeStrength.skills.dataVisualizationCount}</div>
               <div><b>Tools & Platforms:</b> {resumeStrength.skills.toolsCount}</div>
               <div><b>Domain Knowledge:</b> {resumeStrength.skills.domainCount}</div>
-              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid #e2e8f0" }}><b>Total Listed:</b> {resumeStrength.skills.technicalCount + resumeStrength.skills.dataVisualizationCount + resumeStrength.skills.toolsCount + resumeStrength.skills.domainCount}</div>
+              <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid #d6d6d8" }}><b>Total Listed:</b> {resumeStrength.skills.technicalCount + resumeStrength.skills.dataVisualizationCount + resumeStrength.skills.toolsCount + resumeStrength.skills.domainCount}</div>
             </div>
             {optimizer.keyword ? <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.45, textAlign: "left" }}>
-              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Job Match</div>
+              <div style={{ background: "#e9e9ea", border: "1px solid #d6d6d8", borderRadius: 0, padding: 10, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: "#6d7073", fontWeight: 700 }}>Job Match</div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: optimizer.keyword.matchPct >= 75 ? "#16a34a" : optimizer.keyword.matchPct >= 50 ? "#d97706" : "#dc2626" }}>{optimizer.keyword.matchPct}%</div>
               </div>
               {optimizer.keyword.missingSkills.length > 0 ? <div><b>Potential skill gaps:</b> {optimizer.keyword.missingSkills.slice(0, 6).join(", ")}</div> : <div>No major suggested skill gaps from the pasted job posting.</div>}
-            </div> : <p style={{ fontSize: 10.5, color: "#64748b", marginTop: 10, textAlign: "left" }}>Paste a target job posting to see role-specific keyword gaps.</p>}
+            </div> : <p style={{ fontSize: 10.5, color: "#6d7073", marginTop: 10, textAlign: "left" }}>Paste a target job posting to see role-specific keyword gaps.</p>}
           </div>
 
-          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 16 }}>
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 0, padding: 16 }}>
             <h3 style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>ATS Tips</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {[
@@ -6590,14 +6605,14 @@ function App() {
 }
 
 function Preview({ data }) {
-  const H = ({ children }) => <div style={{ borderBottom: "1px solid #1F3864", color: "#1F3864", fontWeight: 700, fontSize: 12, letterSpacing: .5, textTransform: "uppercase", paddingBottom: 2, marginTop: 12, marginBottom: 4 }}>{children}</div>;
+  const H = ({ children }) => <div style={{ borderBottom: "1px solid #5980a6", color: "#5980a6", fontWeight: 700, fontSize: 12, letterSpacing: .5, textTransform: "uppercase", paddingBottom: 2, marginTop: 12, marginBottom: 4 }}>{children}</div>;
   const Row = ({ l, r, bl, ri }) => <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ fontWeight: bl ? 700 : 400 }}>{l}</span><span style={{ fontStyle: ri ? "italic" : "normal" }}>{r}</span></div>;
   const cleanBulletText = (s) => String(s || "").replace(/^([••\-\*]\s*)+/, "");
   const Bul = ({ items }) => <ul style={{ margin: "2px 0 0", paddingLeft: 16, fontSize: 11 }}>{items.filter((b) => b.trim()).map((b, i) => <li key={i} style={{ marginBottom: 2 }}>{cleanBulletText(b)}</li>)}</ul>;
   const C = ({ children }) => <div style={{ marginTop: 10 }}>{children}</div>;
   return (
     <div className="print-only" style={{ fontFamily: "Arial, sans-serif", color: "#000", maxWidth: "8.5in", margin: "0 auto", padding: "0.5in", background: "#fff" }}>
-      <div style={{ textAlign: "center", color: "#1F3864", fontWeight: 700, fontSize: 22, textTransform: "uppercase" }}>{data.name || "First Last"}</div>
+      <div style={{ textAlign: "center", color: "#5980a6", fontWeight: 700, fontSize: 22, textTransform: "uppercase" }}>{data.name || "First Last"}</div>
       <div style={{ textAlign: "center", color: "#595959", fontSize: 11, marginTop: 4 }}>{[data.contact.cityState, data.contact.phone, data.contact.email, data.contact.linkedin, data.contact.portfolio].filter(Boolean).join("  |  ")}</div>
       {data.order.map((key) => {
         if (data.hidden[key]) return null;
@@ -6666,9 +6681,9 @@ root.render(<App />);
   function runChain(idx) {
     if (idx >= steps.length) { compileAndRun(); return; }
     var st = steps[idx];
-    setMsg('<div style="padding:40px;text-align:center;color:#64748b;font-family:Arial,sans-serif;">Loading the resume builder… (' + st.name + ')</div>');
+    setMsg('<div style="padding:40px;text-align:center;color:#6d7073;font-family:Arial,sans-serif;">Loading the resume builder… (' + st.name + ')</div>');
     loadWithFallback(st.urls, st.test).then(function () { runChain(idx + 1); }).catch(function (e) {
-      setMsg('<div style="max-width:600px;margin:40px auto;padding:24px;background:#fff;border:1px solid #fde68a;border-radius:12px;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#92400e;">' +
+      setMsg('<div style="max-width:600px;margin:40px auto;padding:24px;background:#fff;border:1px solid #fde68a;border-radius: 0;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#92400e;">' +
         '<h2 style="margin-bottom:8px;">Couldn’t load: ' + st.name + '</h2>' +
         '<p>This page needs internet access the first time it opens, to load a few libraries. ' +
         'It looks like <b>' + st.name + '</b> couldn’t be reached.</p>' +
@@ -6685,7 +6700,7 @@ root.render(<App />);
       var run = new Function(out);
       run();
     } catch (err) {
-      setMsg('<div style="max-width:600px;margin:40px auto;padding:24px;background:#fff;border:1px solid #fca5a5;border-radius:12px;font-family:Arial,sans-serif;color:#991b1b;">' +
+      setMsg('<div style="max-width:600px;margin:40px auto;padding:24px;background:#fff;border:1px solid #fca5a5;border-radius: 0;font-family:Arial,sans-serif;color:#991b1b;">' +
         '<h2 style="margin-bottom:8px;">Something went wrong starting the app</h2><p>' + (err && err.message ? err.message : err) + '</p></div>');
     }
   }
@@ -6696,7 +6711,7 @@ root.render(<App />);
 
 
 
-<footer style="text-align:center;padding:26px 16px 40px;color:#64748b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:.85rem;border-top:1px solid #e2e8f0;margin-top:30px;"><div>&copy; <span id="cj-yr-r"></span> Coach Jeff &mdash; Experience Career System</div><div style="margin-top:8px;"><span class="cj-legal-links"><a href="#" data-cj-legal="tos">Terms</a> &middot; <a href="#" data-cj-legal="privacy">Privacy</a> &middot; <a href="#" data-cj-legal="disclaimer">Disclaimer</a></span></div></footer>
+<footer style="text-align:center;padding:26px 16px 40px;color:#6d7073;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:.85rem;border-top:1px solid #d6d6d8;margin-top:30px;"><div>&copy; <span id="cj-yr-r"></span> Coach Jeff &mdash; Experience Career System</div><div style="margin-top:8px;"><span class="cj-legal-links"><a href="#" data-cj-legal="tos">Terms</a> &middot; <a href="#" data-cj-legal="privacy">Privacy</a> &middot; <a href="#" data-cj-legal="disclaimer">Disclaimer</a></span></div></footer>
 <script>var _y=document.getElementById("cj-yr-r");if(_y)_y.textContent=new Date().getFullYear();</script>
 <style id="cj-legal-css">
 .cj-legal-links{font-size:.85rem;line-height:1.7}
@@ -6704,15 +6719,15 @@ root.render(<App />);
 .cj-legal-links a:hover{opacity:.75}
 .cj-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:flex-start;justify-content:center;background:rgba(15,23,42,.55);padding:5vh 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .cj-modal.cj-open{display:flex}
-.cj-modal-card{background:#fff;color:#1e293b;max-width:680px;width:100%;border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,.3);padding:28px 30px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6}
+.cj-modal-card{background:#fff;color:#1d1f20;max-width:680px;width:100%;border-radius: 0;box-shadow:0 20px 60px rgba(15,23,42,.3);padding:28px 30px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6}
 .cj-modal-card h2{font-size:1.35rem;margin:0 0 4px}
 .cj-modal-card h3{font-size:1.08rem;margin:26px 0 6px;color:#12203a}
 .cj-modal-card h3:first-of-type{margin-top:14px}
 .cj-modal-card p{font-size:.95rem;margin:0 0 10px;color:#374151}
-.cj-modal-card .cj-meta{font-size:.82rem;color:#64748b;margin-top:-2px}
-.cj-modal-close{float:right;background:none;border:none;font-size:1.5rem;line-height:1;color:#64748b;cursor:pointer;margin:-6px -6px 0 0}
+.cj-modal-card .cj-meta{font-size:.82rem;color:#6d7073;margin-top:-2px}
+.cj-modal-close{float:right;background:none;border:none;font-size:1.5rem;line-height:1;color:#6d7073;cursor:pointer;margin:-6px -6px 0 0}
 .cj-modal-close:hover{color:#12203a}
-.cj-legal-note{margin-top:22px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:.82rem;color:#64748b}
+.cj-legal-note{margin-top:22px;padding-top:14px;border-top:1px solid #d6d6d8;font-size:.82rem;color:#6d7073}
 </style>
 <div class="cj-modal" id="cj-legal-modal" role="dialog" aria-modal="true" aria-labelledby="cj-legal-title" tabindex="-1">
   <div class="cj-modal-card">
@@ -6739,7 +6754,7 @@ root.render(<App />);
 <p><strong>Contact.</strong> Questions about privacy? Reach Jeff Burke at <a href="mailto:jburke8111@gmail.com">jburke8111@gmail.com</a> or through the feedback form on the homepage.</p></div>
     <div id="cj-disclaimer"><h3>Disclaimer</h3>
 <p>This free tool is for informational and educational purposes only and provides no guarantee of employment or any specific outcome. It is not legal, financial, tax, immigration, or employment advice. Review and verify everything before you use it.</p></div>
-    <p class="cj-legal-note">These free tools are provided by Jeff Burke &mdash; Experience Career System. This information is general and not a substitute for professional advice.</p>
+    <p class="cj-legal-note">These free tools are provided by Jeff Burke &mdash; Experience Career System™. This information is general and not a substitute for professional advice.</p>
   </div>
 </div>
 <script>
