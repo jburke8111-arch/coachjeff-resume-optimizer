@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.6: BEST-FORMAT GUIDE ALIGNMENT. Experience company/location rows use 3pt after; 6pt between jobs; Education exports degree bold first, then school + graduation date regular with 6pt after. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -139,7 +140,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.5-industry";
+const BUILD_VERSION = "v12.3.6-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3881,7 +3882,7 @@ function App() {
           if (s.tools) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.tools) || 'Tools & Platforms') + ':</b> ' + escapeHtml(s.tools), 0));
           if (s.domain) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.domain) || 'Domain Knowledge') + ':</b> ' + escapeHtml(s.domain), 6)); }
         if (key === "experience") { const items = data.experience.filter((e) => e.title || e.org); if (!items.length) continue; parts.push(headerHtml("Experience"));
-          items.forEach((e) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true })); e.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); parts.push('<p style="margin:0 0 6pt 0;font-size:4pt;">&nbsp;</p>'); }); }
+          items.forEach((e) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true, after: 3 })); e.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); parts.push('<p style="margin:0 0 6pt 0;font-size:4pt;">&nbsp;</p>'); }); }
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
           items.forEach((p) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); sp.accomplishments.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
         if (key === "education") { const items = data.education.filter((ed) => ed.degree || ed.school); if (!items.length) continue; parts.push(headerHtml("Education"));
@@ -4223,10 +4224,10 @@ function App() {
     r ? xRun("\t", { size: 11 }) + xRun(noWrapText(r), { size: 11 }) : ""
   ], { tabRight: true, after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
   const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "000000" }), { before: 240, after: 120, keepNext: true });
-  const xBullet = (t) => {
+  const xBullet = (t, o = {}) => {
     const stripped = String(t).replace(/^([•·▪◦‣\-–—\*]\s*)+/, "").replace(/^\s*•\s*/, "");
     const clean = tidyBullet(stripped);
-    const pPr = '<w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:hanging="360"/></w:pPr>';
+    const pPr = '<w:pPr><w:spacing w:before="0" w:after="' + (o.after != null ? o.after : 0) + '" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:hanging="360"/></w:pPr>';
     return '<w:p>' + pPr + '<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">•\t</w:t></w:r>' + xRun(clean, { size: 11 }) + '</w:p>';
   };
   const xBody = (t, o = {}) => xPar(xRun(t, { size: 11, color: o.color }), { after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
@@ -4282,12 +4283,13 @@ function App() {
           // entries, keep the title intact and place the date on the org/location row.
           if (title.length > 58 && dateRange) {
             P.push(xPar(xRun(title, { bold: true, size: 11 }), { after: 0, keepNext: true }));
-            P.push(xTabRow(orgLoc, dateRange, { after: 0, keepNext: true }));
+            P.push(xTabRow(orgLoc, dateRange, { after: 60, keepNext: true }));
           } else {
             P.push(xTabRow(title, dateRange, { lb: true, after: 0, keepNext: true }));
-            P.push(xTabRow(orgLoc, "", { after: 0, keepNext: true }));
+            P.push(xTabRow(orgLoc, "", { after: 60, keepNext: true }));
           }
-          e.bullets.filter((b) => b.trim()).forEach((b) => P.push(xBullet(b)));
+          const expBullets = e.bullets.filter((b) => b.trim());
+          expBullets.forEach((b, bi) => P.push(xBullet(b, { after: bi === expBullets.length - 1 && idx < items.length - 1 ? 120 : 0 })));
         });
       }
 
@@ -4310,9 +4312,10 @@ function App() {
         if (!items.length) continue;
         P.push(xHeader("Education"));
         items.forEach((ed) => {
-          P.push(xTabRow(ed.school || "", ed.location || "", { lb: true, after: 0, keepNext: true }));
           const dm = splitDegreeMinor(ed.degree || "");
-          P.push(xTabRow(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), ed.grad || "", { lb: true, after: 0, keepNext: true }));
+          P.push(xPar(xRun(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), { bold: true, size: 11 }), { after: 0, keepNext: true }));
+          P.push(xTabRow(ed.school || "", ed.grad || "", { after: 120, keepNext: true }));
+          if (ed.location) P.push(xBody(ed.location, { after: 0, keepNext: true }));
           if (dm.minor) P.push(xBody(dm.minor, { after: 0, keepNext: true }));
           const ex = [];
           if (ed.gpa) ex.push("GPA: " + ed.gpa);
