@@ -10,6 +10,7 @@
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
 <!-- v12.3.1: EXPERIENCE IMPORT + EXPORT-INTEGRITY FIX. Recognizes descriptive experience headings such as "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"; parses common Employer | Title + Location | Date layouts; preserves the line before a standalone date/location line as the entry header; and blocks Word export when section/date content has leaked into Skills or an Experience row has dates/location but no employer/title. -->
 <!-- v12.3.2: IMPORT/EXPORT FIDELITY FIXES. Preserves up to four original labeled skill groups (including their source labels) instead of collapsing multiple groups into generic buckets; displays those labels in Workshop/preview/export. Project subtitle-style bullets such as "Excel Automation & Data Validation" render as an unbulleted project context line. DOCX exports show visible LinkedIn/GitHub URLs instead of generic anchor labels. Mechanical cleanup inserts missing spaces after commas/semicolons/colons in bullets. Long experience titles render with the date on the organization/location row to prevent awkward title/date wrapping. -->
+<!-- v12.3.4: BLACK ATS EXPORT + EDUCATION PIPE FIX. Resume exports/print preview now use black text throughout, remove decorative section-heading rules and hyperlink underlining, and strip a trailing pipe from education degree text when the graduation date is rendered separately. -->
 <!-- v12.3.3: CONTACT-LINK EXPORT FIX. Sanitizes stray trailing separators/encoded pipe characters from imported profile URLs (e.g. GitHub ending in %7C), exports LinkedIn/GitHub as compact clickable labels in DOCX to prevent header wrapping, and preserves the long-title two-line experience layout with employer/location left and date right-aligned. -->
 <!-- v12.3.0: PARSER + PUBLICATION-DETECTION FIXES. (1) Publication false-positive: bare "IEEE"/"ACM" tokens (student-chapter/club mentions like "IEEE EUI") no longer trigger the "Published Work" strength — they now require a real container (IEEE Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access); "presented at" now requires an ALL-CAPS venue acronym so "presented at the client meeting" no longer fires; doi: tightened to "doi: 10.". (2) Wrapped-line bullet splitting: bullets that wrap onto a second physical line (e.g. "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch.") were counted as separate bullets, inflating the bullet count and tripping a false "inconsistent capitalization / starts lowercase" flag. New _isBulletContinuation() merges unmarked continuation lines into the previous bullet, in BOTH the primary date-header parse path (makeEntryFromChunk) and the fallback experience path, and in the projects parser (merge now runs BEFORE title detection so a wrap isn't misread as a structural title). (3) Abbreviated-month dates: the date-range regex allowed "June 2026" but not "Aug. 2025"/"Sept. 2024" — the period blocked the match, so abbreviated-month job headers weren't detected and multiple jobs collapsed into one entry (causing the false "only one paid role is visible" flag). Added optional-period tolerance ([a-z]*\.?\s+20\d{2}) to all five date regexes. (4) En-dash bullets: recognized internally as markers so parsing segments correctly; flagged to the user as a "Bullet style" formatting issue (ATS risk) via analyzeMechanics; and normalized to standard "•" on docx export. Verified end-to-end on Aya Elghayaty's resume: 4 experience entries, 3 projects, 6 project bullets, 0 lowercase-start bullets, en-dash flag present, no false Published Work strength. BUILD_VERSION bumped so the report footer distinguishes this build from v12.2.9. -->
 <!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
@@ -137,7 +138,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.3-industry";
+const BUILD_VERSION = "v12.3.4-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3850,7 +3851,7 @@ function App() {
       const c = data.contact;
       const parts = [];
       // Header section
-      const headerHtml = (t) => '<p style="margin:10pt 0 4pt 0;border-bottom:1pt solid #5980a6;"><span style="font-size:13pt;font-weight:bold;color:#5980a6;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
+      const headerHtml = (t) => '<p style="margin:10pt 0 4pt 0;"><span style="font-size:13pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
       // Two-column row via a borderless full-width table
       const twoCol = (l, r, o = {}) =>
         '<table style="width:100%;border-collapse:collapse;margin:0;"><tr>' +
@@ -3861,7 +3862,7 @@ function App() {
       const bullet = (t) => '<p style="margin:0 0 0pt 18pt;font-size:11pt;font-family:Arial,sans-serif;text-indent:-18pt;">&#8226;&nbsp;' + escapeHtml(t).replace(/^([••\-\*]\s*)+/, "") + '</p>';
 
       // Name + contact (centered)
-      parts.push('<p style="margin:0 0 2pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#5980a6;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
+      parts.push('<p style="margin:0 0 2pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
       const cp = [];
       if (c.cityState) cp.push(escapeHtml(c.cityState));
       if (c.phone) cp.push(escapeHtml(c.phone));
@@ -3883,7 +3884,7 @@ function App() {
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
           items.forEach((p) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); sp.accomplishments.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
         if (key === "education") { const items = data.education.filter((ed) => ed.degree || ed.school); if (!items.length) continue; parts.push(headerHtml("Education"));
-          items.forEach((ed) => { parts.push(twoCol(ed.school || "", ed.location || "", { lb: true })); const dm = splitDegreeMinor(ed.degree || ""); parts.push(twoCol(dm.degree, ed.grad || "", { lb: true })); if (dm.minor) parts.push(para(escapeHtml(dm.minor), 0)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) parts.push(para(escapeHtml(ex.join(" | ")), ed.coursework ? 0 : 6)); if (ed.coursework) parts.push(para("Relevant Coursework: " + escapeHtml(ed.coursework), 6)); }); }
+          items.forEach((ed) => { parts.push(twoCol(ed.school || "", ed.location || "", { lb: true })); const dm = splitDegreeMinor(ed.degree || ""); parts.push(twoCol(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), ed.grad || "", { lb: true })); if (dm.minor) parts.push(para(escapeHtml(dm.minor), 0)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) parts.push(para(escapeHtml(ex.join(" | ")), ed.coursework ? 0 : 6)); if (ed.coursework) parts.push(para("Relevant Coursework: " + escapeHtml(ed.coursework), 6)); }); }
         if (key === "activities") { const items = data.activities.filter((a) => a.role || a.org); if (!items.length) continue; parts.push(headerHtml("Leadership & Activities"));
           items.forEach((a) => { parts.push(twoCol(a.role || "", [a.start, a.end].filter(Boolean).join(" – "), { lb: true })); if (a.org) parts.push(twoCol(a.org, "", { ri: true })); a.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
         if (key === "certifications") { const items = data.certifications.filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Certifications"));
@@ -4201,7 +4202,7 @@ function App() {
     const id = "rIdLink" + (docxHyperlinks.length + 1);
     url = sanitizeProfileUrl(url);
     docxHyperlinks.push({ id, url });
-    return '<w:hyperlink r:id="' + id + '"><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="595959"/><w:u w:val="single"/></w:rPr><w:t xml:space="preserve">' + xmlEsc(label) + '</w:t></w:r></w:hyperlink>';
+    return '<w:hyperlink r:id="' + id + '"><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="000000"/><w:u w:val="none"/></w:rPr><w:t xml:space="preserve">' + xmlEsc(label) + '</w:t></w:r></w:hyperlink>';
   };
   const xRun = (text, o = {}) => '<w:r><w:rPr>' + (o.bold ? '<w:b/>' : '') + (o.size ? '<w:sz w:val="' + (o.size * 2) + '"/>' : '') + (o.color ? '<w:color w:val="' + o.color + '"/>' : '') + '<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t xml:space="preserve">' + xmlEsc(text) + '</w:t></w:r>';
   const xPar = (runs, o = {}) => {
@@ -4220,7 +4221,7 @@ function App() {
     xRun(l || "", { bold: !!o.lb, size: 11 }),
     r ? xRun("\t", { size: 11 }) + xRun(noWrapText(r), { size: 11 }) : ""
   ], { tabRight: true, after: o.after != null ? o.after : 0, keepNext: !!o.keepNext });
-  const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "5980A6" }), { border: true, before: 240, after: 120, keepNext: true });
+  const xHeader = (t) => xPar(xRun(t.toUpperCase(), { bold: true, size: 13, color: "000000" }), { before: 240, after: 120, keepNext: true });
   const xBullet = (t) => {
     const stripped = String(t).replace(/^([•·▪◦‣\-–—\*]\s*)+/, "").replace(/^\s*•\s*/, "");
     const clean = tidyBullet(stripped);
@@ -4233,9 +4234,9 @@ function App() {
     const c = data.contact;
     const P = [];
 
-    P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "5980A6" }), { align: "center", after: 120 }));
+    P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "000000" }), { align: "center", after: 120 }));
 
-    const contactParts = [c.cityState, c.phone, c.email].filter(Boolean).map(x => xRun(x, { size: 11, color: "595959" }));
+    const contactParts = [c.cityState, c.phone, c.email].filter(Boolean).map(x => xRun(x, { size: 11, color: "000000" }));
     if (c.linkedin) {
       const li = sanitizeProfileUrl(c.linkedin);
       contactParts.push(xHyperlink("LinkedIn", /^https?:\/\//i.test(li) ? li : "https://" + li));
@@ -4246,7 +4247,7 @@ function App() {
       contactParts.push(xHyperlink(label, /^https?:\/\//i.test(p) ? p : "https://" + p));
     }
     const contactRuns = [];
-    contactParts.forEach((run, i) => { if (i) contactRuns.push(xRun("  |  ", { size: 11, color: "595959" })); contactRuns.push(run); });
+    contactParts.forEach((run, i) => { if (i) contactRuns.push(xRun("  |  ", { size: 11, color: "000000" })); contactRuns.push(run); });
     if (contactRuns.length) P.push(xPar(contactRuns, { align: "center", after: 240 }));
 
     for (const key of data.order) {
@@ -4310,7 +4311,7 @@ function App() {
         items.forEach((ed) => {
           P.push(xTabRow(ed.school || "", ed.location || "", { lb: true, after: 0, keepNext: true }));
           const dm = splitDegreeMinor(ed.degree || "");
-          P.push(xTabRow(dm.degree, ed.grad || "", { lb: true, after: 0, keepNext: true }));
+          P.push(xTabRow(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), ed.grad || "", { lb: true, after: 0, keepNext: true }));
           if (dm.minor) P.push(xBody(dm.minor, { after: 0, keepNext: true }));
           const ex = [];
           if (ed.gpa) ex.push("GPA: " + ed.gpa);
@@ -6739,22 +6740,22 @@ function App() {
 }
 
 function Preview({ data }) {
-  const H = ({ children }) => <div style={{ borderBottom: "1px solid #5980a6", color: "#5980a6", fontWeight: 700, fontSize: 12, letterSpacing: .5, textTransform: "uppercase", paddingBottom: 2, marginTop: 12, marginBottom: 4 }}>{children}</div>;
+  const H = ({ children }) => <div style={{ color: "#000", fontWeight: 700, fontSize: 12, letterSpacing: .5, textTransform: "uppercase", paddingBottom: 2, marginTop: 12, marginBottom: 4 }}>{children}</div>;
   const Row = ({ l, r, bl, ri }) => <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ fontWeight: bl ? 700 : 400 }}>{l}</span><span style={{ fontStyle: ri ? "italic" : "normal" }}>{r}</span></div>;
   const cleanBulletText = (s) => String(s || "").replace(/^([••\-\*]\s*)+/, "");
   const Bul = ({ items }) => <ul style={{ margin: "2px 0 0", paddingLeft: 16, fontSize: 11 }}>{items.filter((b) => b.trim()).map((b, i) => <li key={i} style={{ marginBottom: 2 }}>{cleanBulletText(b)}</li>)}</ul>;
   const C = ({ children }) => <div style={{ marginTop: 10 }}>{children}</div>;
   return (
     <div className="print-only" style={{ fontFamily: "Arial, sans-serif", color: "#000", maxWidth: "8.5in", margin: "0 auto", padding: "0.5in", background: "#fff" }}>
-      <div style={{ textAlign: "center", color: "#5980a6", fontWeight: 700, fontSize: 22, textTransform: "uppercase" }}>{data.name || "First Last"}</div>
-      <div style={{ textAlign: "center", color: "#595959", fontSize: 11, marginTop: 4 }}>{[data.contact.cityState, data.contact.phone, data.contact.email, data.contact.linkedin, data.contact.portfolio].filter(Boolean).join("  |  ")}</div>
+      <div style={{ textAlign: "center", color: "#000", fontWeight: 700, fontSize: 22, textTransform: "uppercase" }}>{data.name || "First Last"}</div>
+      <div style={{ textAlign: "center", color: "#000", fontSize: 11, marginTop: 4 }}>{[data.contact.cityState, data.contact.phone, data.contact.email, data.contact.linkedin, data.contact.portfolio].filter(Boolean).join("  |  ")}</div>
       {data.order.map((key) => {
         if (data.hidden[key]) return null;
         if (key === "summary" && data.summary.trim()) return <C key={key}><H>Professional Summary</H><p style={{ fontSize: 11 }}>{data.summary}</p></C>;
         if (key === "skills") { const s = data.skills; if (!s.technical && !s.tools) return null; return <C key={key}><H>Skills</H>{s.technical && <div style={{ fontSize: 11 }}><b>Technical:</b> {s.technical}</div>}{s.tools && <div style={{ fontSize: 11 }}><b>Tools/Platforms:</b> {s.tools}</div>}</C>; }
         if (key === "experience") { const it = data.experience.filter((e) => e.title || e.org); if (!it.length) return null; return <C key={key}><H>Experience</H>{it.map((e) => <div key={e.id} style={{ marginBottom: 6 }}><Row l={e.title} r={[e.start, e.end].filter(Boolean).join(" – ")} bl /><Row l={e.org} r={e.location} ri /><Bul items={e.bullets} /></div>)}</C>; }
         if (key === "projects") { const it = data.projects.filter((p) => p.name); if (!it.length) return null; return <C key={key}><H>Projects</H>{it.map((p) => { const sp = splitProjectLines(p.bullets); return <div key={p.id} style={{ marginBottom: 6 }}><Row l={p.name} r={p.date} bl />{sp.context && <div style={{ fontSize: 11 }}>{sp.context}</div>}{sp.toolsValue && <div style={{ fontSize: 11 }}><b>Technologies:</b> {sp.toolsValue}</div>}<Bul items={sp.accomplishments} /></div>; })}</C>; }
-        if (key === "education") { const it = data.education.filter((ed) => ed.degree || ed.school); if (!it.length) return null; return <C key={key}><H>Education</H>{it.map((ed) => { const dm = splitDegreeMinor(ed.degree || ""); return <div key={ed.id} style={{ marginBottom: 6 }}><Row l={ed.school} r={ed.location} bl /><Row l={dm.degree} r={ed.grad} bl />{dm.minor && <div style={{ fontSize: 11 }}>{dm.minor}</div>}{(ed.gpa || ed.coursework) && <div style={{ fontSize: 11, color: "#595959" }}>{[ed.gpa && "GPA: " + ed.gpa, ed.coursework && "Relevant Coursework: " + ed.coursework].filter(Boolean).join("  •  ")}</div>}</div>; })}</C>; }
+        if (key === "education") { const it = data.education.filter((ed) => ed.degree || ed.school); if (!it.length) return null; return <C key={key}><H>Education</H>{it.map((ed) => { const dm = splitDegreeMinor(ed.degree || ""); return <div key={ed.id} style={{ marginBottom: 6 }}><Row l={ed.school} r={ed.location} bl /><Row l={String(dm.degree || "").replace(/\s*\|\s*$/, "").trim()} r={ed.grad} bl />{dm.minor && <div style={{ fontSize: 11 }}>{dm.minor}</div>}{(ed.gpa || ed.coursework) && <div style={{ fontSize: 11, color: "#595959" }}>{[ed.gpa && "GPA: " + ed.gpa, ed.coursework && "Relevant Coursework: " + ed.coursework].filter(Boolean).join("  •  ")}</div>}</div>; })}</C>; }
         if (key === "activities") { const it = data.activities.filter((a) => a.role || a.org); if (!it.length) return null; return <C key={key}><H>Leadership & Activities</H>{it.map((a) => <div key={a.id} style={{ marginBottom: 6 }}><Row l={[a.role, a.org].filter(Boolean).join(" — ")} r={[a.start, a.end].filter(Boolean).join(" – ")} bl /><Bul items={a.bullets} /></div>)}</C>; }
         if (key === "certifications") { const it = data.certifications.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Certifications</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
         if (key === "awards") { const it = data.awards.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Awards & Honors</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
