@@ -10,6 +10,7 @@
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
 <!-- v12.3.1: EXPERIENCE IMPORT + EXPORT-INTEGRITY FIX. Recognizes descriptive experience headings such as "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"; parses common Employer | Title + Location | Date layouts; preserves the line before a standalone date/location line as the entry header; and blocks Word export when section/date content has leaked into Skills or an Experience row has dates/location but no employer/title. -->
 <!-- v12.3.2: IMPORT/EXPORT FIDELITY FIXES. Preserves up to four original labeled skill groups (including their source labels) instead of collapsing multiple groups into generic buckets; displays those labels in Workshop/preview/export. Project subtitle-style bullets such as "Excel Automation & Data Validation" render as an unbulleted project context line. DOCX exports show visible LinkedIn/GitHub URLs instead of generic anchor labels. Mechanical cleanup inserts missing spaces after commas/semicolons/colons in bullets. Long experience titles render with the date on the organization/location row to prevent awkward title/date wrapping. -->
+<!-- v12.3.3: CONTACT-LINK EXPORT FIX. Sanitizes stray trailing separators/encoded pipe characters from imported profile URLs (e.g. GitHub ending in %7C), exports LinkedIn/GitHub as compact clickable labels in DOCX to prevent header wrapping, and preserves the long-title two-line experience layout with employer/location left and date right-aligned. -->
 <!-- v12.3.0: PARSER + PUBLICATION-DETECTION FIXES. (1) Publication false-positive: bare "IEEE"/"ACM" tokens (student-chapter/club mentions like "IEEE EUI") no longer trigger the "Published Work" strength — they now require a real container (IEEE Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access); "presented at" now requires an ALL-CAPS venue acronym so "presented at the client meeting" no longer fires; doi: tightened to "doi: 10.". (2) Wrapped-line bullet splitting: bullets that wrap onto a second physical line (e.g. "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch.") were counted as separate bullets, inflating the bullet count and tripping a false "inconsistent capitalization / starts lowercase" flag. New _isBulletContinuation() merges unmarked continuation lines into the previous bullet, in BOTH the primary date-header parse path (makeEntryFromChunk) and the fallback experience path, and in the projects parser (merge now runs BEFORE title detection so a wrap isn't misread as a structural title). (3) Abbreviated-month dates: the date-range regex allowed "June 2026" but not "Aug. 2025"/"Sept. 2024" — the period blocked the match, so abbreviated-month job headers weren't detected and multiple jobs collapsed into one entry (causing the false "only one paid role is visible" flag). Added optional-period tolerance ([a-z]*\.?\s+20\d{2}) to all five date regexes. (4) En-dash bullets: recognized internally as markers so parsing segments correctly; flagged to the user as a "Bullet style" formatting issue (ATS risk) via analyzeMechanics; and normalized to standard "•" on docx export. Verified end-to-end on Aya Elghayaty's resume: 4 experience entries, 3 projects, 6 project bullets, 0 lowercase-start bullets, en-dash flag present, no false Published Work strength. BUILD_VERSION bumped so the report footer distinguishes this build from v12.2.9. -->
 <!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
 <!-- v12.2.8: SKILLS PARSER — switched from a hard-coded label list to GENERIC label-shape detection, ending the label whack-a-mole. Any "Short Label:" sub-heading is now recognized by shape (a short 1-4 word phrase + colon, followed by a comma-list of skills), so novel labels like "Machine Learning & AI:", "High-Performance Computing:", "Infrastructure & DevOps:", "Networking & Storage:" are stripped and bucketed correctly without being enumerated. A guard requires the post-colon content to look like a skill list (not prose), so a real skill/line containing a colon is not mistaken for a label. Verified on two real resumes (Soham, Samuel) plus dash/bullet/numbered/classic formats. Known minor edge case: a single flattened line cramming multiple label groups with no delimiters can still mis-bucket one trailing label word; this format is prevented by the v12.1.3 line reconstruction in the normal PDF path. -->
@@ -136,7 +137,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.2-industry";
+const BUILD_VERSION = "v12.3.3-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -604,8 +605,19 @@ function cleanImportedCityState(cityState, name) {
   // Even with no clean city/state match, strip a parenthetical so it doesn't carry through.
   return s.replace(/\s*\([^)]*\)\s*$/, "").trim();
 }
+function sanitizeProfileUrl(value) {
+  let u = String(value || "").trim();
+  if (!u) return "";
+  // Word/Google Docs extraction can accidentally attach the contact separator to
+  // the URL. Strip both literal and percent-encoded trailing pipes/bullets plus
+  // ordinary sentence punctuation, but leave legitimate URL path characters.
+  u = u.replace(/(?:%7C|%7c|\||%E2%80%A2|%e2%80%a2|•)+$/g, "");
+  u = u.replace(/[),.;]+$/g, "").trim();
+  return u;
+}
+
 function cleanImportedPortfolio(portfolio, email, linkedin) {
-  const p = String(portfolio || "").trim();
+  const p = sanitizeProfileUrl(portfolio);
   if (!p) return "";
   const domain = p.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0].toLowerCase();
   const blocked = new Set(["gmail.com","outlook.com","hotmail.com","yahoo.com","icloud.com","aol.com","live.com","msn.com","proton.me","protonmail.com","mail.com"]);
@@ -620,7 +632,7 @@ function _parseContact(lines) {
   const joined = (lines || []).join(" ");
   const email = (joined.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i) || [""])[0];
   const phone = (joined.match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/) || [""])[0];
-  const linkedin = (joined.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-z0-9\-_%]+\/?/i) || [""])[0];
+  const linkedin = sanitizeProfileUrl((joined.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-z0-9\-_%]+\/?/i) || [""])[0]);
 
   const emailDomains = new Set(["gmail.com","outlook.com","hotmail.com","yahoo.com","icloud.com","aol.com","live.com","msn.com","proton.me","protonmail.com","mail.com"]);
   const urlMatches = joined.match(/(?:https?:\/\/)?(?:www\.)?(?:github\.com\/[a-z0-9\-_%]+|behance\.net\/[a-z0-9\-_%]+|dribbble\.com\/[a-z0-9\-_%]+|[a-z0-9\-_%]+\.(?:com|net|org|io|me)\/?)/ig) || [];
@@ -1576,7 +1588,7 @@ async function extractDocxHyperlinks(arrayBuffer) {
   }
 }
 function summarizeImportedLinks(urls) {
-  const clean = Array.from(new Set((urls || []).filter(Boolean)));
+  const clean = Array.from(new Set((urls || []).map(sanitizeProfileUrl).filter(Boolean)));
   // Accept any linkedin.com URL (not just /in/), and any github.com URL.
   const linkedIn = clean.find(u => /linkedin\.com/i.test(u)) || "";
   const github = clean.find(u => /github\.com/i.test(u)) || "";
@@ -4173,7 +4185,7 @@ function App() {
 
   const xmlEsc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // OOXML run + paragraph builders
-  const cleanDisplayUrl = (s) => String(s || "").replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  const cleanDisplayUrl = (s) => sanitizeProfileUrl(s).replace(/^https?:\/\//i, "").replace(/\/$/, "");
   const noWrapText = (s) => String(s || "").replace(/ /g, "\u00A0");
   const formatOrgLocation = (org, location) => {
     const o = String(org || "").trim().replace(/[,\s]+$/, "");
@@ -4187,6 +4199,7 @@ function App() {
   const xHyperlink = (label, url) => {
     if (!url) return xRun(label, { size: 11, color: "595959" });
     const id = "rIdLink" + (docxHyperlinks.length + 1);
+    url = sanitizeProfileUrl(url);
     docxHyperlinks.push({ id, url });
     return '<w:hyperlink r:id="' + id + '"><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="595959"/><w:u w:val="single"/></w:rPr><w:t xml:space="preserve">' + xmlEsc(label) + '</w:t></w:r></w:hyperlink>';
   };
@@ -4223,10 +4236,13 @@ function App() {
     P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "5980A6" }), { align: "center", after: 120 }));
 
     const contactParts = [c.cityState, c.phone, c.email].filter(Boolean).map(x => xRun(x, { size: 11, color: "595959" }));
-    if (c.linkedin) contactParts.push(xHyperlink(cleanDisplayUrl(c.linkedin), /^https?:\/\//i.test(c.linkedin) ? c.linkedin : "https://" + c.linkedin));
+    if (c.linkedin) {
+      const li = sanitizeProfileUrl(c.linkedin);
+      contactParts.push(xHyperlink("LinkedIn", /^https?:\/\//i.test(li) ? li : "https://" + li));
+    }
     if (c.portfolio) {
-      const p = String(c.portfolio || "");
-      const label = cleanDisplayUrl(p);
+      const p = sanitizeProfileUrl(c.portfolio);
+      const label = /github\.com/i.test(p) ? "GitHub" : cleanDisplayUrl(p);
       contactParts.push(xHyperlink(label, /^https?:\/\//i.test(p) ? p : "https://" + p));
     }
     const contactRuns = [];
