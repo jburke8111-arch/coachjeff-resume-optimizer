@@ -9,6 +9,7 @@
 <!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
 <!-- v12.3.1: EXPERIENCE IMPORT + EXPORT-INTEGRITY FIX. Recognizes descriptive experience headings such as "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"; parses common Employer | Title + Location | Date layouts; preserves the line before a standalone date/location line as the entry header; and blocks Word export when section/date content has leaked into Skills or an Experience row has dates/location but no employer/title. -->
+<!-- v12.3.2: IMPORT/EXPORT FIDELITY FIXES. Preserves up to four original labeled skill groups (including their source labels) instead of collapsing multiple groups into generic buckets; displays those labels in Workshop/preview/export. Project subtitle-style bullets such as "Excel Automation & Data Validation" render as an unbulleted project context line. DOCX exports show visible LinkedIn/GitHub URLs instead of generic anchor labels. Mechanical cleanup inserts missing spaces after commas/semicolons/colons in bullets. Long experience titles render with the date on the organization/location row to prevent awkward title/date wrapping. -->
 <!-- v12.3.0: PARSER + PUBLICATION-DETECTION FIXES. (1) Publication false-positive: bare "IEEE"/"ACM" tokens (student-chapter/club mentions like "IEEE EUI") no longer trigger the "Published Work" strength — they now require a real container (IEEE Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access); "presented at" now requires an ALL-CAPS venue acronym so "presented at the client meeting" no longer fires; doi: tightened to "doi: 10.". (2) Wrapped-line bullet splitting: bullets that wrap onto a second physical line (e.g. "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch.") were counted as separate bullets, inflating the bullet count and tripping a false "inconsistent capitalization / starts lowercase" flag. New _isBulletContinuation() merges unmarked continuation lines into the previous bullet, in BOTH the primary date-header parse path (makeEntryFromChunk) and the fallback experience path, and in the projects parser (merge now runs BEFORE title detection so a wrap isn't misread as a structural title). (3) Abbreviated-month dates: the date-range regex allowed "June 2026" but not "Aug. 2025"/"Sept. 2024" — the period blocked the match, so abbreviated-month job headers weren't detected and multiple jobs collapsed into one entry (causing the false "only one paid role is visible" flag). Added optional-period tolerance ([a-z]*\.?\s+20\d{2}) to all five date regexes. (4) En-dash bullets: recognized internally as markers so parsing segments correctly; flagged to the user as a "Bullet style" formatting issue (ATS risk) via analyzeMechanics; and normalized to standard "•" on docx export. Verified end-to-end on Aya Elghayaty's resume: 4 experience entries, 3 projects, 6 project bullets, 0 lowercase-start bullets, en-dash flag present, no false Published Work strength. BUILD_VERSION bumped so the report footer distinguishes this build from v12.2.9. -->
 <!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
 <!-- v12.2.8: SKILLS PARSER — switched from a hard-coded label list to GENERIC label-shape detection, ending the label whack-a-mole. Any "Short Label:" sub-heading is now recognized by shape (a short 1-4 word phrase + colon, followed by a comma-list of skills), so novel labels like "Machine Learning & AI:", "High-Performance Computing:", "Infrastructure & DevOps:", "Networking & Storage:" are stripped and bucketed correctly without being enumerated. A guard requires the post-colon content to look like a skill list (not prose), so a real skill/line containing a colon is not mistaken for a label. Verified on two real resumes (Soham, Samuel) plus dash/bullet/numbered/classic formats. Known minor edge case: a single flattened line cramming multiple label groups with no delimiters can still mis-bucket one trailing label word; this format is prevented by the v12.1.3 line reconstruction in the normal PDF path. -->
@@ -135,7 +136,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.1-industry";
+const BUILD_VERSION = "v12.3.2-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -660,26 +661,18 @@ function _parseContact(lines) {
   return { name, contact: { cityState, phone, email, linkedin, portfolio: safePortfolio, relocationNoteFound } };
 }
 function _parseSkills(lines) {
-  const buckets = {
-    technical: [],
-    dataVisualization: [],
-    tools: [],
-    domain: []
+  const buckets = { technical: [], dataVisualization: [], tools: [], domain: [] };
+  const labels = {
+    technical: "Technical Skills",
+    dataVisualization: "Data Visualization",
+    tools: "Tools & Platforms",
+    domain: "Domain Knowledge"
   };
   const importChanges = [];
   const seenLabels = new Set();
+  const labeledGroups = [];
 
-  // v12.2.8: Generic label detection instead of a hard-coded list. A skills
-  // sub-label has a recognizable SHAPE — a short phrase (1–4 words, often Title
-  // Case, may contain & / - or "and") followed by a colon, then a comma-list of
-  // skills. We detect that shape so ANY label works ("Machine Learning & AI:",
-  // "Networking & Storage:", "High-Performance Computing:") without enumerating it.
-  // The known-label matcher below is used only to choose the bucket; unknown
-  // labels still get stripped and their contents bucketed as technical.
   const stripLeadMarker = (s) => String(s || "").replace(/^\s*(?:[-–—•*·▪◦‣]|\d+[.)])\s*/, "").trim();
-  // A generic "label:" prefix: 1–4 words of letters (with optional &, /, -, +, and,
-  // digits like "Fortran 94" excluded by requiring the head to be wordy), then a
-  // colon. Capped length so a full sentence with a colon isn't treated as a label.
   const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
 
   function normalizeLabel(label) {
@@ -690,48 +683,70 @@ function _parseSkills(lines) {
     if (/technical|core skills|core competencies|programming|language|framework|librar|machine learning|deep learning|\bai\b|data science|computing|hpc/.test(l)) return "technical";
     return "";
   }
-  // Decide whether a leading "Word...:" is really a skills LABEL vs. a skill that
-  // happens to contain a colon. Real labels are short, mostly alphabetic, and the
-  // remainder is a comma/space list of skill-like tokens.
   const looksLikeLabel = (head) => {
     const h = String(head || "").trim();
     if (!h || h.length > 40) return false;
-    if ((h.match(/\s+/g) || []).length > 4) return false; // too many words
-    if (/\d{3,}/.test(h)) return false; // long numbers aren't labels
+    if ((h.match(/\s+/g) || []).length > 4) return false;
+    if (/\d{3,}/.test(h)) return false;
     return /[A-Za-z]/.test(h);
   };
-  // The content after a label should read like a skill list: mostly short,
-  // comma-separated tokens — not a prose sentence. Heuristic: either it has
-  // commas, or it's short with few words; and it's not a full sentence with
-  // connective words that signal prose.
   const looksLikeSkillList = (rest) => {
     const r = String(rest || "").trim();
     if (!r) return false;
-    if (/[.!?]$/.test(r) && !/,/.test(r)) return false; // ends like a sentence, no commas
+    if (/[.!?]$/.test(r) && !/,/.test(r)) return false;
     if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !/,/.test(r)) return false;
-    // Has commas (list) OR is short enough to be a couple of skills.
     return /,/.test(r) || r.split(/\s+/).length <= 4;
   };
+  const splitItems = (text) => String(text || "").split(/[,;|••]/).map(x => stripLeadMarker(x)).filter(Boolean);
+  const cleanUnique = arr => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
+
+  // First capture source-labelled groups exactly. If the resume supplies 2–4 clean
+  // labelled rows, preserving their names and order is more faithful than forcing
+  // them into generic optimizer categories (which can merge unrelated groups).
+  (lines || []).forEach(raw => {
+    const line = stripLeadMarker(raw);
+    const m = line.match(GENERIC_LABEL);
+    if (m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length))) {
+      const groupLabel = m[1].trim();
+      const items = splitItems(line.slice(m[0].length));
+      if (items.length) labeledGroups.push({ label: groupLabel, items });
+    }
+  });
+
+  const allLinesAreSimpleLabeledGroups = labeledGroups.length >= 2 && labeledGroups.length <= 4 && labeledGroups.length === (lines || []).filter(x => String(x || "").trim()).length;
+  if (allLinesAreSimpleLabeledGroups) {
+    const slots = ["technical", "dataVisualization", "tools", "domain"];
+    labeledGroups.forEach((g, i) => {
+      const slot = slots[i];
+      buckets[slot] = cleanUnique(g.items);
+      labels[slot] = g.label;
+      seenLabels.add(g.label);
+    });
+    importChanges.push("Preserved " + labeledGroups.length + " original skill categories and labels from imported resume.");
+    return {
+      technical: buckets.technical.join(", "),
+      dataVisualization: buckets.dataVisualization.join(", "),
+      tools: buckets.tools.join(", "),
+      domain: buckets.domain.join(", "),
+      labels,
+      omitted: [],
+      importChanges
+    };
+  }
 
   function addToBucket(item, bucket) {
-    let s = stripLeadMarker(String(item || "")).trim();
-    if (!s) return;
-    // Drop stray connective artifacts from mangled labels.
-    if (/^(?:&|and|\/|-|tools|frameworks|databases|cloud|infrastructure|networking)?\s*&?$/i.test(s) && s.length <= 3) {
-      importChanges.push('Removed formatting artifact: "' + s + '"');
+    let value = stripLeadMarker(item);
+    if (!value) return;
+    if (/^(?:&|and|\/|-|tools|frameworks|databases|cloud|infrastructure|networking)?\s*&?$/i.test(value) && value.length <= 3) {
+      importChanges.push('Removed formatting artifact: "' + value + '"');
       return;
     }
-    buckets[bucket || "technical"].push(s);
+    buckets[bucket || "technical"].push(value);
   }
 
   (lines || []).forEach(raw => {
-    // Strip a leading bullet BEFORE anything else so label detection sees the real
-    // start of the line (root cause of the "- Languages :" leak).
-    let line = stripLeadMarker(String(raw || ""));
+    let line = stripLeadMarker(raw);
     if (!line) return;
-
-    // Detect a leading generic label. If found and it looks like a label (AND what
-    // follows looks like a skill list, not prose), use it to pick the bucket.
     let bucket = "technical";
     const m = line.match(GENERIC_LABEL);
     if (m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length))) {
@@ -739,13 +754,8 @@ function _parseSkills(lines) {
       bucket = normalizeLabel(m[1]) || "technical";
       line = line.slice(m[0].length);
     }
-
-    // Some resumes cram several "Label: a, b   Label2: c, d" groups on one line.
-    // After removing the first label, re-scan the remainder for additional
-    // "  Word...:" groups and split there, carrying each group's own bucket.
     const INNER = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
-    let segments = [];
-    let lastIdx = 0, lastBucket = bucket, im;
+    let segments = [], lastIdx = 0, lastBucket = bucket, im;
     while ((im = INNER.exec(line)) !== null) {
       if (looksLikeLabel(im[1]) && looksLikeSkillList(line.slice(im.index + im[0].length))) {
         segments.push({ text: line.slice(lastIdx, im.index), bucket: lastBucket });
@@ -755,22 +765,18 @@ function _parseSkills(lines) {
       }
     }
     segments.push({ text: line.slice(lastIdx), bucket: lastBucket });
-
-    segments.forEach(seg => {
-      seg.text.split(/[,;|••]/).map(x => x.trim()).filter(Boolean).forEach(item => addToBucket(item, seg.bucket));
-    });
+    segments.forEach(seg => splitItems(seg.text).forEach(item => addToBucket(item, seg.bucket)));
   });
 
-  const cleanUnique = arr => Array.from(new Set(arr.map(s => s.trim()).filter(Boolean)));
   const categoryCount = ["technical", "dataVisualization", "tools", "domain"].filter(k => buckets[k].length).length;
-  if (seenLabels.size) importChanges.push("Preserved original skill categories from imported resume.");
+  if (seenLabels.size) importChanges.push("Preserved skill content from imported resume.");
   if (categoryCount >= 3) importChanges.push(categoryCount + " skill categories identified.");
-
   return {
     technical: cleanUnique(buckets.technical).join(", "),
     dataVisualization: cleanUnique(buckets.dataVisualization).join(", "),
     tools: cleanUnique(buckets.tools).join(", "),
     domain: cleanUnique(buckets.domain).join(", "),
+    labels,
     omitted: [],
     importChanges: Array.from(new Set(importChanges))
   };
@@ -1244,6 +1250,11 @@ function tidyBullet(s) {
   let t = String(s || "").replace(/\u00a0/g, " ").replace(/\s{2,}/g, " ").trim();
   if (!t) return t;
 
+  // Repair collapsed punctuation spacing from DOCX/PDF extraction (e.g. "gaps,so").
+  // Keep decimals, URLs, and abbreviations untouched by only targeting punctuation
+  // immediately followed by a letter.
+  t = t.replace(/([,;:])(?=[A-Za-z])/g, "$1 ");
+
   // Capitalize the first letter so every bullet starts sentence-case.
   t = t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -1268,6 +1279,12 @@ function splitProjectLines(bullets) {
     if (isTools(t)) return false;
     if (/^(university|college|institute|school)\b/i.test(t)) return true;
     if (/\s\|\s/.test(t) && !/\d/.test(t)) return true;
+    // Short noun-phrase subtitles/categories are often formatted with a bullet in
+    // source resumes even though they are not accomplishment bullets. Preserve
+    // them as an unbulleted context line (e.g. "Excel Automation & Data Validation").
+    const words = t.split(/\s+/).filter(Boolean);
+    const startsActionVerb = /^(led|analyzed|built|developed|created|managed|designed|implemented|conducted|performed|delivered|achieved|reduced|increased|improved|generated|automated|streamlined|launched|coordinated|collaborated|researched|tested|deployed|configured|resolved|optimized|engineered|presented|evaluated|identified|supported|programmed|documented|integrated)\b/i.test(t);
+    if (!startsActionVerb && words.length >= 2 && words.length <= 7 && !/[.!?]$/.test(t) && /(?:&|automation|analysis|validation|modeling|development|research|design|analytics|dashboard|visualization)/i.test(t)) return true;
     return false;
   };
   let context = "", tools = "", toolsValue = "";
@@ -1936,7 +1953,7 @@ const STARTER = {
   name: "",
   contact: { cityState: "", phone: "", email: "", linkedin: "", portfolio: "" },
   summary: "",
-  skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] },
+  skills: { technical: "", dataVisualization: "", tools: "", domain: "", labels: { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }, importChanges: [] },
   jobPost: "",
   jobPostUrl: "",
   experience: [emptyExp()],
@@ -3725,7 +3742,7 @@ function App() {
       name: "",
       contact: { cityState: "", phone: "", email: "", linkedin: "", portfolio: "" },
       summary: "",
-      skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] },
+      skills: { technical: "", dataVisualization: "", tools: "", domain: "", labels: { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }, importChanges: [] },
       experience: [emptyExp()],
       projects: [emptyProj()],
       education: [emptyEdu()],
@@ -3770,6 +3787,7 @@ function App() {
         dataVisualization: mapped.skills && mapped.skills.dataVisualization ? mapped.skills.dataVisualization : data.skills.dataVisualization,
         tools: mapped.skills && mapped.skills.tools ? mapped.skills.tools : data.skills.tools,
         domain: mapped.skills && mapped.skills.domain ? mapped.skills.domain : data.skills.domain,
+        labels: mapped.skills && mapped.skills.labels ? mapped.skills.labels : (data.skills.labels || { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }),
         importChanges: mapped.skills && mapped.skills.importChanges ? mapped.skills.importChanges : data.skills.importChanges
       },
       experience: mapped.experience && (mapped.experience[0].title || mapped.experience[0].org || mapped.experience[0].bullets.some(Boolean)) ? mapped.experience : data.experience,
@@ -3844,10 +3862,10 @@ function App() {
         if (data.hidden[key]) continue;
         if (key === "summary") { if (!data.summary.trim()) continue; parts.push(headerHtml("Professional Summary")); parts.push(para(escapeHtml(data.summary), 6)); }
         if (key === "skills") { const s = data.skills; if (!s.technical && !s.dataVisualization && !s.tools && !s.domain) continue; parts.push(headerHtml("Skills"));
-          if (s.technical) parts.push(para('<b>Technical Skills:</b> ' + escapeHtml(s.technical), 0));
-          if (s.dataVisualization) parts.push(para('<b>Data Visualization:</b> ' + escapeHtml(s.dataVisualization), 0));
-          if (s.tools) parts.push(para('<b>Tools & Platforms:</b> ' + escapeHtml(s.tools), 0));
-          if (s.domain) parts.push(para('<b>Domain Knowledge:</b> ' + escapeHtml(s.domain), 6)); }
+          if (s.technical) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.technical) || 'Technical Skills') + ':</b> ' + escapeHtml(s.technical), 0));
+          if (s.dataVisualization) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.dataVisualization) || 'Data Visualization') + ':</b> ' + escapeHtml(s.dataVisualization), 0));
+          if (s.tools) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.tools) || 'Tools & Platforms') + ':</b> ' + escapeHtml(s.tools), 0));
+          if (s.domain) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.domain) || 'Domain Knowledge') + ':</b> ' + escapeHtml(s.domain), 6)); }
         if (key === "experience") { const items = data.experience.filter((e) => e.title || e.org); if (!items.length) continue; parts.push(headerHtml("Experience"));
           items.forEach((e) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true })); e.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); parts.push('<p style="margin:0 0 6pt 0;font-size:4pt;">&nbsp;</p>'); }); }
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
@@ -4205,11 +4223,11 @@ function App() {
     P.push(xPar(xRun((data.name || "First Last").toUpperCase(), { bold: true, size: 20, color: "5980A6" }), { align: "center", after: 120 }));
 
     const contactParts = [c.cityState, c.phone, c.email].filter(Boolean).map(x => xRun(x, { size: 11, color: "595959" }));
-    if (c.linkedin) contactParts.push(xHyperlink("LinkedIn", c.linkedin));
+    if (c.linkedin) contactParts.push(xHyperlink(cleanDisplayUrl(c.linkedin), /^https?:\/\//i.test(c.linkedin) ? c.linkedin : "https://" + c.linkedin));
     if (c.portfolio) {
       const p = String(c.portfolio || "");
-      const label = /github\.com/i.test(p) ? "GitHub" : "Portfolio";
-      contactParts.push(xHyperlink(label, p));
+      const label = cleanDisplayUrl(p);
+      contactParts.push(xHyperlink(label, /^https?:\/\//i.test(p) ? p : "https://" + p));
     }
     const contactRuns = [];
     contactParts.forEach((run, i) => { if (i) contactRuns.push(xRun("  |  ", { size: 11, color: "595959" })); contactRuns.push(run); });
@@ -4228,10 +4246,10 @@ function App() {
         const s = data.skills;
         if (!s.technical && !s.dataVisualization && !s.tools && !s.domain) continue;
         P.push(xHeader("Skills"));
-        if (s.technical) P.push(xPar([xRun("Technical Skills: ", { bold: true, size: 11 }), xRun(s.technical, { size: 11 })], { after: 60 }));
-        if (s.dataVisualization) P.push(xPar([xRun("Data Visualization: ", { bold: true, size: 11 }), xRun(s.dataVisualization, { size: 11 })], { after: 60 }));
-        if (s.tools) P.push(xPar([xRun("Tools & Platforms: ", { bold: true, size: 11 }), xRun(s.tools, { size: 11 })], { after: 60 }));
-        if (s.domain) P.push(xPar([xRun("Domain Knowledge: ", { bold: true, size: 11 }), xRun(s.domain, { size: 11 })], { after: 60 }));
+        if (s.technical) P.push(xPar([xRun(((s.labels && s.labels.technical) || "Technical Skills") + ": ", { bold: true, size: 11 }), xRun(s.technical, { size: 11 })], { after: 60 }));
+        if (s.dataVisualization) P.push(xPar([xRun(((s.labels && s.labels.dataVisualization) || "Data Visualization") + ": ", { bold: true, size: 11 }), xRun(s.dataVisualization, { size: 11 })], { after: 60 }));
+        if (s.tools) P.push(xPar([xRun(((s.labels && s.labels.tools) || "Tools & Platforms") + ": ", { bold: true, size: 11 }), xRun(s.tools, { size: 11 })], { after: 60 }));
+        if (s.domain) P.push(xPar([xRun(((s.labels && s.labels.domain) || "Domain Knowledge") + ": ", { bold: true, size: 11 }), xRun(s.domain, { size: 11 })], { after: 60 }));
       }
 
       if (key === "experience") {
@@ -4239,10 +4257,19 @@ function App() {
         if (!items.length) continue;
         P.push(xHeader("Experience"));
         items.forEach((e, idx) => {
-          P.push(xTabRow(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true, after: 0, keepNext: true }));
-          P.push(xTabRow(formatOrgLocation(e.org, e.location), "", { after: 0, keepNext: true }));
+          const dateRange = [e.start, e.end].filter(Boolean).join(" – ");
+          const title = e.title || "";
+          const orgLoc = formatOrgLocation(e.org, e.location);
+          // Long titles plus a right-aligned date can wrap badly in Word. For those
+          // entries, keep the title intact and place the date on the org/location row.
+          if (title.length > 58 && dateRange) {
+            P.push(xPar(xRun(title, { bold: true, size: 11 }), { after: 0, keepNext: true }));
+            P.push(xTabRow(orgLoc, dateRange, { after: 0, keepNext: true }));
+          } else {
+            P.push(xTabRow(title, dateRange, { lb: true, after: 0, keepNext: true }));
+            P.push(xTabRow(orgLoc, "", { after: 0, keepNext: true }));
+          }
           e.bullets.filter((b) => b.trim()).forEach((b) => P.push(xBullet(b)));
-          
         });
       }
 
@@ -4415,7 +4442,7 @@ function App() {
     if (key === "jobPost") set({ jobPost: "", jobPostUrl: "" });
     if (key === "contact") set({ name: "", contact: { cityState: "", phone: "", email: "", linkedin: "", portfolio: "" } });
     if (key === "summary") set({ summary: "" });
-    if (key === "skills") set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] } });
+    if (key === "skills") set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", labels: { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }, importChanges: [] } });
     if (key === "experience") set({ experience: [emptyExp()] });
     if (key === "projects") set({ projects: [emptyProj()] });
     if (key === "education") set({ education: [emptyEdu()] });
@@ -6388,14 +6415,14 @@ function App() {
             );
             if (key === "skills") return (
               <Card key={key} title="Skills" onClear={() => clearSection("skills")}>
-                <button onClick={() => set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] } })} style={{ float: "right", marginTop: -6, padding: "5px 9px", fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Clear All Skills</button>
-                <label style={lC}>Technical Skills</label>
+                <button onClick={() => set({ skills: { technical: "", dataVisualization: "", tools: "", domain: "", labels: { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }, importChanges: [] } })} style={{ float: "right", marginTop: -6, padding: "5px 9px", fontSize: 11, borderRadius: 0, border: "1px solid #b9b9bd", background: "#fff", cursor: "pointer" }}>Clear All Skills</button>
+                <label style={lC}>{(data.skills.labels && data.skills.labels.technical) || "Technical Skills"}</label>
                 <input style={iC} value={data.skills.technical || ""} onChange={(e) => set({ skills: { ...data.skills, technical: e.target.value } })} placeholder="Python, SQL, ETL, Machine Learning" />
-                <label style={{ ...lC, marginTop: 8 }}>Data Visualization</label>
+                <label style={{ ...lC, marginTop: 8 }}>{(data.skills.labels && data.skills.labels.dataVisualization) || "Data Visualization"}</label>
                 <input style={iC} value={data.skills.dataVisualization || ""} onChange={(e) => set({ skills: { ...data.skills, dataVisualization: e.target.value } })} placeholder="Power BI, Tableau, Looker" />
-                <label style={{ ...lC, marginTop: 8 }}>Tools & Platforms</label>
+                <label style={{ ...lC, marginTop: 8 }}>{(data.skills.labels && data.skills.labels.tools) || "Tools & Platforms"}</label>
                 <input style={iC} value={data.skills.tools || ""} onChange={(e) => set({ skills: { ...data.skills, tools: e.target.value } })} placeholder="Jupyter Notebook, VS Code, Linux, Git/GitHub, Jira, Azure" />
-                <label style={{ ...lC, marginTop: 8 }}>Domain Knowledge</label>
+                <label style={{ ...lC, marginTop: 8 }}>{(data.skills.labels && data.skills.labels.domain) || "Domain Knowledge"}</label>
                 <input style={iC} value={data.skills.domain || ""} onChange={(e) => set({ skills: { ...data.skills, domain: e.target.value } })} placeholder="Statistical Analysis, AI Risk Assessment, Responsible AI Governance" />
 
                 <div style={{ marginTop: 10, padding: 10, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
