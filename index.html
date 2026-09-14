@@ -8,6 +8,7 @@
 <!-- v12.1.4-note: build stamp bumped to v12.1.3. -->
 <!-- v12.1.5: adds analyzeMetricDensity (manual eval §10/§21) — flags bullets packing 3+ distinct numbers as "Metric overload" (merged with the run-on check), with before→after ranges counted as one claim and overlapping metric tokens de-duplicated so counts are accurate. Mechanics pass now catches "Advance → Advanced" (context-guarded) plus common resume misspellings. Metric-overload and typo signals feed both Risk Flags and the recruiter-confidence penalty. -->
 <!-- v12.1.6: adds analyzeSummaryQuality (manual eval §13) — reads the ACTUAL summary text and names specific weaknesses (buzzword density, missing article "bridging gap"→"bridging the gap", no concrete proof point/metric, first-person filler, over-length) instead of a generic "rewrite this." Renders as a new "Professional Summary Review" section; the summary improvement item now cites the specific weakness. Rewards strong concrete summaries with zero findings (no false positives). -->
+<!-- v12.3.1: EXPERIENCE IMPORT + EXPORT-INTEGRITY FIX. Recognizes descriptive experience headings such as "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"; parses common Employer | Title + Location | Date layouts; preserves the line before a standalone date/location line as the entry header; and blocks Word export when section/date content has leaked into Skills or an Experience row has dates/location but no employer/title. -->
 <!-- v12.3.0: PARSER + PUBLICATION-DETECTION FIXES. (1) Publication false-positive: bare "IEEE"/"ACM" tokens (student-chapter/club mentions like "IEEE EUI") no longer trigger the "Published Work" strength — they now require a real container (IEEE Transactions/Journal/Conference/Proceedings/Symposium/Letters/Access); "presented at" now requires an ALL-CAPS venue acronym so "presented at the client meeting" no longer fires; doi: tightened to "doi: 10.". (2) Wrapped-line bullet splitting: bullets that wrap onto a second physical line (e.g. "...pedestrian detection, / achieving +65% mAP@50 ... using PyTorch.") were counted as separate bullets, inflating the bullet count and tripping a false "inconsistent capitalization / starts lowercase" flag. New _isBulletContinuation() merges unmarked continuation lines into the previous bullet, in BOTH the primary date-header parse path (makeEntryFromChunk) and the fallback experience path, and in the projects parser (merge now runs BEFORE title detection so a wrap isn't misread as a structural title). (3) Abbreviated-month dates: the date-range regex allowed "June 2026" but not "Aug. 2025"/"Sept. 2024" — the period blocked the match, so abbreviated-month job headers weren't detected and multiple jobs collapsed into one entry (causing the false "only one paid role is visible" flag). Added optional-period tolerance ([a-z]*\.?\s+20\d{2}) to all five date regexes. (4) En-dash bullets: recognized internally as markers so parsing segments correctly; flagged to the user as a "Bullet style" formatting issue (ATS risk) via analyzeMechanics; and normalized to standard "•" on docx export. Verified end-to-end on Aya Elghayaty's resume: 4 experience entries, 3 projects, 6 project bullets, 0 lowercase-start bullets, en-dash flag present, no false Published Work strength. BUILD_VERSION bumped so the report footer distinguishes this build from v12.2.9. -->
 <!-- v12.2.9: SMARTER SKILL MATCHING for Job Match. The old check literally substring-matched a skill against the resume, producing false gaps two ways: (1) hyphen/spacing/punctuation mismatches — "High-Performance Computing" (posting) vs "High Performance Computing" (resume) failed on the hyphen; (2) concept vs keyword — a resume full of PyTorch/TensorFlow/CNN/ResNet clearly demonstrates "Machine Learning" but never spells that phrase. New resumeHasSkill() normalizes punctuation on both sides and credits a skill when the resume shows the skill itself OR a specific, unambiguous evidence term for it (PyTorch->Machine Learning, CUDA/MPI/SLURM->HPC, FAISS->Vector Search, GitHub Actions->CI/CD, FastAPI/Flask->APIs, etc.). Evidence lists are deliberately narrow to avoid over-crediting on incidental word mentions. Verified: Samuel now correctly credited for ML/HPC/FAISS; a backend eng with no ML still shows ML as missing; Soham domain gaps (Supply Chain/Operations) and the fit warning are unchanged. The matcher already scanned the whole resume (projects/experience bullets), so this fixes matching, not coverage. -->
 <!-- v12.2.8: SKILLS PARSER — switched from a hard-coded label list to GENERIC label-shape detection, ending the label whack-a-mole. Any "Short Label:" sub-heading is now recognized by shape (a short 1-4 word phrase + colon, followed by a comma-list of skills), so novel labels like "Machine Learning & AI:", "High-Performance Computing:", "Infrastructure & DevOps:", "Networking & Storage:" are stripped and bucketed correctly without being enumerated. A guard requires the post-colon content to look like a skill list (not prose), so a real skill/line containing a colon is not mistaken for a label. Verified on two real resumes (Soham, Samuel) plus dash/bullet/numbered/classic formats. Known minor edge case: a single flattened line cramming multiple label groups with no delimiters can still mis-bucket one trailing label word; this format is prevented by the v12.1.3 line reconstruction in the normal PDF path. -->
@@ -134,7 +135,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.0-industry";
+const BUILD_VERSION = "v12.3.1-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -357,7 +358,11 @@ function normalizeImportedResumeText(rawText) {
   t = t.replace(/\b((?:19|20)\d{2})([A-Z][a-z]{2,})/g, "$1\n$2");
   //   2) a lowercase letter glued to a Title-Case phrase that is followed by " | " —
   //      the pipe strongly signals a new experience/education entry header.
-  t = t.replace(/([a-z])([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*\s*\|)/g, "$1\n$2");
+  // v12.3.1: require at least TWO Title-Case words before the pipe. The prior
+  // single-word form split brand names such as "PhoneFix | Technician" into
+  // "Phone" + "Fix | Technician". Real glued entry headers this rule targets
+  // are title phrases such as "Graduate Assistant | ...".
+  t = t.replace(/([a-z])([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)+\s*\|)/g, "$1\n$2");
 
   // Normalize contact separators when they separate contact items.
   t = t.replace(/\s*[|•]\s*(?=(?:\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})|[a-z0-9._%+\-]+@|(?:https?:\/\/)?(?:www\.)?linkedin|github\.com)/gi, "\n");
@@ -428,6 +433,12 @@ function _headingKey(line) {
   if (/^(professional\s+summary|summary|profile|professional\s+profile|career\s+profile|career\s+summary|personal\s+profile|about\s+me|objective|career\s+objective|professional\s+objective)$/.test(s)) return "summary";
   if (/^(skills|technical\s+skills|technical\s+proficiencies|technical\s+competencies|core\s+skills|core\s+competencies|competencies|areas\s+of\s+expertise|technologies|technology|technology\s+skills|tools|tools\s+\/\s+platforms|tools\s+and\s+platforms|platforms|software|software\s+skills|computer\s+skills|data\s+&\s+analytics|data\s+and\s+analytics|analytics\s+skills|programming|programming\s+languages|languages|systems|applications|technical\s+toolkit|toolkit)$/i.test(s)) return "skills";
   if (/^(?:(?:relevant|related|additional|other|professional|core)\s+){0,2}(experience|professional\s+experience|work\s+experience|employment|employment\s+history|work\s+history|relevant\s+experience|internship\s+experience|internships|clinical\s+experience|field\s+experience|career\s+experience|related\s+experience|additional\s+experience|employment\s+experience|professional\s+work\s+experience|research\s+experience|teaching\s+experience|customer\s+service\s+experience|sales\s+experience|administrative\s+experience)$/i.test(s)) return "experience";
+  // v12.3.1: Descriptive headings often insert a specialty between the qualifier
+  // and EXPERIENCE (e.g. "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"). The old
+  // exact matcher missed these, leaving the entire block inside the preceding
+  // section (usually Skills). Restrict this to known heading qualifiers so job
+  // titles like "Customer Experience" are not misclassified.
+  if (/^(?:relevant|related|additional|other|professional|core)(?:\s+[a-z0-9&/+.-]+){1,5}\s+experience$/i.test(s)) return "experience";
   if (/^(projects|academic\s+projects|technical\s+projects|relevant\s+projects|project\s+experience|selected\s+projects|capstone|capstone\s+project|portfolio\s+projects|course\s+projects|class\s+projects|research\s+projects|personal\s+projects|data\s+projects|software\s+projects|engineering\s+projects|project\s+portfolio)$/i.test(s)) return "projects";
   if (/^(education|academic\s+background|educational\s+background|degrees|academic\s+history|university\s+education|college\s+education)$/i.test(s)) return "education";
   if (/^(leadership|leadership\s+experience|leadership\s+and\s+volunteering|leadership\s+&\s+volunteering|leadership\s+and\s+volunteer\s+experience|leadership\s+\/\s+volunteer\s+experience|leadership\s+&\s+volunteer\s+experience|leadership\s+&\s+activities|activities|campus\s+involvement|campus\s+leadership|student\s+organizations|organizations|extracurricular\s+activities|involvement|clubs|affiliations)$/i.test(s)) return "activities";
@@ -993,36 +1004,70 @@ function _parseExperienceEntries(lines) {
 
   function makeEntryFromChunk(chunk, chunkMarks) {
     if (!chunk || !chunk.length) return null;
+
+    // v12.3.1: support BOTH common layouts:
+    //   Title | Org | Date
+    //   Org | Title
+    //   Location | Date
+    // The previous parser only looked for a date on chunk[0], so the second
+    // layout started at the location/date row and silently dropped employer/title.
     const first = chunk[0];
-    const date = extractDateRangeFromLine(first);
-    let title = date ? date.before : first;
+    const firstDate = extractDateRangeFromLine(first);
+    const second = chunk[1] || "";
+    const secondDate = !firstDate ? extractDateRangeFromLine(second) : null;
+    const date = firstDate || secondDate;
+    const dateLineIdx = firstDate ? 0 : (secondDate ? 1 : -1);
+
+    let headerText = firstDate ? firstDate.before : first;
+    let title = headerText;
     let org = "";
     let location = "";
     let bulletStart = 1;
 
-    // Pipe-separated header: "Title | Org" or "Title | Sub | Org" (date already removed).
-    // Trailing empty segment from a removed date leaves a dangling pipe — clean it.
-    title = title.replace(/\|\s*$/, "").trim();
-    if (title.includes("|")) {
-      const parts = title.split("|").map(x => x.trim()).filter(Boolean);
-      title = parts[0] || title;
-      const rest = parts.slice(1);
-      if (rest.length) {
-        // Last pipe segment becomes org; any middle segments fold into the title.
-        org = rest[rest.length - 1];
-        if (rest.length > 1) title = [parts[0]].concat(rest.slice(0, rest.length - 1)).join(" — ");
+    headerText = String(headerText || "").replace(/\|\s*$/, "").trim();
+
+    // Parse a pipe header. If one side clearly looks like a job title, use that
+    // signal to determine whether the source is "Org | Title" or "Title | Org".
+    if (headerText.includes("|")) {
+      const parts = headerText.split("|").map(x => x.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const left = parts[0];
+        const right = parts[parts.length - 1];
+        const leftIsTitle = _looksLikeJobTitle(left);
+        const rightIsTitle = _looksLikeJobTitle(right);
+        if (rightIsTitle && !leftIsTitle) {
+          org = left;
+          title = right;
+        } else if (leftIsTitle && !rightIsTitle) {
+          title = left;
+          org = right;
+        } else {
+          // Preserve the prior convention when ambiguous: first segment is title,
+          // last segment is organization, with middle segments folded into title.
+          title = left || headerText;
+          const rest = parts.slice(1);
+          org = rest[rest.length - 1] || "";
+          if (rest.length > 1) title = [left].concat(rest.slice(0, -1)).join(" — ");
+        }
       }
     }
 
-    const second = chunk[1] || "";
-    const secondIsMarked = chunkMarks ? chunkMarks[1] : false;
-    // Only promote the second line to org/location if it is NOT a bullet-marked
-    // line. A dashed line is always accomplishment content, never an org header.
-    if (second && !secondIsMarked && _looksLikeOrgLocation(second)) {
-      const ol = _splitOrgLocation(second);
-      org = org || ol.org;
-      location = ol.location || "";
+    // If the date is on the second row, that row is normally Location | Date.
+    // Keep the location portion and begin bullets after it.
+    if (secondDate) {
+      let locText = String(secondDate.before || "").replace(/\|\s*$/, "").trim();
+      // "Tallahassee, FL | Remote |" -> "Tallahassee, FL | Remote"
+      if (locText) location = locText;
       bulletStart = 2;
+    } else {
+      const secondIsMarked = chunkMarks ? chunkMarks[1] : false;
+      // Existing Title/Date + Org/Location layout.
+      if (second && !secondIsMarked && _looksLikeOrgLocation(second)) {
+        const ol = _splitOrgLocation(second);
+        org = org || ol.org;
+        location = ol.location || "";
+        bulletStart = 2;
+      }
     }
 
     // A line that starts with an action/accomplishment verb (or a leading bullet mark) is
@@ -1072,21 +1117,32 @@ function _parseExperienceEntries(lines) {
 
   // Primary strategy: split the experience section by lines containing date ranges.
   // This matches common student resumes: Title + dates, Organization/location, bullets.
-  const startIdxs = [];
+  const starts = [];
   clean.forEach((line, idx) => {
     if (isHardSectionHeading(line)) return;
     const d = extractDateRangeFromLine(line);
-    // A line carrying a date range is an entry header even if the text before
-    // the date includes an org name (e.g. "Title | Organization | Date").
-    // Only require that there is meaningful text before the date.
-    if (d && d.before && d.before.length > 2) startIdxs.push(idx);
+    if (!d || !d.before || d.before.length <= 2) return;
+
+    // v12.3.1: when the date is on a standalone Location | Date row, include
+    // the preceding unmarked Employer | Title row in the entry chunk. This is
+    // the layout used by many Word resumes and by Aaliyah's test case.
+    let start = idx;
+    const prev = clean[idx - 1] || "";
+    const prevMarked = idx > 0 ? isMarkedBullet(rawLines[idx - 1]) : false;
+    const datePrefixLooksLocation = /,\s*[A-Z]{2}\b|\bRemote\b/i.test(d.before) || /^.+?\|\s*(?:Remote\s*\|\s*)?$/i.test(d.before + "|");
+    const prevLooksHeader = prev && !prevMarked && !extractDateRangeFromLine(prev) &&
+      (prev.includes("|") || _looksLikeJobTitle(prev) || _looksLikeOrgLocation(prev));
+    if (idx > 0 && datePrefixLooksLocation && prevLooksHeader) start = idx - 1;
+
+    // De-duplicate when two date lines would point at the same header.
+    if (!starts.length || starts[starts.length - 1].start !== start) starts.push({ start, dateIdx: idx });
   });
 
-  if (startIdxs.length) {
+  if (starts.length) {
     const entries = [];
-    startIdxs.forEach((start, i) => {
-      const end = startIdxs[i + 1] || clean.length;
-      // Slice both the text and the marker flags together, dropping section headings.
+    starts.forEach((item, i) => {
+      const start = item.start;
+      const end = starts[i + 1] ? starts[i + 1].start : clean.length;
       const chunkPairs = [];
       for (let k = start; k < end; k++) {
         if (isHardSectionHeading(clean[k])) continue;
@@ -4274,7 +4330,26 @@ function App() {
     return P;
   };
 
+  const getExportIntegrityProblems = () => {
+    const problems = [];
+    const skillText = [data.skills && data.skills.technical, data.skills && data.skills.dataVisualization, data.skills && data.skills.tools, data.skills && data.skills.domain].filter(Boolean).join(" ");
+    // A date range or a literal resume section heading inside Skills is a strong
+    // signal that import boundaries failed. Do not silently export that corruption.
+    if (/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2})/i.test(skillText) ||
+        /\b(?:relevant|additional|professional|work)\b(?:[ A-Z&/+.-]{0,45})\bexperience\b/i.test(skillText)) {
+      problems.push("Experience/date content appears to have been imported into Skills.");
+    }
+    const brokenExp = (data.experience || []).filter(e => (e.start || e.end || e.location) && !(String(e.title || "").trim() || String(e.org || "").trim()));
+    if (brokenExp.length) problems.push("One or more Experience entries have dates/location but no employer or job title.");
+    return problems;
+  };
+
   const exportDocxReal = async () => {
+    const integrityProblems = getExportIntegrityProblems();
+    if (integrityProblems.length) {
+      alert("Export stopped because the resume structure looks corrupted:\n\n• " + integrityProblems.join("\n• ") + "\n\nReturn to Resume Workshop and correct the affected section before exporting.");
+      return;
+    }
     setBusy(true);
     try {
       await loadJSZip();
