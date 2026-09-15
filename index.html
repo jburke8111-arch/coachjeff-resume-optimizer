@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.7: IMPORT ANALYSIS INTEGRITY FIX. A newly imported resume is authoritative: absent optional sections are cleared instead of inheriting stale data from a prior resume. Project parser preserves subtitle/context rows, portfolio detection recognizes paths such as extern.com/portfolios/..., and campus ambiguity checks honor a campus/location already present elsewhere in the education entry. -->
 <!-- v12.3.6: BEST-FORMAT GUIDE ALIGNMENT. Experience company/location rows use 3pt after; 6pt between jobs; Education exports degree bold first, then school + graduation date regular with 6pt after. -->
 <html lang="en">
 <head>
@@ -140,7 +141,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.6-industry";
+const BUILD_VERSION = "v12.3.7-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -321,7 +322,7 @@ function detectProfileLinks(data, rawImportText) {
   const head = text.slice(0, 600);
   const textLinkedIn = /\blinked ?in\b/i.test(head) || /linkedin\.com/i.test(text);
   const textGithub = /\bgit ?hub\b/i.test(head) || /github\.com/i.test(text);
-  const textPortfolio = /\b[a-z0-9\-]+\.(?:dev|io|me|net|com)\/[A-Za-z0-9]/i.test(text) && !/gmail|outlook|yahoo|hotmail/i.test(head);
+  const textPortfolio = /\b[a-z0-9\-]+\.(?:dev|io|me|net|com|org)\/[A-Za-z0-9]/i.test(text) && !/gmail|outlook|yahoo|hotmail/i.test(head);
   const hasLinkedIn = fieldLinkedIn || textLinkedIn;
   const hasGithub = fieldGithub || textGithub;
   const hasPortfolio = fieldPortfolio || textPortfolio;
@@ -638,7 +639,7 @@ function _parseContact(lines) {
   const linkedin = sanitizeProfileUrl((joined.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-z0-9\-_%]+\/?/i) || [""])[0]);
 
   const emailDomains = new Set(["gmail.com","outlook.com","hotmail.com","yahoo.com","icloud.com","aol.com","live.com","msn.com","proton.me","protonmail.com","mail.com"]);
-  const urlMatches = joined.match(/(?:https?:\/\/)?(?:www\.)?(?:github\.com\/[a-z0-9\-_%]+|behance\.net\/[a-z0-9\-_%]+|dribbble\.com\/[a-z0-9\-_%]+|[a-z0-9\-_%]+\.(?:com|net|org|io|me)\/?)/ig) || [];
+  const urlMatches = joined.match(/(?:https?:\/\/)?(?:www\.)?(?:github\.com\/[a-z0-9\-_%]+|behance\.net\/[a-z0-9\-_%]+|dribbble\.com\/[a-z0-9\-_%]+|[a-z0-9\-_%]+\.(?:com|net|org|io|me)(?:\/[^\s|•]*)?)/ig) || [];
   const portfolio = (urlMatches.find(u => {
     const cleanDomain = String(u || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0].toLowerCase();
     if (cleanDomain.includes("linkedin.com")) return false;
@@ -1382,6 +1383,17 @@ function _parseProjectEntries(lines) {
     // date) OR it structurally sits as a header: not bullet-marked, and the next
     // non-empty line IS bullet-marked. This rescues short brand-style titles like
     // "TritonStore.ai" that carry no title keyword.
+    // v12.3.7: a short unmarked row immediately below a dated project title is
+    // usually context/affiliation (e.g. "Independent Project" or
+    // "University of Maryland"), not a second project. Preserve it as an
+    // unbulleted context line; the DOCX exporter already renders a first
+    // subtitle-style project line without a bullet.
+    const projectContextLine = !isBulletMarked && current && !current.bullets.length &&
+      !!current.date && line.length < 90 && !extractDateRangeFromLine(line);
+    if (projectContextLine) {
+      current.bullets.push(line);
+      return;
+    }
     const structuralTitle = !isBulletMarked && current && current.bullets.length > 0 && nextMarked && line.length < 80;
     if (!isBulletMarked && (_looksLikeProjectTitle(line) || structuralTitle)) {
       if (current) entries.push(current);
@@ -2640,7 +2652,18 @@ function analyzeSectionQuality(data, rawImportText) {
   // Case-insensitive on "of" so "University Of Massachusetts" is caught too.
   const AMBIG = /\bUniversity [Oo]f (Massachusetts|California|Texas|Illinois|Wisconsin|Colorado|Michigan|Minnesota|Maryland|Missouri|Washington|North Carolina|South Carolina)\b(?!\s+(?:at\s+)?[A-Z][a-z]|[- ]?(?:Amherst|Berkeley|Austin|Dallas|Chicago|Madison|Boulder|Ann Arbor|Twin Cities|College Park|Seattle|Chapel Hill|Columbia|Lowell|Boston|Dartmouth|San Diego|Los Angeles|Irvine|Davis|Riverside))/;
   const am = text.match(AMBIG);
-  if (am) notes.push({ kind: "tip", text: "\u201C" + am[0] + "\u201D is ambiguous \u2014 that system has several campuses. Name yours (e.g. \u201C" + am[0] + " Amherst\u201D) so recruiters and ATS place it correctly." });
+  if (am) {
+    const campusEvidence = (data.education || []).some(e => {
+      const eduText = [e.school, e.location, e.degree].filter(Boolean).join(" ");
+      return /\b(College Park|Amherst|Berkeley|Austin|Dallas|Chicago|Madison|Boulder|Ann Arbor|Twin Cities|Seattle|Chapel Hill|Columbia|Lowell|Boston|Dartmouth|San Diego|Los Angeles|Irvine|Davis|Riverside)\b/i.test(eduText);
+    }) || /\b(College Park|Amherst|Berkeley|Austin|Dallas|Chicago|Madison|Boulder|Ann Arbor|Twin Cities|Seattle|Chapel Hill|Columbia|Lowell|Boston|Dartmouth|San Diego|Los Angeles|Irvine|Davis|Riverside)\b/i.test(text);
+    if (!campusEvidence) {
+      const examples = { Maryland: "College Park", Massachusetts: "Amherst", California: "Berkeley", Texas: "Austin", Illinois: "Chicago", Wisconsin: "Madison", Colorado: "Boulder", Michigan: "Ann Arbor", Minnesota: "Twin Cities", Washington: "Seattle", "North Carolina": "Chapel Hill", "South Carolina": "Columbia" };
+      const system = am[1] || "";
+      const example = examples[system] || "the specific campus";
+      notes.push({ kind: "tip", text: "\u201C" + am[0] + "\u201D is ambiguous \u2014 that system has several campuses. Name yours (e.g. \u201C" + am[0] + " " + example + "\u201D) so recruiters and ATS place it correctly." });
+    }
+  }
 
   // (c) Cert gap vs. heavily-listed cloud skills.
   const listsAWS = /\bAWS\b/i.test(text);
@@ -3796,32 +3819,34 @@ function App() {
           portfolio
         };
       })(),
-      summary: mapped.summary || data.summary,
+      // v12.3.7: the newly imported resume is authoritative. Never inherit a
+      // Professional Summary from a previously loaded resume when this file has none.
+      summary: mapped.summary || "",
       skills: {
-        technical: mapped.skills && mapped.skills.technical ? mapped.skills.technical : data.skills.technical,
-        dataVisualization: mapped.skills && mapped.skills.dataVisualization ? mapped.skills.dataVisualization : data.skills.dataVisualization,
-        tools: mapped.skills && mapped.skills.tools ? mapped.skills.tools : data.skills.tools,
-        domain: mapped.skills && mapped.skills.domain ? mapped.skills.domain : data.skills.domain,
+        technical: mapped.skills && mapped.skills.technical ? mapped.skills.technical : "",
+        dataVisualization: mapped.skills && mapped.skills.dataVisualization ? mapped.skills.dataVisualization : "",
+        tools: mapped.skills && mapped.skills.tools ? mapped.skills.tools : "",
+        domain: mapped.skills && mapped.skills.domain ? mapped.skills.domain : "",
         labels: mapped.skills && mapped.skills.labels ? mapped.skills.labels : (data.skills.labels || { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }),
         importChanges: mapped.skills && mapped.skills.importChanges ? mapped.skills.importChanges : data.skills.importChanges
       },
-      experience: mapped.experience && (mapped.experience[0].title || mapped.experience[0].org || mapped.experience[0].bullets.some(Boolean)) ? mapped.experience : data.experience,
-      projects: mapped.projects && (mapped.projects[0].name || mapped.projects[0].bullets.some(Boolean)) ? mapped.projects : data.projects,
-      education: mapped.education && (mapped.education[0].degree || mapped.education[0].school) ? mapped.education : data.education,
-      activities: mapped.activities && (mapped.activities[0].role || mapped.activities[0].org || mapped.activities[0].bullets.some(Boolean)) ? mapped.activities : data.activities,
-      certifications: mapped.certifications && mapped.certifications[0].name ? mapped.certifications : data.certifications,
-      awards: mapped.awards && mapped.awards[0].name ? mapped.awards : data.awards,
-      publications: mapped.publications && mapped.publications[0].citation ? mapped.publications : data.publications,
-      volunteer: mapped.volunteer && (mapped.volunteer[0].role || mapped.volunteer[0].org || mapped.volunteer[0].bullets.some(Boolean)) ? mapped.volunteer : data.volunteer,
+      experience: mapped.experience && mapped.experience.length ? mapped.experience : [emptyExp()],
+      projects: mapped.projects && mapped.projects.length ? mapped.projects : [emptyProj()],
+      education: mapped.education && mapped.education.length ? mapped.education : [emptyEdu()],
+      activities: mapped.activities && mapped.activities.length ? mapped.activities : [emptyAct()],
+      certifications: mapped.certifications && mapped.certifications.length ? mapped.certifications : [emptyCert()],
+      awards: mapped.awards && mapped.awards.length ? mapped.awards : [emptyAward()],
+      publications: mapped.publications && mapped.publications.length ? mapped.publications : [emptyPub()],
+      volunteer: mapped.volunteer && mapped.volunteer.length ? mapped.volunteer : [emptyVol()],
       order: smartRecommendedOrder({
         ...data,
-        experience: mapped.experience && (mapped.experience[0].title || mapped.experience[0].org || mapped.experience[0].bullets.some(Boolean)) ? mapped.experience : data.experience,
-        projects: mapped.projects && (mapped.projects[0].name || mapped.projects[0].bullets.some(Boolean)) ? mapped.projects : data.projects,
-        education: mapped.education && (mapped.education[0].degree || mapped.education[0].school) ? mapped.education : data.education,
-        publications: mapped.publications && mapped.publications[0].citation ? mapped.publications : data.publications,
-        awards: mapped.awards && mapped.awards[0].name ? mapped.awards : data.awards,
-        activities: mapped.activities && (mapped.activities[0].role || mapped.activities[0].org || mapped.activities[0].bullets.some(Boolean)) ? mapped.activities : data.activities,
-        certifications: mapped.certifications && mapped.certifications[0].name ? mapped.certifications : data.certifications
+        experience: mapped.experience && mapped.experience.length ? mapped.experience : [emptyExp()],
+        projects: mapped.projects && mapped.projects.length ? mapped.projects : [emptyProj()],
+        education: mapped.education && mapped.education.length ? mapped.education : [emptyEdu()],
+        publications: mapped.publications && mapped.publications.length ? mapped.publications : [emptyPub()],
+        awards: mapped.awards && mapped.awards.length ? mapped.awards : [emptyAward()],
+        activities: mapped.activities && mapped.activities.length ? mapped.activities : [emptyAct()],
+        certifications: mapped.certifications && mapped.certifications.length ? mapped.certifications : [emptyCert()]
       })
     });
     setHasStarted(true);
@@ -5537,7 +5562,7 @@ function App() {
       (data.header || []).join ? (data.header || []).join(" ") : data.header,
       data.summary
     ].filter(Boolean).join(" ");
-    const hasCodeSample = /\b(github\.com|gitlab\.com|bitbucket\.org)\b/i.test(codeSampleText) || /\bportfolio\b/i.test(String(c.portfolio || ""));
+    const hasCodeSample = !!String(c.portfolio || "").trim() || /\b(github\.com|gitlab\.com|bitbucket\.org)\b/i.test(codeSampleText) || /\bportfolio\b/i.test(String(c.portfolio || ""));
     const hasVisualPortfolio = /\b(behance\.net|dribbble\.com|portfolio|artstation)\b/i.test(codeSampleText);
     if (workSample === "code") {
       if (!hasCodeSample) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
