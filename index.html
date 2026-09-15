@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.11: EDUCATION-PLACEMENT (STAGE-AWARE) FIX. Section placement is now a function of DEGREE + EXPERIENCE + TIMING, not GPA. Prior builds gated Education-first on GPA>=3.5, so a current student with a fresh/upcoming degree but no GPA on the resume (e.g. an expected-May-2027 grad) was left with Education third-from-bottom on export. New shared helper educationPlacementSignal() is the single source of truth for smartRecommendedOrder (which sets data.order on import, and therefore the export order), the Section Ordering scorecard, and the Section Order coaching notes — so all three always agree. Education leads when the candidate is a current student ("expected"/upcoming grad) OR has thin paid experience (0-1 employment entries); a strong GPA now only strengthens the rationale (surfaced in the note) rather than gating it. Guardrail: a candidate who has already graduated AND has substantial experience (3+ employment entries) is treated as experience-dominant and Education stays lower, with the senior-IC judgment call surfaced via the caveat. Verified: Rachel Mbolembe (current 2027 grad, no GPA, 2 roles) now recommends Summary -> Education -> Skills -> Experience -> Projects and exports Education second; seasoned/experience-dominant profiles keep Education low. -->
 <!-- v12.3.10: COMPOUND LETTER-SPACED HEADING FIX. A v12.3.9 follow-up: compound headings such as "A CTIVITIES & L EADERSHIP" (or "A WARDS AND H ONORS") were rescued as two separate heading lines, stranding the connector ("&"/"and"/"/") on its own line — which then printed as a rogue "&" line under the section header on export. normalizeImportedResumeText now detects a letter-spaced heading + connector + letter-spaced heading and rebuilds it as ONE clean heading line ("ACTIVITIES & LEADERSHIP") before the single-heading pass runs. Verified on Rachel Mbolembe's resume: no stray "&" under Leadership & Activities, heading classifies as activities, and INROADS content no longer splits across a phantom second heading. -->
 <!-- v12.3.9: LETTER-SPACED HEADING + RUNAWAY-SUMMARY FIX. (1) DOCX/PDF exports that flatten a heading's expanded letter-spacing into a real space after the first character ("S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES") hid those headings from the anchored matchers, so the entire resume body glued into the Professional Summary — producing a ~584-word "summary", "No projects detected", and a truncated 4-bullet Experience count. normalizeImportedResumeText now re-glues these onto their own lines, but ONLY for the ALL-CAPS tail of a known section word, so ordinary prose is untouched. (2) analyzeSummaryQuality now separates a genuinely long summary (>70 words -> "tighten") from a pathological one (>150 words -> parse-warning that points at hidden/mis-imported section headings instead of a phantom writing problem). (3) _splitResume flags repeated section headings (duplicate:true) in debug diagnostics rather than silently merging fragmentary second copies. Verified on Rachel Mbolembe's DOCX: headings now classify correctly, Projects and full Experience import, summary word count returns to normal. -->
 <!-- v12.3.8: RACHEL REGRESSION FIX. Removes false summary inference from profile/contact URL lines; fixes a v12.3.7 project-parser scope error that aborted imports; validates mapped section structure before analysis; and preserves project/experience bullets through PDF line wraps. -->
@@ -144,7 +145,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.10-industry";
+const BUILD_VERSION = "v12.3.11-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3076,6 +3077,70 @@ function analyzeSkillChangeExplanations(data, lastSkillImportNote) {
 }
 
 
+// ---- Shared education-placement signal (v12.3.11) ----
+// Section placement is a function of DEGREE + EXPERIENCE + TIMING, not GPA alone.
+// A current/recent grad whose paid experience is still thin should lead with
+// Education because the degree is the leading credential and entry-level
+// recruiters expect to see it early — this is true whether or not a GPA is
+// listed. A strong GPA (>=3.5) strengthens the case (and is worth surfacing),
+// but it is NO LONGER a hard gate. Prior builds required GPA>=3.5, so a strong
+// current student with no GPA on the resume (e.g. an upcoming-2027 grad) was
+// wrongly left with Education third-from-bottom. This single helper is the one
+// source of truth for smartRecommendedOrder, the scorecard, and the coaching
+// advice, so all three always agree.
+function educationPlacementSignal(data) {
+  const eduEntries = (data.education || []).filter(e => e && (e.degree || e.school));
+  const expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+
+  // Strongest GPA present, normalized to a /4 scale (booster, not a gate).
+  let bestGpa = null;
+  eduEntries.forEach(e => {
+    const m = String(e.gpa || "").match(/([0-9](?:\.\d{1,2})?)\s*(?:\/\s*([0-9]{1,2}(?:\.\d)?))?/);
+    if (m) {
+      const val = parseFloat(m[1]);
+      const scale = m[2] ? parseFloat(m[2]) : 4;
+      const norm = scale >= 5 ? (val / scale) * 4 : val;
+      if (!isNaN(norm) && (bestGpa === null || norm > bestGpa)) bestGpa = norm;
+    }
+  });
+
+  // Timing: recent or upcoming graduation. A future graduation year (still in
+  // school) is the strongest possible new-grad signal.
+  const allText = collectResumeText(data);
+  const gradYears = (allText.match(/\b20\d{2}\b/g) || []).map(Number);
+  const maxYear = gradYears.length ? Math.max(...gradYears) : null;
+  const nowYear = new Date().getFullYear();
+  const recentOrUpcomingGrad = maxYear !== null && maxYear >= (nowYear - 1);
+  const currentStudent = maxYear !== null && maxYear >= nowYear; // graduation still ahead
+  // "Expected/Anticipated" grad text is an explicit current-student marker even
+  // if the year parse is ambiguous.
+  const expectedGrad = eduEntries.some(e => /\b(expected|anticipated|in\s+progress|present)\b/i.test(String(e.grad || "")));
+
+  // Thin paid experience: 0-1 real employment entries. Research/projects are
+  // strength, but they don't outweigh a fresh degree for placement purposes.
+  const thinExperience = expEntries.length <= 1;
+
+  const newGrad = (recentOrUpcomingGrad || expectedGrad || thinExperience) && eduEntries.length > 0;
+  const strongGpa = bestGpa !== null && bestGpa >= 3.5;
+
+  // Education leads for a new/current grad. The decisive signals are being a
+  // CURRENT student (graduation still ahead / "expected") or THIN paid
+  // experience — either alone is enough, GPA only strengthens the rationale.
+  // A candidate who has already graduated AND has substantial experience
+  // (3+ employment entries) is experience-dominant, so we do NOT force
+  // Education to the top for them even if graduation was fairly recent — that
+  // stays a user judgment call, surfaced via the caveat rather than the default.
+  const experienceDominant = !currentStudent && !expectedGrad && expEntries.length >= 3;
+  const educationFirst = newGrad && eduEntries.length > 0 && !experienceDominant;
+
+  return {
+    eduEntries, expEntries, bestGpa, strongGpa,
+    recentOrUpcomingGrad, currentStudent, expectedGrad,
+    thinExperience, newGrad, educationFirst, maxYear
+  };
+}
+
+
 function smartRecommendedOrder(data) {
   const hasProjects = (data.projects || []).some(p => p.name || (p.bullets || []).some(Boolean));
   const hasExperience = (data.experience || []).some(e => e.title || e.org || (e.bullets || []).some(Boolean));
@@ -3086,27 +3151,13 @@ function smartRecommendedOrder(data) {
   const field = String(data.field || "").toLowerCase();
 
   if (/technology|computer|cs|engineering|data|analytics|ai|machine/.test(field)) {
-    // Stage-aware (manual eval §11): a new grad with a strong GPA leads with
-    // Education, then Skills as the keyword block. Experienced candidates lead
-    // with Skills + applied work, keeping Education lower. We compute the
-    // new-grad signal directly (not via the advice branch) so the recommended
-    // order is stable whether or not the resume already follows it.
-    const eduList = (data.education || []).filter(e => e && (e.degree || e.school));
-    const expList = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
-    let bestGpaNorm = null;
-    eduList.forEach(e => {
-      const mm = String(e.gpa || "").match(/([0-9](?:\.\d{1,2})?)\s*(?:\/\s*([0-9]{1,2}(?:\.\d)?))?/);
-      if (mm) {
-        const v = parseFloat(mm[1]); const sc = mm[2] ? parseFloat(mm[2]) : 4;
-        const norm = sc >= 5 ? (v / sc) * 4 : v;
-        if (!isNaN(norm) && (bestGpaNorm === null || norm > bestGpaNorm)) bestGpaNorm = norm;
-      }
-    });
-    const yrs = (collectResumeText(data).match(/\b20\d{2}\b/g) || []).map(Number);
-    const maxYr = yrs.length ? Math.max(...yrs) : null;
-    const nowYr = new Date().getFullYear();
-    const newGradSig = ((maxYr !== null && maxYr >= nowYr - 1) || expList.length <= 1) && eduList.length > 0;
-    const educationFirst = newGradSig && bestGpaNorm !== null && bestGpaNorm >= 3.5;
+    // Stage-aware (manual eval §11): a new/current grad leads with Education,
+    // then Skills as the keyword block. Experienced candidates lead with Skills
+    // + applied work, keeping Education lower. v12.3.11: placement now uses the
+    // shared educationPlacementSignal (degree + experience + timing), so a
+    // current student with a fresh/upcoming degree leads with Education even
+    // when no GPA is listed — GPA strengthens the case but no longer gates it.
+    const educationFirst = educationPlacementSignal(data).educationFirst;
 
     const order = educationFirst ? ["summary", "education", "skills"] : ["summary", "skills"];
     if (hasProjects) order.push("projects");
@@ -3131,60 +3182,44 @@ function smartRecommendedOrder(data) {
 // experience-dominant (senior IC) targets the call flips. Only fires when it has
 // a concrete, defensible recommendation to make.
 function analyzeSectionOrderAdvice(data) {
-  const eduEntries = (data.education || []).filter(e => e && (e.degree || e.school));
-  const expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+  const sig = educationPlacementSignal(data);
   const current = (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
 
-  // Parse the strongest GPA present (normalize a /5 or /10 scale to /4).
-  let bestGpa = null;
-  eduEntries.forEach(e => {
-    const m = String(e.gpa || "").match(/([0-9](?:\.\d{1,2})?)\s*(?:\/\s*([0-9]{1,2}(?:\.\d)?))?/);
-    if (m) {
-      const val = parseFloat(m[1]);
-      const scale = m[2] ? parseFloat(m[2]) : 4;
-      const norm = scale >= 5 ? (val / scale) * 4 : val;
-      if (!isNaN(norm) && (bestGpa === null || norm > bestGpa)) bestGpa = norm;
-    }
-  });
-
-  // Detect recent / upcoming graduation (new-grad signal).
-  const allText = collectResumeText(data);
-  const gradYears = (allText.match(/\b20\d{2}\b/g) || []).map(Number);
-  const maxYear = gradYears.length ? Math.max(...gradYears) : null;
-  const nowYear = new Date().getFullYear();
-  const recentOrUpcomingGrad = maxYear !== null && maxYear >= (nowYear - 1);
-
-  // "Thin" paid experience: 0–1 real employment entries (research/projects don't
-  // count as employment for this purpose, matching the manual audit's framing).
-  const thinExperience = expEntries.length <= 1;
-
-  // Is Education currently sitting BELOW Skills?
+  // Is Education currently sitting BELOW Skills, Experience, or Projects?
   const idxEdu = current.indexOf("education");
   const idxSkills = current.indexOf("skills");
-  const educationBelowSkills = idxEdu > -1 && idxSkills > -1 && idxEdu > idxSkills;
+  const idxExp = current.indexOf("experience");
+  const idxProj = current.indexOf("projects");
+  const anchorsBelow = [idxSkills, idxExp, idxProj].filter(i => i > -1);
+  const educationSitsLow = idxEdu > -1 && anchorsBelow.length > 0 && anchorsBelow.some(i => idxEdu > i);
 
-  const newGrad = (recentOrUpcomingGrad || thinExperience) && eduEntries.length > 0;
-  const strongGpa = bestGpa !== null && bestGpa >= 3.5;
+  // Human-readable timing phrase and an optional GPA clause (only when present).
+  const timingPhrase = sig.currentStudent
+    ? "current student (graduating soon)"
+    : sig.recentOrUpcomingGrad
+      ? "recent/upcoming graduate"
+      : "early-career candidate";
+  const gpaClause = sig.strongGpa
+    ? " Your strong GPA (" + sig.bestGpa.toFixed(2).replace(/\.00$/, ".0") + "/4) reinforces this — put it in the Education block so it's seen early."
+    : "";
 
-  // Only make the Education-first call when it's genuinely warranted AND actionable
-  // (i.e., Education is currently below Skills).
-  if (newGrad && strongGpa && educationBelowSkills) {
+  // Primary: Education should lead, but currently sits low. Actionable move.
+  if (sig.educationFirst && educationSitsLow) {
     return {
       applies: true,
-      headline: "Move Education above Skills.",
-      body: "As a " + (recentOrUpcomingGrad ? "recent/upcoming graduate" : "early-career candidate") +
-        " with a strong GPA (" + bestGpa.toFixed(2).replace(/\.00$/, ".0") + "/4), your degree is your leading asset — recruiters for entry-level roles expect to see it early. Put Education right after your Summary, with Skills immediately below as the keyword block: Summary → Education → Skills → Experience → Projects.",
-      caveat: "Judgment call: this is the safer default for new-grad applications. If you're targeting senior individual-contributor roles where hands-on experience dominates the decision, keep Experience higher instead.",
+      headline: "Move Education higher — right after your Summary.",
+      body: "As a " + timingPhrase + ", your degree is a leading credential and entry-level recruiters expect to see it early. Placement is driven by degree, experience, and timing — and your timing (a fresh, in-progress degree) plus limited full-time experience both point to Education near the top. Recommended order: Summary → Education → Skills → Experience → Projects." + gpaClause,
+      caveat: "Judgment call: this is the safer default for new-grad and internship applications. If you were targeting senior individual-contributor roles where years of hands-on experience dominate the decision, you'd keep Experience higher and drop Education toward the bottom.",
       recommendedTop: ["summary", "education", "skills", "experience", "projects"]
     };
   }
 
-  // Secondary: strong new grad whose Education is already high — affirm it.
-  if (newGrad && strongGpa && !educationBelowSkills && idxEdu > -1 && idxEdu <= 2) {
+  // Secondary: Education should lead AND already does — affirm it.
+  if (sig.educationFirst && !educationSitsLow && idxEdu > -1 && idxEdu <= 2) {
     return {
       applies: true,
       headline: "Your section order already leads with your strongest asset.",
-      body: "Education is near the top, which is right for a new grad with a strong GPA — recruiters see your leading credential first. Keep Skills close behind as the keyword block.",
+      body: "Education is near the top, which is right for a " + timingPhrase + " — recruiters see your leading credential first. Keep Skills close behind as the keyword block." + gpaClause,
       caveat: "",
       recommendedTop: []
     };
