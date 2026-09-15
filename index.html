@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.9: LETTER-SPACED HEADING + RUNAWAY-SUMMARY FIX. (1) DOCX/PDF exports that flatten a heading's expanded letter-spacing into a real space after the first character ("S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES") hid those headings from the anchored matchers, so the entire resume body glued into the Professional Summary — producing a ~584-word "summary", "No projects detected", and a truncated 4-bullet Experience count. normalizeImportedResumeText now re-glues these onto their own lines, but ONLY for the ALL-CAPS tail of a known section word, so ordinary prose is untouched. (2) analyzeSummaryQuality now separates a genuinely long summary (>70 words -> "tighten") from a pathological one (>150 words -> parse-warning that points at hidden/mis-imported section headings instead of a phantom writing problem). (3) _splitResume flags repeated section headings (duplicate:true) in debug diagnostics rather than silently merging fragmentary second copies. Verified on Rachel Mbolembe's DOCX: headings now classify correctly, Projects and full Experience import, summary word count returns to normal. -->
 <!-- v12.3.8: RACHEL REGRESSION FIX. Removes false summary inference from profile/contact URL lines; fixes a v12.3.7 project-parser scope error that aborted imports; validates mapped section structure before analysis; and preserves project/experience bullets through PDF line wraps. -->
 <!-- v12.3.7: IMPORT ANALYSIS INTEGRITY FIX. A newly imported resume is authoritative: absent optional sections are cleared instead of inheriting stale data from a prior resume. Project parser preserves subtitle/context rows, portfolio detection recognizes paths such as extern.com/portfolios/..., and campus ambiguity checks honor a campus/location already present elsewhere in the education entry. -->
 <!-- v12.3.6: BEST-FORMAT GUIDE ALIGNMENT. Experience company/location rows use 3pt after; 6pt between jobs; Education exports degree bold first, then school + graduation date regular with 6pt after. -->
@@ -142,7 +143,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.8-industry";
+const BUILD_VERSION = "v12.3.9-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -345,6 +346,20 @@ function normalizeImportedResumeText(rawText) {
   t = t.replace(/[\u00a0\u2007\u202f\u2009\u200a\u2002\u2003]/g, " ");
   t = t.replace(/[\u2013\u2014\u2212]/g, "–");
 
+  // v12.3.9: Rescue LETTER-SPACED section headings. Some DOCX/PDF exports flatten
+  // a heading's tracked/expanded letter-spacing into a real space after the first
+  // character, e.g. "S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES". Anchored
+  // heading matchers never see these, so the entire block below stays glued into
+  // the preceding section (typically the summary), producing a runaway word count
+  // and dropped Projects/Experience. Re-glue only when the first capital is
+  // followed by a space and the ALL-CAPS tail of a KNOWN section word — never a
+  // generic capital+word, so ordinary prose ("A team", "I worked") is untouched.
+  // Force onto its own line so _headingKey() can classify it.
+  t = t.replace(
+    /(^|[\s.;,])([A-Z]) (KILLS|XPERIENCE|ROJECTS|DUCATION|CTIVITIES|ERTIFICATIONS|EADERSHIP|WARDS|UMMARY|ROFILE|BJECTIVE|OOLS|ANGUAGES|OLUNTEER|UBLICATIONS|RAINING|ONORS|RGANIZATIONS)(?=$|[\s.;,:])/gm,
+    (m, pre, first, rest) => pre + "\n" + first + rest + "\n"
+  );
+
   // Split common contact fields only at boundaries, not inside emails.
   t = t.replace(/(https?:\/\/[^\s]+)\s*[–—-]\s*([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})/gi, "$1\n$2");
   t = t.replace(/([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})\s*[–—-]\s*(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/gi, "$1\n$2");
@@ -502,8 +517,13 @@ function _splitResume(rawText) {
         sections.ignore = sections.ignore || [];
         return;
       }
+      // v12.3.9: a repeated heading means the file has two blocks under the same
+      // section (common in copy-paste-assembled or double-exported DOCX). We still
+      // append rather than overwrite, but record it so the import diagnostics can
+      // surface the duplication instead of silently merging fragments.
+      const isDuplicate = !!sections[current];
       if (!sections[current]) sections[current] = [];
-      debugHeadings.push({ raw: line, mapped: h });
+      debugHeadings.push({ raw: line, mapped: h, duplicate: isDuplicate });
       return;
     }
     if (current === "ignore") return;
@@ -2395,12 +2415,21 @@ function analyzeSummaryQuality(data) {
     findings.push("Open with your professional identity and value, not \u201CI am\u201D or \u201Cseeking\u201D \u2014 lead with the role and a proof point.");
   }
 
-  // (5) Length: too long buries the point; the sweet spot is ~2–3 lines.
-  if (wordCount > 70) {
+  // (5) Length. The sweet spot is ~2–3 lines. But a genuinely extreme count is
+  // almost never a real summary — it means other sections (Skills, Experience,
+  // Projects) failed to import under their own headings and got absorbed here.
+  // v12.3.9: separate the two cases so we never tell someone to "tighten" a
+  // 500-word block that is actually their whole resume. The parse-warning points
+  // at the real cause instead of a phantom writing problem.
+  let parseWarning = false;
+  if (wordCount > 150) {
+    parseWarning = true;
+    findings.push("This summary is unusually long (" + wordCount + " words) \u2014 that almost always means other sections (Skills, Experience, or Projects) didn\u2019t import under their own headings and got pulled in here. Check that your section headings are on their own lines (a stray space can turn \u201CPROJECTS\u201D into \u201CP ROJECTS\u201D and hide it), then re-import. If the text below really is all summary, cut it to 2\u20133 lines.");
+  } else if (wordCount > 70) {
     findings.push("Your summary runs long (" + wordCount + " words). Tighten to 2\u20133 lines so a recruiter absorbs it in one glance.");
   }
 
-  if (findings.length) {
+  if (findings.length && !parseWarning) {
     suggestions.push("Lead with what you are, add one concrete proof point, and cut the abstraction. Example shape: \u201C[Role/credential] who [does X] \u2014 [headline metric or result].\u201D");
   }
 
