@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.8: RACHEL REGRESSION FIX. Removes false summary inference from profile/contact URL lines; fixes a v12.3.7 project-parser scope error that aborted imports; validates mapped section structure before analysis; and preserves project/experience bullets through PDF line wraps. -->
 <!-- v12.3.7: IMPORT ANALYSIS INTEGRITY FIX. A newly imported resume is authoritative: absent optional sections are cleared instead of inheriting stale data from a prior resume. Project parser preserves subtitle/context rows, portfolio detection recognizes paths such as extern.com/portfolios/..., and campus ambiguity checks honor a campus/location already present elsewhere in the education entry. -->
 <!-- v12.3.6: BEST-FORMAT GUIDE ALIGNMENT. Experience company/location rows use 3pt after; 6pt between jobs; Education exports degree bold first, then school + graduation date regular with 6pt after. -->
 <html lang="en">
@@ -141,7 +142,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.7-industry";
+const BUILD_VERSION = "v12.3.8-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -524,11 +525,14 @@ function _splitResume(rawText) {
   });
 
   if ((!sections.summary || !sections.summary.length) && sections.header && sections.header.length > 1) {
-    const contactIdx = sections.header.findIndex(l => /@|linkedin|github|https?:\/\/|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/i.test(l));
-    const narrativeIdx = sections.header.findIndex((l, i) => i > contactIdx && l.length > 55 && /[a-z]/.test(l));
+    const isContactOrProfileLine = l => /@|linkedin|github|https?:\/\/|\b(?:www\.)?[a-z0-9.-]+\.(?:com|net|org|io|dev|me)\//i.test(String(l || "")) || /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(String(l || ""));
+    const contactIdx = sections.header.findIndex(l => isContactOrProfileLine(l));
+    // Only infer an unlabeled summary from genuine prose. Profile URLs and other
+    // contact rows can be long and lowercase, but they are not narrative content.
+    const narrativeIdx = sections.header.findIndex((l, i) => i > contactIdx && l.length > 55 && /[a-z]/.test(l) && !isContactOrProfileLine(l));
     if (narrativeIdx >= 0) {
-      sections.summary = sections.header.slice(narrativeIdx);
-      sections.header = sections.header.slice(0, narrativeIdx);
+      sections.summary = sections.header.slice(narrativeIdx).filter(l => !isContactOrProfileLine(l));
+      sections.header = sections.header.slice(0, narrativeIdx).concat(sections.header.slice(narrativeIdx).filter(isContactOrProfileLine));
       debugHeadings.push({ raw: "Inferred post-header paragraph", mapped: "summary" });
     }
   }
@@ -945,8 +949,14 @@ function _splitDateRange(line) {
   return { start: single ? single[0].trim() : "", end: "" };
 }
 function _looksLikeOrgLocation(line) {
-  const s = String(line || "");
-  return /(\||,)\s*(remote|usa|[A-Z]{2}|[A-Z][a-z]+,\s*[A-Z]{2})/i.test(s) ||
+  const s = String(line || "").trim();
+  // State abbreviations must remain CASE-SENSITIVE. The old /i regex treated
+  // ordinary prose after a comma (", fairness", ", product") as if the first
+  // two lowercase letters were a U.S. state code, causing wrapped bullet lines
+  // to be discarded during PDF import.
+  const hasStateLocation = /(\||,)\s*(?:[A-Z][a-zA-Z .'-]+,\s*)?[A-Z]{2}\b/.test(s);
+  const hasRemoteLocation = /(\||,)\s*(?:remote|usa)\b/i.test(s) || /\bRemote$/i.test(s);
+  return hasStateLocation || hasRemoteLocation ||
          /(inc\.?|llc|company|college|university|group|corp|corporation|solutions|systems|connect|staffing|department|handshake|foundever|kelly|pharma|st\.?\s*petersburg)/i.test(s);
 }
 function _splitOrgLocation(line) {
@@ -1084,7 +1094,13 @@ function _parseExperienceEntries(lines) {
     } else {
       const secondIsMarked = chunkMarks ? chunkMarks[1] : false;
       // Existing Title/Date + Org/Location layout.
-      if (second && !secondIsMarked && _looksLikeOrgLocation(second)) {
+      const secondLooksContent = /^(published|presented|developed|designed|built|created|led|managed|conducted|analyzed|implemented|delivered|improved|reduced|increased|deployed|researched|collaborated|prepared|defined|identified|supported|coordinated)\b/i.test(second);
+      // PDF extraction often removes the visual spacing/tab between employer and
+      // location, leaving a plain short row such as "Break Through Tech, UMD".
+      // Directly below a dated title, an unmarked non-action row is structurally
+      // the employer/location row even if it lacks Inc./LLC/a state abbreviation.
+      if (second && !secondIsMarked && !extractDateRangeFromLine(second) && !secondLooksContent &&
+          (_looksLikeOrgLocation(second) || second.replace(/\s+/g, " ").length < 100)) {
         const ol = _splitOrgLocation(second);
         org = org || ol.org;
         location = ol.location || "";
@@ -1151,7 +1167,7 @@ function _parseExperienceEntries(lines) {
     let start = idx;
     const prev = clean[idx - 1] || "";
     const prevMarked = idx > 0 ? isMarkedBullet(rawLines[idx - 1]) : false;
-    const datePrefixLooksLocation = /,\s*[A-Z]{2}\b|\bRemote\b/i.test(d.before) || /^.+?\|\s*(?:Remote\s*\|\s*)?$/i.test(d.before + "|");
+    const datePrefixLooksLocation = /,\s*[A-Z]{2}\b|\bRemote\b/i.test(d.before) || /\|\s*(?:Remote)?\s*$/i.test(d.before);
     const prevLooksHeader = prev && !prevMarked && !extractDateRangeFromLine(prev) &&
       (prev.includes("|") || _looksLikeJobTitle(prev) || _looksLikeOrgLocation(prev));
     if (idx > 0 && datePrefixLooksLocation && prevLooksHeader) start = idx - 1;
@@ -1327,7 +1343,7 @@ function _looksLikeProjectTitle(line) {
   // Never promote a continuation line (tools list, org subtitle) to a title.
   if (_looksLikeProjectContinuation(s)) return false;
   // A title with its own date range is the strongest signal.
-  if (_looksLikeDateRange(s)) return true;
+  if (/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?/i.test(s)) return true;
   // Keyword fallback: must read like a project name, and a leading past-tense
   // action verb (e.g. "Led...", "Achieved...") signals a bullet, not a title.
   if (/^(led|analyzed|built|developed|created|managed|designed|implemented|synthesized|conducted|performed|delivered|achieved|reduced|increased|improved|generated|automated|streamlined|launched|spearheaded|coordinated|collaborated|researched|trained|tested|deployed|maintained|configured|resolved|optimized|engineered|established|drafted|produced|secured|negotiated|presented|evaluated|identified|recommended|supported|organized|executed|programmed|published|founded|initiated|mentored|redesigned|forecasted|modeled|wrote|won|applied|documented|utilized|leveraged|integrated)\b/i.test(s)) return false;
@@ -1373,7 +1389,9 @@ function _parseProjectEntries(lines) {
     // continuations into the previous bullet before any title test. _isBulletContinuation is
     // the tie-breaker: a real title starts capitalized and reads as a fresh clause, while a
     // wrap starts lowercase / with a connective or follows a bullet left grammatically open.
+    const hasStrictProjectDate = /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?/i.test(line);
     if (!isBulletMarked && current && current.bullets.length &&
+        !hasStrictProjectDate &&
         _isBulletContinuation(line, current.bullets[current.bullets.length - 1])) {
       const li = current.bullets.length - 1;
       current.bullets[li] = (current.bullets[li] + " " + line).replace(/\s+/g, " ").trim();
@@ -1389,7 +1407,7 @@ function _parseProjectEntries(lines) {
     // unbulleted context line; the DOCX exporter already renders a first
     // subtitle-style project line without a bullet.
     const projectContextLine = !isBulletMarked && current && !current.bullets.length &&
-      !!current.date && line.length < 90 && !extractDateRangeFromLine(line);
+      !!current.date && line.length < 90 && !_looksLikeDateRange(line);
     if (projectContextLine) {
       current.bullets.push(line);
       return;
@@ -5562,7 +5580,8 @@ function App() {
       (data.header || []).join ? (data.header || []).join(" ") : data.header,
       data.summary
     ].filter(Boolean).join(" ");
-    const hasCodeSample = !!String(c.portfolio || "").trim() || /\b(github\.com|gitlab\.com|bitbucket\.org)\b/i.test(codeSampleText) || /\bportfolio\b/i.test(String(c.portfolio || ""));
+    const hasCodeSample = /\b(github\.com|gitlab\.com|bitbucket\.org)\b/i.test(codeSampleText);
+    const hasGeneralPortfolio = !!String(c.portfolio || "").trim() || /\bportfolio\b/i.test(codeSampleText);
     const hasVisualPortfolio = /\b(behance\.net|dribbble\.com|portfolio|artstation)\b/i.test(codeSampleText);
     if (workSample === "code") {
       if (!hasCodeSample) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
@@ -5595,7 +5614,9 @@ function App() {
     if (workSample === "code") {
       bigger.push(hasCodeSample
         ? { label: "Deepen your strongest GitHub project", why: "You already link to code — now make one repo shine: a clear README, a short demo, and a results/impact note turn a link into a talking point." }
-        : { label: "Build a GitHub or portfolio", why: "One link to real, working code does more than a dozen resume lines for technical roles." });
+        : hasGeneralPortfolio
+          ? { label: "Strengthen your technical portfolio", why: "You already have a portfolio link. Make the strongest technical or analytics project easy to find, with the problem, tools, your contribution, and the result." }
+          : { label: "Build a GitHub or portfolio", why: "One link to real, working technical work can give recruiters evidence beyond the resume itself." });
     } else if (workSample === "portfolio") {
       bigger.push(hasVisualPortfolio
         ? { label: "Curate your portfolio's best 3 pieces", why: "You already have a portfolio — leading with your three strongest, well-captioned pieces beats a large, unfiltered gallery." }
