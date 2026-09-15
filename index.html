@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.10: COMPOUND LETTER-SPACED HEADING FIX. A v12.3.9 follow-up: compound headings such as "A CTIVITIES & L EADERSHIP" (or "A WARDS AND H ONORS") were rescued as two separate heading lines, stranding the connector ("&"/"and"/"/") on its own line — which then printed as a rogue "&" line under the section header on export. normalizeImportedResumeText now detects a letter-spaced heading + connector + letter-spaced heading and rebuilds it as ONE clean heading line ("ACTIVITIES & LEADERSHIP") before the single-heading pass runs. Verified on Rachel Mbolembe's resume: no stray "&" under Leadership & Activities, heading classifies as activities, and INROADS content no longer splits across a phantom second heading. -->
 <!-- v12.3.9: LETTER-SPACED HEADING + RUNAWAY-SUMMARY FIX. (1) DOCX/PDF exports that flatten a heading's expanded letter-spacing into a real space after the first character ("S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES") hid those headings from the anchored matchers, so the entire resume body glued into the Professional Summary — producing a ~584-word "summary", "No projects detected", and a truncated 4-bullet Experience count. normalizeImportedResumeText now re-glues these onto their own lines, but ONLY for the ALL-CAPS tail of a known section word, so ordinary prose is untouched. (2) analyzeSummaryQuality now separates a genuinely long summary (>70 words -> "tighten") from a pathological one (>150 words -> parse-warning that points at hidden/mis-imported section headings instead of a phantom writing problem). (3) _splitResume flags repeated section headings (duplicate:true) in debug diagnostics rather than silently merging fragmentary second copies. Verified on Rachel Mbolembe's DOCX: headings now classify correctly, Projects and full Experience import, summary word count returns to normal. -->
 <!-- v12.3.8: RACHEL REGRESSION FIX. Removes false summary inference from profile/contact URL lines; fixes a v12.3.7 project-parser scope error that aborted imports; validates mapped section structure before analysis; and preserves project/experience bullets through PDF line wraps. -->
 <!-- v12.3.7: IMPORT ANALYSIS INTEGRITY FIX. A newly imported resume is authoritative: absent optional sections are cleared instead of inheriting stale data from a prior resume. Project parser preserves subtitle/context rows, portfolio detection recognizes paths such as extern.com/portfolios/..., and campus ambiguity checks honor a campus/location already present elsewhere in the education entry. -->
@@ -143,7 +144,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.9-industry";
+const BUILD_VERSION = "v12.3.10-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -355,8 +356,24 @@ function normalizeImportedResumeText(rawText) {
   // followed by a space and the ALL-CAPS tail of a KNOWN section word — never a
   // generic capital+word, so ordinary prose ("A team", "I worked") is untouched.
   // Force onto its own line so _headingKey() can classify it.
+  const LS_HEAD_TAIL = "KILLS|XPERIENCE|ROJECTS|DUCATION|CTIVITIES|ERTIFICATIONS|EADERSHIP|WARDS|UMMARY|ROFILE|BJECTIVE|OOLS|ANGUAGES|OLUNTEER|UBLICATIONS|RAINING|ONORS|RGANIZATIONS";
+
+  // v12.3.10: COMPOUND letter-spaced headings, e.g. "A CTIVITIES & L EADERSHIP"
+  // or "A WARDS AND H ONORS". Handle these BEFORE the single-heading pass so the
+  // connector ("&" / "and" / "/") is absorbed into one clean heading line instead
+  // of being stranded on its own line (which printed as a rogue "&" under the
+  // section header). Rebuild as a single normalized "TAIL1 & TAIL2" heading.
+  const compoundRe = new RegExp(
+    "(^|[\\s.;,])([A-Z]) (" + LS_HEAD_TAIL + ")\\s*([&/]|and)\\s*([A-Z]) (" + LS_HEAD_TAIL + ")(?=$|[\\s.;,:])",
+    "gmi"
+  );
+  t = t.replace(compoundRe, (m, pre, f1, r1, conn, f2, r2) => {
+    const joiner = /and/i.test(conn) ? " AND " : " " + conn + " ";
+    return pre + "\n" + f1 + r1 + joiner + f2 + r2 + "\n";
+  });
+
   t = t.replace(
-    /(^|[\s.;,])([A-Z]) (KILLS|XPERIENCE|ROJECTS|DUCATION|CTIVITIES|ERTIFICATIONS|EADERSHIP|WARDS|UMMARY|ROFILE|BJECTIVE|OOLS|ANGUAGES|OLUNTEER|UBLICATIONS|RAINING|ONORS|RGANIZATIONS)(?=$|[\s.;,:])/gm,
+    new RegExp("(^|[\\s.;,])([A-Z]) (" + LS_HEAD_TAIL + ")(?=$|[\\s.;,:])", "gm"),
     (m, pre, first, rest) => pre + "\n" + first + rest + "\n"
   );
 
