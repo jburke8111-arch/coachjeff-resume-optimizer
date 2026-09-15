@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.12: ROGUE-BULLET CLEANUP (PROJECTS + ACTIVITIES). Two fixes for bullets that should never have been bullets. (1) Projects: an affiliation/type line such as "Independent Project" (also Personal/Individual/Academic/Group/Team/Class/Course/Freelance/Volunteer/Capstone/Hackathon Project) is now recognized as a context subtitle, matching how "University of Maryland" already renders on other entries — so it no longer prints as the first accomplishment bullet. Applied in both splitProjectLines (render/export) and _looksLikeProjectContinuation (title guard). (2) Activities: new tidyActivityEntries() cleans the section where run-on flattening does the most damage — it (a) drops an org line that is a wrapped-sentence fragment (starts lowercase / opens with a connector), (b) folds a bare membership STATUS ("Candidate", "Member", "Participant", officer titles) into the entry role instead of bulleting it, and (c) splits a crushed membership chain ("X Member Y Member Z Participant") into one clean entry per membership. It never invents content — only reclassifies and splits what is present. Regression-checked: normal single activities and legit multi-keyword accomplishment bullets are left untouched. Verified on Rachel Mbolembe: no "Independent Project" bullet, no rogue "Candidate" bullet, INROADS fragment dropped, and the four glued memberships (Business & Data Club, IS Female-Identifying Student Org, NABA, I4C Mentorship) split into separate lines. -->
 <!-- v12.3.11: EDUCATION-PLACEMENT (STAGE-AWARE) FIX. Section placement is now a function of DEGREE + EXPERIENCE + TIMING, not GPA. Prior builds gated Education-first on GPA>=3.5, so a current student with a fresh/upcoming degree but no GPA on the resume (e.g. an expected-May-2027 grad) was left with Education third-from-bottom on export. New shared helper educationPlacementSignal() is the single source of truth for smartRecommendedOrder (which sets data.order on import, and therefore the export order), the Section Ordering scorecard, and the Section Order coaching notes — so all three always agree. Education leads when the candidate is a current student ("expected"/upcoming grad) OR has thin paid experience (0-1 employment entries); a strong GPA now only strengthens the rationale (surfaced in the note) rather than gating it. Guardrail: a candidate who has already graduated AND has substantial experience (3+ employment entries) is treated as experience-dominant and Education stays lower, with the senior-IC judgment call surfaced via the caveat. Verified: Rachel Mbolembe (current 2027 grad, no GPA, 2 roles) now recommends Summary -> Education -> Skills -> Experience -> Projects and exports Education second; seasoned/experience-dominant profiles keep Education low. -->
 <!-- v12.3.10: COMPOUND LETTER-SPACED HEADING FIX. A v12.3.9 follow-up: compound headings such as "A CTIVITIES & L EADERSHIP" (or "A WARDS AND H ONORS") were rescued as two separate heading lines, stranding the connector ("&"/"and"/"/") on its own line — which then printed as a rogue "&" line under the section header on export. normalizeImportedResumeText now detects a letter-spaced heading + connector + letter-spaced heading and rebuilds it as ONE clean heading line ("ACTIVITIES & LEADERSHIP") before the single-heading pass runs. Verified on Rachel Mbolembe's resume: no stray "&" under Leadership & Activities, heading classifies as activities, and INROADS content no longer splits across a phantom second heading. -->
 <!-- v12.3.9: LETTER-SPACED HEADING + RUNAWAY-SUMMARY FIX. (1) DOCX/PDF exports that flatten a heading's expanded letter-spacing into a real space after the first character ("S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES") hid those headings from the anchored matchers, so the entire resume body glued into the Professional Summary — producing a ~584-word "summary", "No projects detected", and a truncated 4-bullet Experience count. normalizeImportedResumeText now re-glues these onto their own lines, but ONLY for the ALL-CAPS tail of a known section word, so ordinary prose is untouched. (2) analyzeSummaryQuality now separates a genuinely long summary (>70 words -> "tighten") from a pathological one (>150 words -> parse-warning that points at hidden/mis-imported section headings instead of a phantom writing problem). (3) _splitResume flags repeated section headings (duplicate:true) in debug diagnostics rather than silently merging fragmentary second copies. Verified on Rachel Mbolembe's DOCX: headings now classify correctly, Projects and full Experience import, summary word count returns to normal. -->
@@ -145,7 +146,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.11-industry";
+const BUILD_VERSION = "v12.3.12-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -1287,7 +1288,7 @@ function _parseExperienceEntries(lines) {
 }
 function _parseActivityEntries(lines) {
   const entries = _parseExperienceEntries(lines);
-  return entries.map(e => ({
+  const mapped = entries.map(e => ({
     id: e.id || _newId(),
     role: e.title || "",
     org: e.org || "",
@@ -1295,7 +1296,82 @@ function _parseActivityEntries(lines) {
     end: e.end || "",
     bullets: e.bullets && e.bullets.length ? e.bullets : [""]
   }));
+  return tidyActivityEntries(mapped);
 }
+
+// v12.3.12: Clean up activity entries that DOCX/PDF flattening leaves malformed.
+// The activities block is where run-on flattening does the most damage: a bare
+// membership STATUS ("Candidate", "Member", "Participant") gets bulleted as if
+// it were an accomplishment, a fragment of a wrapped sentence lands as the org
+// line, and a long chain of separate memberships ("X Member Y Member Z Member")
+// gets crushed into one bullet. This pass fixes those mechanically WITHOUT
+// inventing content: it never adds facts, only reclassifies and splits what is
+// already there.
+function tidyActivityEntries(entries) {
+  // A bare membership status/role token that belongs in `role`, never as a bullet.
+  const STATUS_ONLY = /^(candidate|member|participant|volunteer|mentee|mentor|fellow|associate|officer|president|vice[\s-]?president|treasurer|secretary|chair|co-?chair|captain|lead|ambassador|delegate|student\s+member|general\s+member|active\s+member)$/i;
+  // A run-on membership chain: "<Org> Member <Org> Member/Participant ..." — two
+  // or more role keywords embedded mid-line signal several memberships glued
+  // together. Split on the role keyword boundaries into separate entries.
+  const ROLE_SPLIT = /\b(Member|Participant|Mentor|Mentee|Fellow|Volunteer|Officer|President|Treasurer|Secretary|Chair|Captain|Ambassador)\b/g;
+
+  const out = [];
+  entries.forEach(e => {
+    let role = String(e.role || "").trim();
+    let org = String(e.org || "").trim();
+    const rawBullets = (e.bullets || []).map(b => String(b || "").trim()).filter(Boolean);
+
+    // Drop an org line that is clearly a wrapped-sentence FRAGMENT rather than an
+    // organization name: it starts lowercase, or opens mid-clause with a
+    // connector/comma. Better to omit an unusable fragment than print it as the org.
+    if (org && (/^[a-z]/.test(org) || /^(and|or|with|through|including|mentorship|,)/i.test(org))) {
+      org = "";
+    }
+
+    const keptBullets = [];
+    const spawned = [];
+    rawBullets.forEach(b => {
+      // A bare status token: promote to role if the entry has none, else drop it
+      // (it is not an accomplishment).
+      if (STATUS_ONLY.test(b)) {
+        if (!role) role = b;
+        else if (!/\b(candidate|member|participant|fellow|mentor|mentee)\b/i.test(role)) role = role + " — " + b;
+        return;
+      }
+      // A run-on membership chain: 2+ role keywords in one bullet. Split into
+      // one entry per membership so each renders on its own line.
+      const roleHits = (b.match(ROLE_SPLIT) || []).length;
+      if (roleHits >= 2 && b.length > 40) {
+        // Split so each role keyword ends its segment: "Foo Member Bar Participant"
+        // -> ["Foo Member", "Bar Participant"].
+        const parts = b.split(/(?<=\b(?:Member|Participant|Mentor|Mentee|Fellow|Volunteer|Officer|President|Treasurer|Secretary|Chair|Captain|Ambassador))\s+(?=[A-Z])/)
+          .map(s => s.trim()).filter(Boolean);
+        if (parts.length >= 2) {
+          parts.forEach(p => spawned.push({ id: _newId(), role: "", org: p, start: "", end: "", bullets: [""] }));
+          return;
+        }
+      }
+      keptBullets.push(b);
+    });
+
+    const primaryHasContent = role || org || keptBullets.length;
+    if (primaryHasContent) {
+      out.push({
+        id: e.id || _newId(),
+        role, org,
+        start: e.start || "", end: e.end || "",
+        bullets: keptBullets.length ? keptBullets : [""]
+      });
+    }
+    // Additional memberships extracted from a run-on chain become their own
+    // compact entries (org only), appended after the primary entry.
+    spawned.forEach(s => out.push(s));
+  });
+  // Drop any fully empty entries that survived (defensive).
+  const cleaned = out.filter(e => e.role || e.org || (e.bullets || []).some(b => String(b).trim()));
+  return cleaned.length ? cleaned : entries;
+}
+
 
 
 function _looksLikeProjectContinuation(line) {
@@ -1304,6 +1380,8 @@ function _looksLikeProjectContinuation(line) {
   // a tools/tech declaration, or an org/school subtitle line.
   if (/^\s*(tools?|tech|technologies|stack|built with|tools?\s*&\s*technologies|skills used|methods?)\s*[:|]/i.test(s)) return true;
   if (/^(university|college|institute|school)\b/i.test(s)) return true;
+  // v12.3.12: affiliation/type subtitle line, never a new project title.
+  if (/^(independent|personal|individual|academic|group|team|class|course|freelance|volunteer|capstone|hackathon|self[\s-]?directed)\b.*\bproject\b/i.test(s) || /^(capstone|hackathon)$/i.test(s)) return true;
   // "Org Name | Descriptor" subtitle pattern with no date.
   if (/\s\|\s/.test(s) && !_looksLikeDateRange(s)) return true;
   return false;
@@ -1348,6 +1426,11 @@ function splitProjectLines(bullets) {
     const t = String(s || "").trim();
     if (isTools(t)) return false;
     if (/^(university|college|institute|school)\b/i.test(t)) return true;
+    // v12.3.12: project affiliation/type lines ("Independent Project", "Personal
+    // Project", "Academic/Group/Team Project", "Capstone") are context, not
+    // accomplishments — they parallel the "University of Maryland" subtitle on
+    // other entries and must not render as a bullet.
+    if (/^(independent|personal|individual|academic|group|team|class|course|freelance|volunteer|capstone|hackathon|self[\s-]?directed)\b.*\bproject\b/i.test(t) || /^(capstone|hackathon)$/i.test(t)) return true;
     if (/\s\|\s/.test(t) && !/\d/.test(t)) return true;
     // Short noun-phrase subtitles/categories are often formatted with a bullet in
     // source resumes even though they are not accomplishment bullets. Preserve
