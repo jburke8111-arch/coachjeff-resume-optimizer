@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.13: EDUCATION LAYOUT FIX (date pairs with the degree). The .docx export rendered the degree alone on one line and put the graduation date on the SCHOOL row, so the date floated out to the right of the school while the degree sat bare. Now the date pairs with the DEGREE line (degree bold-left, date right-aligned), then school, then minor — matching the Experience/Projects convention and the HTML export. Two supporting fixes made this work: (1) splitDegreeMinor now handles a NAMED minor with a qualifier between the separator and "Minor" (e.g. "...Information Science; Smith Minor in General Business" -> degree "Bachelor of Science in Information Science" + minor "Smith Minor in General Business", kept on its own line); the minor phrase is preserved VERBATIM (only a stray trailing period is stripped and the leading letter capitalized) — it is a real credential name, so it is NOT rewritten into a "Minor: X" template. Previously the whole 70+ char string stayed on one line and forced the long-degree fallback. (2) A long-degree guard (mirroring Experience) keeps very long degrees intact with the date on the school row, avoiding ugly Word wrapping. Applied consistently across all three renderers — .docx export, .doc/HTML export, and the on-screen preview. Verified on Rachel Mbolembe: "Bachelor of Science in Information Science …… Expected May 2027" on one line, "University of Maryland College Park, MD" below, "Smith Minor: General Business" below that. -->
 <!-- v12.3.12: ROGUE-BULLET CLEANUP (PROJECTS + ACTIVITIES). Two fixes for bullets that should never have been bullets. (1) Projects: an affiliation/type line such as "Independent Project" (also Personal/Individual/Academic/Group/Team/Class/Course/Freelance/Volunteer/Capstone/Hackathon Project) is now recognized as a context subtitle, matching how "University of Maryland" already renders on other entries — so it no longer prints as the first accomplishment bullet. Applied in both splitProjectLines (render/export) and _looksLikeProjectContinuation (title guard). (2) Activities: new tidyActivityEntries() cleans the section where run-on flattening does the most damage — it (a) drops an org line that is a wrapped-sentence fragment (starts lowercase / opens with a connector), (b) folds a bare membership STATUS ("Candidate", "Member", "Participant", officer titles) into the entry role instead of bulleting it, and (c) splits a crushed membership chain ("X Member Y Member Z Participant") into one clean entry per membership. It never invents content — only reclassifies and splits what is present. Regression-checked: normal single activities and legit multi-keyword accomplishment bullets are left untouched. Verified on Rachel Mbolembe: no "Independent Project" bullet, no rogue "Candidate" bullet, INROADS fragment dropped, and the four glued memberships (Business & Data Club, IS Female-Identifying Student Org, NABA, I4C Mentorship) split into separate lines. -->
 <!-- v12.3.11: EDUCATION-PLACEMENT (STAGE-AWARE) FIX. Section placement is now a function of DEGREE + EXPERIENCE + TIMING, not GPA. Prior builds gated Education-first on GPA>=3.5, so a current student with a fresh/upcoming degree but no GPA on the resume (e.g. an expected-May-2027 grad) was left with Education third-from-bottom on export. New shared helper educationPlacementSignal() is the single source of truth for smartRecommendedOrder (which sets data.order on import, and therefore the export order), the Section Ordering scorecard, and the Section Order coaching notes — so all three always agree. Education leads when the candidate is a current student ("expected"/upcoming grad) OR has thin paid experience (0-1 employment entries); a strong GPA now only strengthens the rationale (surfaced in the note) rather than gating it. Guardrail: a candidate who has already graduated AND has substantial experience (3+ employment entries) is treated as experience-dominant and Education stays lower, with the senior-IC judgment call surfaced via the caveat. Verified: Rachel Mbolembe (current 2027 grad, no GPA, 2 roles) now recommends Summary -> Education -> Skills -> Experience -> Projects and exports Education second; seasoned/experience-dominant profiles keep Education low. -->
 <!-- v12.3.10: COMPOUND LETTER-SPACED HEADING FIX. A v12.3.9 follow-up: compound headings such as "A CTIVITIES & L EADERSHIP" (or "A WARDS AND H ONORS") were rescued as two separate heading lines, stranding the connector ("&"/"and"/"/") on its own line — which then printed as a rogue "&" line under the section header on export. normalizeImportedResumeText now detects a letter-spaced heading + connector + letter-spaced heading and rebuilds it as ONE clean heading line ("ACTIVITIES & LEADERSHIP") before the single-heading pass runs. Verified on Rachel Mbolembe's resume: no stray "&" under Leadership & Activities, heading classifies as activities, and INROADS content no longer splits across a phantom second heading. -->
@@ -146,7 +147,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.12-industry";
+const BUILD_VERSION = "v12.3.13-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -868,14 +869,30 @@ function cleanEducationEntries(entries) {
 // recommended education format) instead of colliding with the right-aligned date.
 function splitDegreeMinor(degree) {
   const s = String(degree || "").trim();
-  const m = s.match(/[,;]\s*(minor\b.*)$/i);
+  // Match a minor clause after a comma/semicolon. v12.3.13: allow a short
+  // qualifier between the separator and "Minor" so named minors split correctly
+  // — e.g. "...Information Science; Smith Minor in General Business" (UMD's
+  // Robert H. Smith School credential), "...; Robert H. Smith Minor in ...".
+  // Without this the whole string stayed on one 70+ char line and the
+  // graduation date got orphaned onto the school row. The qualifier is limited
+  // to 1-3 capitalized/initial tokens so we don't swallow real degree text.
+  let m = s.match(/[,;]\s*(minor\b.*)$/i);
+  if (!m) m = s.match(/[,;]\s*((?:[A-Z][A-Za-z.'-]*\s+){1,3}minor\b.*)$/i);
   if (m) {
-    let minor = m[1].trim();
-    // Normalize "Minor: X" / "Minor in X" -> "Minor: X" for a clean label.
-    minor = minor.replace(/^minor\s*(?:in|:)?\s*/i, "Minor: ");
-    return { degree: s.slice(0, m.index).trim(), minor: minor };
+    // v12.3.13a: preserve the minor phrase as written. It is the candidate's
+    // own name for a real credential — "Smith Minor in General Business" is a
+    // named program, "Minor in Mathematics" is standard phrasing. We do NOT
+    // rewrite it into a "Minor: X" template (that turned "Smith Minor in
+    // General Business" into the nonsensical "Smith Minor: General Business").
+    // Only strip a stray trailing period and normalize whitespace.
+    const minorRaw = m[1].trim().replace(/\s{2,}/g, " ").replace(/\.\s*$/, "").trim();
+    // Capitalize only the leading letter so a lowercase "minor in X" reads
+    // cleanly as its own line, without otherwise altering the wording.
+    const minor = minorRaw ? minorRaw.charAt(0).toUpperCase() + minorRaw.slice(1) : minorRaw;
+    return { degree: s.slice(0, m.index).trim().replace(/[.;,]\s*$/, "").trim(), minor: minor };
   }
-  return { degree: s, minor: "" };
+  // No minor: still strip a stray trailing period so the degree line is clean.
+  return { degree: s.replace(/\.\s*$/, "").trim(), minor: "" };
 }
 function _parseEducation(lines) {
   const clean = _dropSectionNoise ? _dropSectionNoise(lines) : (lines || []);
@@ -4093,7 +4110,7 @@ function App() {
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
           items.forEach((p) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); sp.accomplishments.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
         if (key === "education") { const items = data.education.filter((ed) => ed.degree || ed.school); if (!items.length) continue; parts.push(headerHtml("Education"));
-          items.forEach((ed) => { parts.push(twoCol(ed.school || "", ed.location || "", { lb: true })); const dm = splitDegreeMinor(ed.degree || ""); parts.push(twoCol(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), ed.grad || "", { lb: true })); if (dm.minor) parts.push(para(escapeHtml(dm.minor), 0)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) parts.push(para(escapeHtml(ex.join(" | ")), ed.coursework ? 0 : 6)); if (ed.coursework) parts.push(para("Relevant Coursework: " + escapeHtml(ed.coursework), 6)); }); }
+          items.forEach((ed) => { const dm = splitDegreeMinor(ed.degree || ""); const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(); if (degreeText.length > 58 && (ed.grad || "").trim()) { parts.push(para('<b>' + escapeHtml(degreeText) + '</b>', 0)); parts.push(twoCol(ed.school || "", ed.grad || "", { lb: false })); } else { parts.push(twoCol(degreeText, ed.grad || "", { lb: true })); if (ed.school) parts.push(para(escapeHtml(ed.school), 0)); } if (ed.location) parts.push(para(escapeHtml(ed.location), 0)); if (dm.minor) parts.push(para(escapeHtml(dm.minor), 0)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) parts.push(para(escapeHtml(ex.join(" | ")), ed.coursework ? 0 : 6)); if (ed.coursework) parts.push(para("Relevant Coursework: " + escapeHtml(ed.coursework), 6)); }); }
         if (key === "activities") { const items = data.activities.filter((a) => a.role || a.org); if (!items.length) continue; parts.push(headerHtml("Leadership & Activities"));
           items.forEach((a) => { parts.push(twoCol(a.role || "", [a.start, a.end].filter(Boolean).join(" – "), { lb: true })); if (a.org) parts.push(twoCol(a.org, "", { ri: true })); a.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
         if (key === "certifications") { const items = data.certifications.filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Certifications"));
@@ -4520,8 +4537,21 @@ function App() {
         P.push(xHeader("Education"));
         items.forEach((ed) => {
           const dm = splitDegreeMinor(ed.degree || "");
-          P.push(xPar(xRun(String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(), { bold: true, size: 11 }), { after: 0, keepNext: true }));
-          P.push(xTabRow(ed.school || "", ed.grad || "", { after: 120, keepNext: true }));
+          const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim();
+          // v12.3.13: pair the graduation date with the DEGREE line (the primary
+          // credential), not the school line — so the date no longer floats out
+          // to the right of the school while the degree sits bare. This matches
+          // the Experience/Projects convention (title + date on one row) and the
+          // HTML export path. Long-degree guard mirrors Experience: if the degree
+          // is too long to share a line with a right-aligned date without ugly
+          // wrapping, keep the degree intact and place the date on the school row.
+          if (degreeText.length > 58 && (ed.grad || "").trim()) {
+            P.push(xPar(xRun(degreeText, { bold: true, size: 11 }), { after: 0, keepNext: true }));
+            P.push(xTabRow(ed.school || "", ed.grad || "", { after: 120, keepNext: true }));
+          } else {
+            P.push(xTabRow(degreeText, ed.grad || "", { lb: true, after: 0, keepNext: true }));
+            if (ed.school) P.push(xBody(ed.school, { after: 120, keepNext: true }));
+          }
           if (ed.location) P.push(xBody(ed.location, { after: 0, keepNext: true }));
           if (dm.minor) P.push(xBody(dm.minor, { after: 0, keepNext: true }));
           const ex = [];
@@ -6969,7 +6999,7 @@ function Preview({ data }) {
         if (key === "skills") { const s = data.skills; if (!s.technical && !s.tools) return null; return <C key={key}><H>Skills</H>{s.technical && <div style={{ fontSize: 11 }}><b>Technical:</b> {s.technical}</div>}{s.tools && <div style={{ fontSize: 11 }}><b>Tools/Platforms:</b> {s.tools}</div>}</C>; }
         if (key === "experience") { const it = data.experience.filter((e) => e.title || e.org); if (!it.length) return null; return <C key={key}><H>Experience</H>{it.map((e) => <div key={e.id} style={{ marginBottom: 6 }}><Row l={e.title} r={[e.start, e.end].filter(Boolean).join(" – ")} bl /><Row l={e.org} r={e.location} ri /><Bul items={e.bullets} /></div>)}</C>; }
         if (key === "projects") { const it = data.projects.filter((p) => p.name); if (!it.length) return null; return <C key={key}><H>Projects</H>{it.map((p) => { const sp = splitProjectLines(p.bullets); return <div key={p.id} style={{ marginBottom: 6 }}><Row l={p.name} r={p.date} bl />{sp.context && <div style={{ fontSize: 11 }}>{sp.context}</div>}{sp.toolsValue && <div style={{ fontSize: 11 }}><b>Technologies:</b> {sp.toolsValue}</div>}<Bul items={sp.accomplishments} /></div>; })}</C>; }
-        if (key === "education") { const it = data.education.filter((ed) => ed.degree || ed.school); if (!it.length) return null; return <C key={key}><H>Education</H>{it.map((ed) => { const dm = splitDegreeMinor(ed.degree || ""); return <div key={ed.id} style={{ marginBottom: 6 }}><Row l={ed.school} r={ed.location} bl /><Row l={String(dm.degree || "").replace(/\s*\|\s*$/, "").trim()} r={ed.grad} bl />{dm.minor && <div style={{ fontSize: 11 }}>{dm.minor}</div>}{(ed.gpa || ed.coursework) && <div style={{ fontSize: 11, color: "#595959" }}>{[ed.gpa && "GPA: " + ed.gpa, ed.coursework && "Relevant Coursework: " + ed.coursework].filter(Boolean).join("  •  ")}</div>}</div>; })}</C>; }
+        if (key === "education") { const it = data.education.filter((ed) => ed.degree || ed.school); if (!it.length) return null; return <C key={key}><H>Education</H>{it.map((ed) => { const dm = splitDegreeMinor(ed.degree || ""); const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(); const longDegree = degreeText.length > 58 && (ed.grad || "").trim(); return <div key={ed.id} style={{ marginBottom: 6 }}>{longDegree ? (<><div style={{ fontSize: 11, fontWeight: "bold" }}>{degreeText}</div><Row l={ed.school} r={ed.grad} /></>) : (<><Row l={degreeText} r={ed.grad} bl />{ed.school && <div style={{ fontSize: 11 }}>{ed.school}</div>}</>)}{ed.location && <div style={{ fontSize: 11 }}>{ed.location}</div>}{dm.minor && <div style={{ fontSize: 11 }}>{dm.minor}</div>}{(ed.gpa || ed.coursework) && <div style={{ fontSize: 11, color: "#595959" }}>{[ed.gpa && "GPA: " + ed.gpa, ed.coursework && "Relevant Coursework: " + ed.coursework].filter(Boolean).join("  •  ")}</div>}</div>; })}</C>; }
         if (key === "activities") { const it = data.activities.filter((a) => a.role || a.org); if (!it.length) return null; return <C key={key}><H>Leadership & Activities</H>{it.map((a) => <div key={a.id} style={{ marginBottom: 6 }}><Row l={[a.role, a.org].filter(Boolean).join(" — ")} r={[a.start, a.end].filter(Boolean).join(" – ")} bl /><Bul items={a.bullets} /></div>)}</C>; }
         if (key === "certifications") { const it = data.certifications.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Certifications</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
         if (key === "awards") { const it = data.awards.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Awards & Honors</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
