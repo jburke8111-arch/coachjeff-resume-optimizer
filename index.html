@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.16: AMBIGUOUS-MINOR COACHING (eval #16). Adds a soft coaching note when a minor references a named school/program by a single word that outsiders may not recognize — e.g. "Smith Minor in General Business" (UMD's Robert H. Smith School of Business). The Education Review now suggests spelling it out ("Smith School of Business"). Detection fires ONLY on a curated list of known business-school program names directly followed by "Minor" (Smith, Ross, Wharton, Haas, Booth, Stern, etc.), and stays silent when the school is already spelled out nearby. Deliberately NOT generic: subject-name minors share the exact "<Word> Minor" shape ("Spanish Minor", "Business Minor"), so a generic rule would false-positive constantly. The note is a soft suggestion only — it does NOT reduce the Education score or change "cleanly structured," it just appears in the Education suggestions. Verified: fires on Smith/Ross/Haas minors; silent on subject minors, spelled-out programs, non-minor uses of a listed word ("Johnson Scholarship"), and resumes with no minor. -->
 <!-- v12.3.15: LANGUAGE REPAIR (self-healing skills). v12.3.14 preserves a resume's own skill labels, but that means re-importing an ALREADY-mislabelled file (e.g. a prior export where "English, French, Lingala" was stuck under Technical Skills and the original "Languages:" group name was lost) faithfully preserves the mistake — garbage in, garbage out. New repairMisfiledLanguages() detects a run of 2+ known spoken languages sitting in the wrong bucket (Technical Skills / Domain Knowledge) with no Languages group present, and lifts them into their own "Languages" group using the first free slot (records a note; if no slot is free, flags it for the report). Conservative: only recognized language names, only 2+ together (a lone "English" is left alone), never touches an existing Languages group. This self-heals prior exports and any DOCX/PDF that flattened the Languages line away. Verified: the damaged v12.3.14 export re-imports with English/French/Lingala restored to a Languages group; clean resumes and single-language cases are untouched. NOTE (workflow): validating skills parsing requires importing the ORIGINAL resume, not a prior tool export, or the input already carries earlier damage. -->
 <!-- v12.3.14: SKILLS CATEGORY PRESERVATION (glued labels). When a resume's skills block arrived as ONE flattened line gluing several labelled groups together ("Business & Operations: ... Data & Analytics: ... Tools: ... Languages: ...") the parser fell through to the force-fit path, which ran each label through normalizeLabel() and DISCARDED the resume's own category names. That mislabelled "Business & Operations" as "Technical Skills", "Data & Analytics" as "Domain Knowledge", and dumped "Languages: English, French, Lingala" into Technical Skills (normalizeLabel maps "Languages" to technical, a rule meant for "Programming Languages"). Fix: the preserve-original-labels path now also splits a single glued line on its inline labels, so 2-4 labelled groups keep their exact names and order whether they arrive as separate lines OR one glued line. Regression-checked: unlabelled flat lists still force-fit to defaults; >4 groups still fall back (only four slots exist). Verified on Rachel: Business & Operations / Data & Analytics / Tools / Languages all preserved. -->
 <!-- v12.3.13: EDUCATION LAYOUT FIX (date pairs with the degree). The .docx export rendered the degree alone on one line and put the graduation date on the SCHOOL row, so the date floated out to the right of the school while the degree sat bare. Now the date pairs with the DEGREE line (degree bold-left, date right-aligned), then school, then minor — matching the Experience/Projects convention and the HTML export. Two supporting fixes made this work: (1) splitDegreeMinor now handles a NAMED minor with a qualifier between the separator and "Minor" (e.g. "...Information Science; Smith Minor in General Business" -> degree "Bachelor of Science in Information Science" + minor "Smith Minor in General Business", kept on its own line); the minor phrase is preserved VERBATIM (only a stray trailing period is stripped and the leading letter capitalized) — it is a real credential name, so it is NOT rewritten into a "Minor: X" template. Previously the whole 70+ char string stayed on one line and forced the long-degree fallback. (2) A long-degree guard (mirroring Experience) keeps very long degrees intact with the date on the school row, avoiding ugly Word wrapping. Applied consistently across all three renderers — .docx export, .doc/HTML export, and the on-screen preview. Verified on Rachel Mbolembe: "Bachelor of Science in Information Science …… Expected May 2027" on one line, "University of Maryland College Park, MD" below, "Smith Minor in General Business" below that. -->
@@ -153,7 +154,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.15-industry";
+const BUILD_VERSION = "v12.3.16-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3227,16 +3228,54 @@ function analyzeSkillsClassification(data) {
 function analyzeEducationCleanup(data) {
   const edu = (data.education || []).filter(e => e && (e.degree || e.school || e.location || e.grad));
   let issues = [];
+  // v12.3.16: soft coaching notes that do NOT reduce the education score — they
+  // are optional polish, not structural defects. Kept separate from `issues`
+  // (which are hard problems and each cost score) so a clean-but-improvable
+  // Education section still scores well and still reads as "cleanly structured".
+  let softNotes = [];
+
+  // Known named schools/programs commonly referred to by a single word on a
+  // resume. When one of these stands alone (no "School/College/Institute"
+  // nearby), an outside recruiter may not recognize it, so we suggest spelling
+  // it out. This is a hint list, not exhaustive — the generic pattern check
+  // below also catches "<Proper> Minor in X" shapes we don't have listed.
+  const NAMED_PROGRAMS = /\b(Smith|Ross|Wharton|Kellogg|Booth|Haas|Stern|Fuqua|Tuck|Sloan|Kenan[\s-]?Flagler|Mendoza|Marshall|Anderson|Darden|Johnson|Tepper|McCombs|Kelley|Foster|Broad|Terry|Carlson|Olin|Goizueta|Cox|McDonough|Questrom|Owen)\s+Minor\b/;
+  const SPELLED_OUT = /\b(school|college|institute|university|business school)\b/i;
+
   edu.forEach(e => {
     if (e.school && e.location && e.school.includes(e.location)) issues.push("School field appears to include location.");
     if (e.degree && e.grad && e.degree.includes(e.grad)) issues.push("Degree field appears to include graduation date.");
     if (!e.degree) issues.push("Missing degree.");
     if (!e.school) issues.push("Missing school.");
     if (!e.grad) issues.push("Missing graduation date.");
+
+    // Ambiguous named minor/program. We fire ONLY on a known named school/
+    // program word standing alone (e.g. "Smith Minor in ...") with no
+    // "School/College" spelled out right around it. We deliberately do NOT try
+    // to catch this generically from the "<Word> Minor" shape: subject-name
+    // minors ("Spanish Minor", "Business Minor", "Statistics Minor") use the
+    // exact same shape and are perfectly clear, so a generic rule produces
+    // constant false positives. A curated program list catches the real
+    // ambiguous cases (named B-schools) with essentially no false positives.
+    const degreeStr = String(e.degree || "");
+    const namedHit = NAMED_PROGRAMS.exec(degreeStr);
+    if (namedHit) {
+      // Already spelled out right around the named word? ("Smith School of
+      // Business Minor" is clear.) Look ~40 chars from the hit in the degree.
+      const nearText = degreeStr.slice(namedHit.index, namedHit.index + 45);
+      if (!SPELLED_OUT.test(nearText)) {
+        const word = namedHit[1];
+        softNotes.push("Your minor references \u201C" + word + "\u201D on its own. If that's a named school or program, spell it out (e.g. \u201C" + word + " School of Business\u201D) so recruiters outside your university recognize it.");
+      }
+    }
   });
+
   issues = Array.from(new Set(issues));
+  softNotes = Array.from(new Set(softNotes));
+  // Score reflects only hard structural issues, exactly as before — soft notes
+  // never move it.
   const score = Math.max(60, Math.min(100, 100 - issues.length * 8));
-  return { count: edu.length, issues, score };
+  return { count: edu.length, issues, softNotes, score };
 }
 
 function recommendSectionOrder(data) {
@@ -3878,7 +3917,7 @@ function sectionRecruiterFeedback(data) {
     section: "Education",
     score: edu.score,
     strengths: edu.issues.length ? [] : ["Education is cleanly structured."],
-    suggestions: edu.issues.slice(0, 4)
+    suggestions: [...edu.issues, ...(edu.softNotes || [])].slice(0, 5)
   });
 
   const fieldChosen = !!String(data.field || "").trim();
