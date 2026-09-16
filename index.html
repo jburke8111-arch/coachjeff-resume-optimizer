@@ -41,6 +41,7 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
+<!-- v12.3.15: LANGUAGE REPAIR (self-healing skills). v12.3.14 preserves a resume's own skill labels, but that means re-importing an ALREADY-mislabelled file (e.g. a prior export where "English, French, Lingala" was stuck under Technical Skills and the original "Languages:" group name was lost) faithfully preserves the mistake — garbage in, garbage out. New repairMisfiledLanguages() detects a run of 2+ known spoken languages sitting in the wrong bucket (Technical Skills / Domain Knowledge) with no Languages group present, and lifts them into their own "Languages" group using the first free slot (records a note; if no slot is free, flags it for the report). Conservative: only recognized language names, only 2+ together (a lone "English" is left alone), never touches an existing Languages group. This self-heals prior exports and any DOCX/PDF that flattened the Languages line away. Verified: the damaged v12.3.14 export re-imports with English/French/Lingala restored to a Languages group; clean resumes and single-language cases are untouched. NOTE (workflow): validating skills parsing requires importing the ORIGINAL resume, not a prior tool export, or the input already carries earlier damage. -->
 <!-- v12.3.14: SKILLS CATEGORY PRESERVATION (glued labels). When a resume's skills block arrived as ONE flattened line gluing several labelled groups together ("Business & Operations: ... Data & Analytics: ... Tools: ... Languages: ...") the parser fell through to the force-fit path, which ran each label through normalizeLabel() and DISCARDED the resume's own category names. That mislabelled "Business & Operations" as "Technical Skills", "Data & Analytics" as "Domain Knowledge", and dumped "Languages: English, French, Lingala" into Technical Skills (normalizeLabel maps "Languages" to technical, a rule meant for "Programming Languages"). Fix: the preserve-original-labels path now also splits a single glued line on its inline labels, so 2-4 labelled groups keep their exact names and order whether they arrive as separate lines OR one glued line. Regression-checked: unlabelled flat lists still force-fit to defaults; >4 groups still fall back (only four slots exist). Verified on Rachel: Business & Operations / Data & Analytics / Tools / Languages all preserved. -->
 <!-- v12.3.13: EDUCATION LAYOUT FIX (date pairs with the degree). The .docx export rendered the degree alone on one line and put the graduation date on the SCHOOL row, so the date floated out to the right of the school while the degree sat bare. Now the date pairs with the DEGREE line (degree bold-left, date right-aligned), then school, then minor — matching the Experience/Projects convention and the HTML export. Two supporting fixes made this work: (1) splitDegreeMinor now handles a NAMED minor with a qualifier between the separator and "Minor" (e.g. "...Information Science; Smith Minor in General Business" -> degree "Bachelor of Science in Information Science" + minor "Smith Minor in General Business", kept on its own line); the minor phrase is preserved VERBATIM (only a stray trailing period is stripped and the leading letter capitalized) — it is a real credential name, so it is NOT rewritten into a "Minor: X" template. Previously the whole 70+ char string stayed on one line and forced the long-degree fallback. (2) A long-degree guard (mirroring Experience) keeps very long degrees intact with the date on the school row, avoiding ugly Word wrapping. Applied consistently across all three renderers — .docx export, .doc/HTML export, and the on-screen preview. Verified on Rachel Mbolembe: "Bachelor of Science in Information Science …… Expected May 2027" on one line, "University of Maryland College Park, MD" below, "Smith Minor in General Business" below that. -->
 <!-- v12.3.12: ROGUE-BULLET CLEANUP (PROJECTS + ACTIVITIES). Two fixes for bullets that should never have been bullets. (1) Projects: an affiliation/type line such as "Independent Project" (also Personal/Individual/Academic/Group/Team/Class/Course/Freelance/Volunteer/Capstone/Hackathon Project) is now recognized as a context subtitle, matching how "University of Maryland" already renders on other entries — so it no longer prints as the first accomplishment bullet. Applied in both splitProjectLines (render/export) and _looksLikeProjectContinuation (title guard). (2) Activities: new tidyActivityEntries() cleans the section where run-on flattening does the most damage — it (a) drops an org line that is a wrapped-sentence fragment (starts lowercase / opens with a connector), (b) folds a bare membership STATUS ("Candidate", "Member", "Participant", officer titles) into the entry role instead of bulleting it, and (c) splits a crushed membership chain ("X Member Y Member Z Participant") into one clean entry per membership. It never invents content — only reclassifies and splits what is present. Regression-checked: normal single activities and legit multi-keyword accomplishment bullets are left untouched. Verified on Rachel Mbolembe: no "Independent Project" bullet, no rogue "Candidate" bullet, INROADS fragment dropped, and the four glued memberships (Business & Data Club, IS Female-Identifying Student Org, NABA, I4C Mentorship) split into separate lines. -->
@@ -148,7 +149,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.14-industry";
+const BUILD_VERSION = "v12.3.15-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -721,6 +722,54 @@ function _parseContact(lines) {
   const relocationNoteFound = /\b(relocat\w*|open to relocat\w*|willing to relocat\w*|moving to)\b/i.test(joined);
   return { name, contact: { cityState, phone, email, linkedin, portfolio: safePortfolio, relocationNoteFound } };
 }
+// v12.3.15: Repair spoken languages misfiled into a skills bucket. Re-importing
+// a prior export (or a resume flattened by a DOCX/PDF) can leave spoken
+// languages — "English, French, Lingala" — appended to Technical Skills or
+// Domain Knowledge, because those tokens carry no obvious "language" label once
+// the original "Languages:" group name is gone. This detects a run of known
+// language names sitting in the wrong bucket and lifts them into their own
+// "Languages" group (using the first free slot), so a trilingual candidate's
+// differentiator is shown correctly instead of buried. Conservative: it only
+// moves tokens it recognizes as languages, only when 2+ are found together
+// (a lone "English" could be ambiguous), and never touches a group already
+// labelled as languages.
+const KNOWN_LANGUAGES = new Set(["english","french","spanish","mandarin","cantonese","chinese","lingala","swahili","arabic","portuguese","german","italian","russian","japanese","korean","hindi","urdu","bengali","punjabi","tagalog","vietnamese","thai","turkish","polish","dutch","greek","hebrew","farsi","persian","amharic","yoruba","igbo","hausa","zulu","xhosa","somali","twi","wolof","kinyarwanda","creole","haitian creole","fulani","fula","swiss german","ukrainian","romanian","czech","hungarian","swedish","norwegian","danish","finnish","tamil","telugu","malayalam","marathi","gujarati","nepali","sinhala","khmer","lao","burmese","malay","indonesian","swati","sesotho","setswana","shona","luganda"]);
+function repairMisfiledLanguages(result) {
+  if (!result || !result.labels) return result;
+  const slots = ["technical", "dataVisualization", "tools", "domain"];
+  // Already have a group named for languages? Then nothing to repair.
+  const hasLanguageGroup = slots.some(s => /language/i.test(result.labels[s] || ""));
+  if (hasLanguageGroup) return result;
+
+  const isLang = t => KNOWN_LANGUAGES.has(String(t || "").trim().toLowerCase());
+  // Find a bucket (not itself a languages group) holding 2+ known languages,
+  // ideally as a trailing run — the classic "…, English, French, Lingala".
+  for (const slot of slots) {
+    const csv = String(result[slot] || "");
+    if (!csv) continue;
+    const items = csv.split(",").map(x => x.trim()).filter(Boolean);
+    const langs = items.filter(isLang);
+    const nonLangs = items.filter(x => !isLang(x));
+    if (langs.length >= 2 && nonLangs.length >= 1) {
+      // Move languages into the first FREE slot; if none is free, leave the data
+      // in place but record the issue so the report can surface it.
+      const freeSlot = slots.find(s => !String(result[s] || "").trim());
+      if (freeSlot) {
+        result[slot] = nonLangs.join(", ");
+        result[freeSlot] = langs.join(", ");
+        result.labels[freeSlot] = "Languages";
+        result.importChanges = Array.from(new Set([...(result.importChanges || []),
+          "Moved spoken languages (" + langs.join(", ") + ") out of \"" + (result.labels[slot] || slot) + "\" into their own Languages group."]));
+      } else {
+        result.importChanges = Array.from(new Set([...(result.importChanges || []),
+          "Spoken languages (" + langs.join(", ") + ") appear under \"" + (result.labels[slot] || slot) + "\"; consider giving them a separate Languages line."]));
+      }
+      break;
+    }
+  }
+  return result;
+}
+
 function _parseSkills(lines) {
   const buckets = { technical: [], dataVisualization: [], tools: [], domain: [] };
   const labels = {
@@ -820,7 +869,7 @@ function _parseSkills(lines) {
       seenLabels.add(g.label);
     });
     importChanges.push("Preserved " + labeledGroups.length + " original skill categories and labels from imported resume.");
-    return {
+    return repairMisfiledLanguages({
       technical: buckets.technical.join(", "),
       dataVisualization: buckets.dataVisualization.join(", "),
       tools: buckets.tools.join(", "),
@@ -828,7 +877,7 @@ function _parseSkills(lines) {
       labels,
       omitted: [],
       importChanges
-    };
+    });
   }
 
   function addToBucket(item, bucket) {
@@ -868,7 +917,7 @@ function _parseSkills(lines) {
   const categoryCount = ["technical", "dataVisualization", "tools", "domain"].filter(k => buckets[k].length).length;
   if (seenLabels.size) importChanges.push("Preserved skill content from imported resume.");
   if (categoryCount >= 3) importChanges.push(categoryCount + " skill categories identified.");
-  return {
+  return repairMisfiledLanguages({
     technical: cleanUnique(buckets.technical).join(", "),
     dataVisualization: cleanUnique(buckets.dataVisualization).join(", "),
     tools: cleanUnique(buckets.tools).join(", "),
@@ -876,7 +925,7 @@ function _parseSkills(lines) {
     labels,
     omitted: [],
     importChanges: Array.from(new Set(importChanges))
-  };
+  });
 }
 
 function cleanEducationEntries(entries) {
