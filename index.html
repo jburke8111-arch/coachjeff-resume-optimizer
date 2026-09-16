@@ -41,7 +41,8 @@
 <!-- v9.3 -->
 <!-- v9.2.7: keep-with-next section/title rows and true hanging bullet alignment -->
 <!DOCTYPE html>
-<!-- v12.3.13: EDUCATION LAYOUT FIX (date pairs with the degree). The .docx export rendered the degree alone on one line and put the graduation date on the SCHOOL row, so the date floated out to the right of the school while the degree sat bare. Now the date pairs with the DEGREE line (degree bold-left, date right-aligned), then school, then minor — matching the Experience/Projects convention and the HTML export. Two supporting fixes made this work: (1) splitDegreeMinor now handles a NAMED minor with a qualifier between the separator and "Minor" (e.g. "...Information Science; Smith Minor in General Business" -> degree "Bachelor of Science in Information Science" + minor "Smith Minor in General Business", kept on its own line); the minor phrase is preserved VERBATIM (only a stray trailing period is stripped and the leading letter capitalized) — it is a real credential name, so it is NOT rewritten into a "Minor: X" template. Previously the whole 70+ char string stayed on one line and forced the long-degree fallback. (2) A long-degree guard (mirroring Experience) keeps very long degrees intact with the date on the school row, avoiding ugly Word wrapping. Applied consistently across all three renderers — .docx export, .doc/HTML export, and the on-screen preview. Verified on Rachel Mbolembe: "Bachelor of Science in Information Science …… Expected May 2027" on one line, "University of Maryland College Park, MD" below, "Smith Minor: General Business" below that. -->
+<!-- v12.3.14: SKILLS CATEGORY PRESERVATION (glued labels). When a resume's skills block arrived as ONE flattened line gluing several labelled groups together ("Business & Operations: ... Data & Analytics: ... Tools: ... Languages: ...") the parser fell through to the force-fit path, which ran each label through normalizeLabel() and DISCARDED the resume's own category names. That mislabelled "Business & Operations" as "Technical Skills", "Data & Analytics" as "Domain Knowledge", and dumped "Languages: English, French, Lingala" into Technical Skills (normalizeLabel maps "Languages" to technical, a rule meant for "Programming Languages"). Fix: the preserve-original-labels path now also splits a single glued line on its inline labels, so 2-4 labelled groups keep their exact names and order whether they arrive as separate lines OR one glued line. Regression-checked: unlabelled flat lists still force-fit to defaults; >4 groups still fall back (only four slots exist). Verified on Rachel: Business & Operations / Data & Analytics / Tools / Languages all preserved. -->
+<!-- v12.3.13: EDUCATION LAYOUT FIX (date pairs with the degree). The .docx export rendered the degree alone on one line and put the graduation date on the SCHOOL row, so the date floated out to the right of the school while the degree sat bare. Now the date pairs with the DEGREE line (degree bold-left, date right-aligned), then school, then minor — matching the Experience/Projects convention and the HTML export. Two supporting fixes made this work: (1) splitDegreeMinor now handles a NAMED minor with a qualifier between the separator and "Minor" (e.g. "...Information Science; Smith Minor in General Business" -> degree "Bachelor of Science in Information Science" + minor "Smith Minor in General Business", kept on its own line); the minor phrase is preserved VERBATIM (only a stray trailing period is stripped and the leading letter capitalized) — it is a real credential name, so it is NOT rewritten into a "Minor: X" template. Previously the whole 70+ char string stayed on one line and forced the long-degree fallback. (2) A long-degree guard (mirroring Experience) keeps very long degrees intact with the date on the school row, avoiding ugly Word wrapping. Applied consistently across all three renderers — .docx export, .doc/HTML export, and the on-screen preview. Verified on Rachel Mbolembe: "Bachelor of Science in Information Science …… Expected May 2027" on one line, "University of Maryland College Park, MD" below, "Smith Minor in General Business" below that. -->
 <!-- v12.3.12: ROGUE-BULLET CLEANUP (PROJECTS + ACTIVITIES). Two fixes for bullets that should never have been bullets. (1) Projects: an affiliation/type line such as "Independent Project" (also Personal/Individual/Academic/Group/Team/Class/Course/Freelance/Volunteer/Capstone/Hackathon Project) is now recognized as a context subtitle, matching how "University of Maryland" already renders on other entries — so it no longer prints as the first accomplishment bullet. Applied in both splitProjectLines (render/export) and _looksLikeProjectContinuation (title guard). (2) Activities: new tidyActivityEntries() cleans the section where run-on flattening does the most damage — it (a) drops an org line that is a wrapped-sentence fragment (starts lowercase / opens with a connector), (b) folds a bare membership STATUS ("Candidate", "Member", "Participant", officer titles) into the entry role instead of bulleting it, and (c) splits a crushed membership chain ("X Member Y Member Z Participant") into one clean entry per membership. It never invents content — only reclassifies and splits what is present. Regression-checked: normal single activities and legit multi-keyword accomplishment bullets are left untouched. Verified on Rachel Mbolembe: no "Independent Project" bullet, no rogue "Candidate" bullet, INROADS fragment dropped, and the four glued memberships (Business & Data Club, IS Female-Identifying Student Org, NABA, I4C Mentorship) split into separate lines. -->
 <!-- v12.3.11: EDUCATION-PLACEMENT (STAGE-AWARE) FIX. Section placement is now a function of DEGREE + EXPERIENCE + TIMING, not GPA. Prior builds gated Education-first on GPA>=3.5, so a current student with a fresh/upcoming degree but no GPA on the resume (e.g. an expected-May-2027 grad) was left with Education third-from-bottom on export. New shared helper educationPlacementSignal() is the single source of truth for smartRecommendedOrder (which sets data.order on import, and therefore the export order), the Section Ordering scorecard, and the Section Order coaching notes — so all three always agree. Education leads when the candidate is a current student ("expected"/upcoming grad) OR has thin paid experience (0-1 employment entries); a strong GPA now only strengthens the rationale (surfaced in the note) rather than gating it. Guardrail: a candidate who has already graduated AND has substantial experience (3+ employment entries) is treated as experience-dominant and Education stays lower, with the senior-IC judgment call surfaced via the caveat. Verified: Rachel Mbolembe (current 2027 grad, no GPA, 2 roles) now recommends Summary -> Education -> Skills -> Experience -> Projects and exports Education second; seasoned/experience-dominant profiles keep Education low. -->
 <!-- v12.3.10: COMPOUND LETTER-SPACED HEADING FIX. A v12.3.9 follow-up: compound headings such as "A CTIVITIES & L EADERSHIP" (or "A WARDS AND H ONORS") were rescued as two separate heading lines, stranding the connector ("&"/"and"/"/") on its own line — which then printed as a rogue "&" line under the section header on export. normalizeImportedResumeText now detects a letter-spaced heading + connector + letter-spaced heading and rebuilds it as ONE clean heading line ("ACTIVITIES & LEADERSHIP") before the single-heading pass runs. Verified on Rachel Mbolembe's resume: no stray "&" under Leadership & Activities, heading classifies as activities, and INROADS content no longer splits across a phantom second heading. -->
@@ -147,7 +148,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.13-industry";
+const BUILD_VERSION = "v12.3.14-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -763,17 +764,53 @@ function _parseSkills(lines) {
   // First capture source-labelled groups exactly. If the resume supplies 2–4 clean
   // labelled rows, preserving their names and order is more faithful than forcing
   // them into generic optimizer categories (which can merge unrelated groups).
+  // v12.3.14: also split a line that GLUES several labelled groups together
+  // ("Business & Operations: ... Data & Analytics: ... Tools: ... Languages: ...")
+  // — common when a DOCX/PDF flattens the skills block onto one line. Without
+  // this, the glued line fell through to the force-fit path, which ran each
+  // label through normalizeLabel() and DISCARDED the resume's own category names
+  // — relabelling "Business & Operations" as "Technical Skills", "Data &
+  // Analytics" as "Domain Knowledge", and dumping "Languages" (English, French,
+  // Lingala) into Technical Skills. Splitting inline labels here preserves the
+  // candidate's original grouping and names.
+  const INNER_LABEL = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
   (lines || []).forEach(raw => {
     const line = stripLeadMarker(raw);
     const m = line.match(GENERIC_LABEL);
-    if (m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length))) {
-      const groupLabel = m[1].trim();
-      const items = splitItems(line.slice(m[0].length));
-      if (items.length) labeledGroups.push({ label: groupLabel, items });
+    if (!(m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length)))) return;
+    // Split the remainder on any further inline labels so each labelled group is
+    // captured with its own name, in order.
+    let firstLabel = m[1].trim();
+    let rest = line.slice(m[0].length);
+    const cuts = [];
+    let im;
+    INNER_LABEL.lastIndex = 0;
+    while ((im = INNER_LABEL.exec(rest)) !== null) {
+      if (looksLikeLabel(im[1]) && looksLikeSkillList(rest.slice(im.index + im[0].length))) {
+        cuts.push({ idx: im.index, end: im.index + im[0].length, label: im[1].trim() });
+      }
     }
+    if (!cuts.length) {
+      const items = splitItems(rest);
+      if (items.length) labeledGroups.push({ label: firstLabel, items });
+      return;
+    }
+    // First group runs from start to the first inline label.
+    let segStart = 0, segLabel = firstLabel;
+    cuts.forEach(c => {
+      const items = splitItems(rest.slice(segStart, c.idx));
+      if (items.length) labeledGroups.push({ label: segLabel, items });
+      segLabel = c.label; segStart = c.end;
+    });
+    const tail = splitItems(rest.slice(segStart));
+    if (tail.length) labeledGroups.push({ label: segLabel, items: tail });
   });
 
-  const allLinesAreSimpleLabeledGroups = labeledGroups.length >= 2 && labeledGroups.length <= 4 && labeledGroups.length === (lines || []).filter(x => String(x || "").trim()).length;
+  const nonEmptyLineCount = (lines || []).filter(x => String(x || "").trim()).length;
+  // The preserve-labels path fires when we recovered 2–4 labelled groups and the
+  // source was either that many clean lines OR a single glued line we just split.
+  const allLinesAreSimpleLabeledGroups = labeledGroups.length >= 2 && labeledGroups.length <= 4 &&
+    (labeledGroups.length === nonEmptyLineCount || nonEmptyLineCount === 1);
   if (allLinesAreSimpleLabeledGroups) {
     const slots = ["technical", "dataVisualization", "tools", "domain"];
     labeledGroups.forEach((g, i) => {
