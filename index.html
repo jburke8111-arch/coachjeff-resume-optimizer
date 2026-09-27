@@ -363,6 +363,21 @@ function normalizeImportedResumeText(rawText) {
   t = t.replace(/[\u00a0\u2007\u202f\u2009\u200a\u2002\u2003]/g, " ");
   t = t.replace(/[\u2013\u2014\u2212]/g, "–");
 
+  // Word's Symbol and Wingdings fonts keep their glyphs in the Unicode Private
+  // Use Area, so a PDF exported from Word hands us U+F0B7 for its bullet and
+  // U+F020 for a space. Nothing downstream knew those code points: the bullet
+  // was never recognised as a bullet (so a wrapped line could not be told apart
+  // from a new entry), and every bullet imported with an empty-box glyph that
+  // went straight into the exported resume. A Private Use character at the start
+  // of a line is a list marker in practice, so map it to the "•" every bullet
+  // parser here already understands. Anywhere else it is an icon-font glyph (a
+  // phone or envelope icon in a header) that cannot render: make it a space.
+  t = t.replace(/^([ \t]*)[\uE000-\uF8FF]+[ \t]*/gm, "$1• ");
+  t = t.replace(/[\uE000-\uF8FF]/g, " ");
+  // Ordinary Unicode bullet symbols at the start of a line are list markers
+  // too, but the bullet parsers only recognise • · ▪ ◦ ‣ - – — and *.
+  t = t.replace(/^([ \t]*)[●○■□◆◇♦❖➢➤►▶✓✔][ \t]*/gm, "$1• ");
+
   // v12.3.9: Rescue LETTER-SPACED section headings. Some DOCX/PDF exports flatten
   // a heading's tracked/expanded letter-spacing into a real space after the first
   // character, e.g. "S KILLS", "E XPERIENCE", "P ROJECTS", "A CTIVITIES". Anchored
