@@ -1054,8 +1054,34 @@ function _parseEducation(lines) {
 
   let school = (loc ? loc.school : schoolLine).replace(/[|,]\s*$/, "").trim();
 
-  const degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
-  const gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
+  let degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
+  if (!degreeLine) {
+    // A credential written on its own with no field of study ("BA", "M.S.") was
+    // dropped: the pattern above only recognises BS-shaped abbreviations, so the
+    // degree vanished from the resume entirely. Match the common credentials
+    // standalone — case-sensitively, because lowercase "as" and "ma" are
+    // ordinary words, and on word boundaries so "jobs" cannot read as a degree.
+    const DEGREE_ABBR = /(?:^|\s)(?:AA|AS|BA|BS|BSc|BBA|BFA|MA|MS|MSc|MBA|MFA|JD|MD|PhD|EdD)(?:[,)]|\s|$)/;
+    degreeLine = clean.find(l =>
+      l !== schoolLine &&
+      // "Boston, MA" is a city and state, not a master of arts. Anything ending
+      // in a two-letter state code is a location line, never the degree.
+      !/,\s*[A-Z]{2}\s*$/.test(l) &&
+      DEGREE_ABBR.test(l.replace(/\./g, ""))
+    ) || "";
+  }
+  // A graduation date and a GPA very often share one line ("May 2025 | GPA:
+  // 3.78"). Skipping every GPA-bearing line dropped the date entirely — it did
+  // not fall through to another field, it was simply lost. Keep preferring a
+  // date line with no GPA on it, and only fall back to the GPA line when that
+  // is the only place the date appears, so nothing that parses today changes.
+  let gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
+  if (!gradLine) {
+    const sharedLine = clean.find(l => /gpa/i.test(l) && /20\d{2}/.test(l));
+    // Remove the GPA clause before reading a date out of the line, so a value
+    // like "3.78/4.0" can never be mistaken for one.
+    if (sharedLine) gradLine = sharedLine.replace(/gpa\s*:?\s*[0-4]\.\d{1,2}(?:\s*\/\s*[0-4]\.\d{1,2})?/ig, " ");
+  }
   const gpaLine = clean.find(l => /gpa/i.test(l)) || "";
   const courseworkLine = clean.find(l => /coursework|courses/i.test(l)) || "";
 
@@ -1261,6 +1287,26 @@ function _parseExperienceEntries(lines) {
       }
     }
 
+    // Company-first headers are as common as title-first ones:
+    //
+    //     Northwind Logistics, Chicago, IL      <- employer
+    //     Operations Analyst Intern             <- title
+    //
+    // but the stacked two-line header was read purely by position — row one was
+    // always the title, row two always the employer — so that layout imported
+    // with the two swapped and the location stranded inside the title. The pipe
+    // header above already settles this by asking which side reads like a job
+    // title; this applies the same test to the stacked form. Only swap on clear
+    // evidence: the second line reads like a title AND the first does not.
+    if (org && title && _looksLikeJobTitle(org) && !_looksLikeJobTitle(title)) {
+      const fromHeader = _splitOrgLocation(title);
+      title = org;
+      org = fromHeader.org;
+      // Keep a location already recovered from the other row rather than
+      // clearing it when the employer line carries no city/state of its own.
+      if (fromHeader.location) location = fromHeader.location;
+    }
+
     // A line that starts with an action/accomplishment verb (or a leading bullet mark) is
     // real content, NOT an org/location header — even if it superficially trips
     // _looksLikeOrgLocation (e.g. "Published in Parallel and Distributed Processing
@@ -1353,6 +1399,22 @@ function _parseExperienceEntries(lines) {
   clean.forEach((line, idx) => {
     if (!line || isHardSectionHeading(line)) return;
     const marked = isMarkedBullet(rawLines[idx]);
+
+    // Company-first header, dateless-fallback path. The first row of an entry
+    // became the title purely because it came first, so when the employer was
+    // listed above the job title the real title had nowhere to go and was
+    // pushed into the bullets — costing the entry its title, its employer, its
+    // location, and adding a phantom bullet. If this entry is still empty and
+    // its current title does not read like a job title while this line clearly
+    // does, the first row was the employer: promote and re-split it.
+    if (!marked && current && current.title && !current.org && !current.start &&
+        !current.bullets.length && _looksLikeJobTitle(line) && !_looksLikeJobTitle(current.title)) {
+      const ol = _splitOrgLocation(current.title);
+      current.org = ol.org;
+      current.location = ol.location;
+      current.title = line;
+      return;
+    }
 
     // A bullet-marked line is never a job title or org — always content.
     if (!marked && _looksLikeJobTitle(line) && (!current || current.org || current.start || current.bullets.length)) {
@@ -1571,6 +1633,25 @@ function splitProjectLines(bullets) {
   });
   return { context, tools, toolsValue, accomplishments };
 }
+// A project date can be a month OR a season: resumes write "Spring 2024" at
+// least as often as "May 2024", and a month-only pattern split those mid-date —
+// the name kept "Spring" and the date got only the year. The leading \b is load
+// bearing: without it "fall" matches inside "Rainfall 2024 Prediction Model"
+// and the project imports as name "Rain", date "fall 2024 Prediction Model".
+const _MONTH_OR_SEASON =
+  /\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?|spring|summer|fall|autumn|winter)/.source;
+const _YEAR = /\s+20\d{2}/.source;
+const _DATE_OR_RANGE =
+  _MONTH_OR_SEASON + _YEAR +
+  "(?:" + /\s*[–—-]\s*/.source + "(?:present|current|" + _MONTH_OR_SEASON + _YEAR + "))?";
+const _PROJECT_DATE_RE = new RegExp(_DATE_OR_RANGE, "i");
+// A bare year counts as the date only at the END of the line ("Portfolio Site
+// 2023", "Ledger Tool 2023-2024"). Anywhere else the year is part of the name,
+// not a date — "Rainfall 2024 Prediction Model" is one project, not a project
+// called "Rainfall" dated "2024 Prediction Model".
+const _BARE_YEAR_AT_END = /\b20\d{2}(?:\s*[–—-]\s*(?:20\d{2}|present|current))?\s*$/.source;
+const _PROJECT_DATE_OR_YEAR_RE = new RegExp(_DATE_OR_RANGE + "|" + _BARE_YEAR_AT_END, "i");
+
 function _looksLikeProjectTitle(line) {
   const s = String(line || "").trim();
   if (!s || s.length > 140) return false;
@@ -1578,7 +1659,7 @@ function _looksLikeProjectTitle(line) {
   // Never promote a continuation line (tools list, org subtitle) to a title.
   if (_looksLikeProjectContinuation(s)) return false;
   // A title with its own date range is the strongest signal.
-  if (/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?/i.test(s)) return true;
+  if (_PROJECT_DATE_RE.test(s)) return true;
   // Keyword fallback: must read like a project name, and a leading past-tense
   // action verb (e.g. "Led...", "Achieved...") signals a bullet, not a title.
   if (/^(led|analyzed|built|developed|created|managed|designed|implemented|synthesized|conducted|performed|delivered|achieved|reduced|increased|improved|generated|automated|streamlined|launched|spearheaded|coordinated|collaborated|researched|trained|tested|deployed|maintained|configured|resolved|optimized|engineered|established|drafted|produced|secured|negotiated|presented|evaluated|identified|recommended|supported|organized|executed|programmed|published|founded|initiated|mentored|redesigned|forecasted|modeled|wrote|won|applied|documented|utilized|leveraged|integrated)\b/i.test(s)) return false;
@@ -1586,10 +1667,12 @@ function _looksLikeProjectTitle(line) {
 }
 function _parseProjectLine(line) {
   const s = String(line || "").trim();
-  const dateMatch = s.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?|\b20\d{2}\b/i);
+  const dateMatch = s.match(_PROJECT_DATE_OR_YEAR_RE);
   if (dateMatch) {
     const idx = dateMatch.index;
-    return { name: s.slice(0, idx).replace(/[–—-]\s*$/,"").trim(), date: s.slice(idx).trim() };
+    // Strip whatever separated the title from its date. Only dashes were being
+    // removed, so every pipe-delimited title kept its pipe ("Project Name |").
+    return { name: s.slice(0, idx).replace(/[\s|·•,;:–—-]+$/, "").trim(), date: s.slice(idx).trim() };
   }
   return { name: s, date: "" };
 }
