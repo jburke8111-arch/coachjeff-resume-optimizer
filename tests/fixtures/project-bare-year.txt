@@ -1,0 +1,7 @@
+Omar Haddad
+Phoenix, AZ | omar.haddad@example.com
+
+PROJECTS
+Portfolio Site 2023
+- Built a static site with 12 case studies
+- Cut load time to under 400ms

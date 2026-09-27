@@ -1,0 +1,8 @@
+Hannah Cho
+Portland, OR | hannah.cho@example.com
+
+EXPERIENCE
+Riverbend Health	June 2024 - August 2024
+Data Analyst Intern	Portland, OR
+- Cleaned 40,000 patient records, raising completeness from 71% to 96%
+- Automated the weekly census report, saving 5 hours per week

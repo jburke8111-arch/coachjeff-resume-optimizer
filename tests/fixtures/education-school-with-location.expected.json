@@ -1,0 +1,18 @@
+{
+  "failureMode": "education-location",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "School line carries a city/state. The location stays glued to the school name and the dedicated location field stays empty.",
+  "expect": {
+    "name": "Sofia Delgado",
+    "education": [
+      {
+        "school": "Colorado State University",
+        "location": "Fort Collins, CO",
+        "degree": "Bachelor of Science in Environmental Science",
+        "grad": "May 2025",
+        "gpa": "3.41"
+      }
+    ]
+  }
+}

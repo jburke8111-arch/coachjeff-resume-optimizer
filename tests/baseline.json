@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-09-18",
+  "metric": "parse-quality",
+  "revision": "v12.3.16-industry (commit 87a0073) — index.html as committed, before any parser fix",
+  "resumes": 13,
+  "garbleRate": 0.6923,
+  "fieldAccuracy": 0.7458,
+  "perFixture": {
+    "clean-single-column": "clean",
+    "degree-abbreviation-only": "garbled",
+    "education-date-with-gpa": "garbled",
+    "education-school-with-location": "clean",
+    "experience-company-first-multi": "garbled",
+    "experience-company-first": "garbled",
+    "experience-multi-entry-mixed": "garbled",
+    "experience-tab-aligned-dates": "garbled",
+    "headings-nonstandard": "clean",
+    "project-bare-year": "clean",
+    "project-pipe-delimiter": "garbled",
+    "project-season-date": "garbled",
+    "project-year-in-name": "garbled"
+  }
+}

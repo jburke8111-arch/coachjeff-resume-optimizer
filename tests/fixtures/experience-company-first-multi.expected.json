@@ -1,0 +1,13 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Two company-first entries in a row. The first recovers correctly; the second loses its employer and location, so the company-first handling works only for the first entry in a section. Found by held-out testing.",
+  "expect": {
+    "name": "Derek Osei",
+    "experience": [
+      { "title": "Supply Chain Analyst", "org": "Cardinal Health", "location": "Dublin, OH", "start": "January 2025", "end": "Present", "bulletCount": 2 },
+      { "title": "Inventory Associate", "org": "Kroger", "location": "Columbus, OH", "start": "May 2023", "end": "December 2024", "bulletCount": 1 }
+    ]
+  }
+}

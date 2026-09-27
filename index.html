@@ -152,6 +152,12 @@
 <script type="text/jsx-app" id="app-source">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
+// ===== LIB START =====
+// Everything between LIB START and LIB END is pure logic: no React, no DOM,
+// no browser globals at module scope. tools/extract-lib.js slices this range
+// verbatim so it can be loaded and tested under Node (npm test).
+// Keep it that way — a bare window/document reference here breaks the tests.
+
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
 const BUILD_VERSION = "v12.3.16-industry";
@@ -3954,6 +3960,8 @@ function atsCompatibilityScore(data, resumeStrength) {
   if (resumeStrength && resumeStrength.edu && resumeStrength.edu.issues && resumeStrength.edu.issues.length) score -= 3;
   return Math.max(70, Math.min(100, Math.round(score)));
 }
+
+// ===== LIB END =====
 
 function App() {
   const [data, setData] = useState(STARTER);

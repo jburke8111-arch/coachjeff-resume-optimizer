@@ -1,0 +1,12 @@
+{
+  "failureMode": "project-titles",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "The year is part of the project's name, not its date. Guards the season/bare-year matching against splitting a title mid-name.",
+  "expect": {
+    "name": "Ivy Chandra",
+    "projects": [
+      { "name": "Rainfall 2024 Prediction Model", "date": "", "bulletCount": 2 }
+    ]
+  }
+}
