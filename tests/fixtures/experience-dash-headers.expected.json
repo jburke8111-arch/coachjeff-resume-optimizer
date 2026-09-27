@@ -1,0 +1,35 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "One-line headers joined by a spaced dash, in all three orders: 'Title - Company, City, ST', 'Company - Title', and 'Company - City, ST' with the title on the next line. Before: the whole header became the title and the employer and location were empty.",
+  "expect": {
+    "name": "Sam Lee",
+    "experience": [
+      {
+        "title": "Software Engineer Intern",
+        "org": "Google",
+        "location": "Mountain View, CA",
+        "start": "Jun 2025",
+        "end": "Aug 2025",
+        "bulletCount": 1
+      },
+      {
+        "title": "Data Analyst Intern",
+        "org": "Northwind Health",
+        "location": "",
+        "start": "Jan 2025",
+        "end": "May 2025",
+        "bulletCount": 1
+      },
+      {
+        "title": "Operations Intern",
+        "org": "Acme Corp",
+        "location": "Chicago, IL",
+        "start": "Jun 2024",
+        "end": "Aug 2024",
+        "bulletCount": 1
+      }
+    ]
+  }
+}

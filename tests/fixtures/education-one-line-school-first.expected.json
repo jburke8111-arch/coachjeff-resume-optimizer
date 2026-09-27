@@ -1,0 +1,17 @@
+{
+  "failureMode": "education-one-line",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "School, degree and date on one pipe-separated line, school first. Before: the whole line was used as both the degree and the school.",
+  "expect": {
+    "name": "Morgan Diaz",
+    "education": [
+      {
+        "school": "University of Houston",
+        "degree": "B.S. in Biology",
+        "grad": "May 2025",
+        "gpa": "3.52"
+      }
+    ]
+  }
+}

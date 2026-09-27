@@ -54,7 +54,7 @@ function topLevelNames(src) {
 // functions reference `window` lazily inside their bodies (CDN loaders for
 // PDF.js, mammoth, JSZip). Those are never called by the parse tests; the stub
 // just keeps the reference from throwing if one is reached.
-function loadLib(indexPath = INDEX_PATH) {
+function loadLib(indexPath = INDEX_PATH, windowStub = { location: { href: "" } }) {
   const src = extractLibSource(indexPath);
   const names = topLevelNames(src);
   const preamble = "var window = arguments[0];\n";
@@ -65,7 +65,7 @@ function loadLib(indexPath = INDEX_PATH) {
   } catch (err) {
     throw new Error("Extracted lib failed to parse: " + err.message);
   }
-  return factory({ location: { href: "" } });
+  return factory(windowStub);
 }
 
 module.exports = { extractLibSource, topLevelNames, loadLib, INDEX_PATH };

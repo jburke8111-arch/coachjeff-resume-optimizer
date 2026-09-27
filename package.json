@@ -2,16 +2,18 @@
   "name": "coachjeff-resume-optimizer",
   "version": "12.3.16",
   "private": true,
-  "description": "Measurement tooling for the Resume Optimizer. The app itself is the static index.html and needs no build.",
+  "description": "Measurement tooling for the Resume Optimizer (text and PDF resumes). The app itself is the static index.html and needs no build.",
   "scripts": {
     "test": "node tools/check-app-compiles.js && node tests/run.js",
     "parse-quality": "node tools/parse-quality.js",
     "baseline": "node tests/run.js --update-baseline",
     "extract-lib": "node tools/extract-lib.js",
-    "check-app": "node tools/check-app-compiles.js"
+    "check-app": "node tools/check-app-compiles.js",
+    "make-fixture-pdfs": "node tools/make-fixture-pdfs.js"
   },
   "license": "UNLICENSED",
   "devDependencies": {
-    "@babel/standalone": "7.23.5"
+    "@babel/standalone": "7.23.5",
+    "pdfjs-dist": "3.11.174"
   }
 }
