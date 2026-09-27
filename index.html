@@ -809,7 +809,9 @@ function _parseSkills(lines) {
   const labeledGroups = [];
 
   const stripLeadMarker = (s) => String(s || "").replace(/^\s*(?:[-–—•*·▪◦‣]|\d+[.)])\s*/, "").trim();
-  const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
+  // A label may contain commas ("Programming, Protocols & Tools:"). Without the
+  // comma the label went unrecognised and its skills spilled into other groups.
+  const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|,|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
 
   function normalizeLabel(label) {
     const l = String(label || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -826,12 +828,15 @@ function _parseSkills(lines) {
     if (/\d{3,}/.test(h)) return false;
     return /[A-Za-z]/.test(h);
   };
+  // "|" and ";" separate list items as often as commas do ("DataCamp: SQL |
+  // Google: Data Analytics"). Counting only commas rejected those rows as prose.
   const looksLikeSkillList = (rest) => {
     const r = String(rest || "").trim();
     if (!r) return false;
-    if (/[.!?]$/.test(r) && !/,/.test(r)) return false;
-    if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !/,/.test(r)) return false;
-    return /,/.test(r) || r.split(/\s+/).length <= 4;
+    const hasSeparator = /[,;|]/.test(r);
+    if (/[.!?]$/.test(r) && !hasSeparator) return false;
+    if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !hasSeparator) return false;
+    return hasSeparator || r.split(/\s+/).length <= 4;
   };
   const splitItems = (text) => String(text || "").split(/[,;|••]/).map(x => stripLeadMarker(x)).filter(Boolean);
   const cleanUnique = arr => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
@@ -849,10 +854,48 @@ function _parseSkills(lines) {
   // Lingala) into Technical Skills. Splitting inline labels here preserves the
   // candidate's original grouping and names.
   const INNER_LABEL = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
+  // Items can carry their own "Name: value" colon — certifications listed as
+  // "DataCamp: Intermediate SQL | Google: Data Analytics". When a group's first
+  // item has that shape, later "Word:" matches in the row are more items of the
+  // same kind, not new groups; treating "Microsoft:" as a group label dropped the
+  // word from "Microsoft: Azure Fundamentals" entirely.
+  const itemsCarryColons = (rest) => /^[^,;|]*:/.test(String(rest || "").trim());
+  // A long row wraps onto the next line in a PDF, and a line with no label of
+  // its own that continues it was being dropped — the unmatched line count
+  // then pushed the whole section down the relabelling path below. Two shapes:
+  //  - the row ended on a separator ("... (AZ-900) |"): the next line starts
+  //    new items;
+  //  - the row ran the full width without one ("... | Tableau: Desktop"): it
+  //    was cut mid-item, so the next line's first piece finishes that item.
+  // "Full width" is judged against the longest line in the section, so a short
+  // row ("Languages: Python, SQL") is never read as cut off.
+  const longestLine = Math.max(0, ...(lines || []).map(l => stripLeadMarker(l).length));
+  const fillsWidth = (l) => l.length >= 60 && l.length >= 0.85 * longestLine;
+  let continuationLines = 0;
+  let prevRowOpen = false;
+  let prevRowFull = false;
   (lines || []).forEach(raw => {
     const line = stripLeadMarker(raw);
     const m = line.match(GENERIC_LABEL);
-    if (!(m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length)))) return;
+    if (!(m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length)))) {
+      if (line && labeledGroups.length && (prevRowOpen || prevRowFull)) {
+        const group = labeledGroups[labeledGroups.length - 1];
+        const items = splitItems(line);
+        if (!prevRowOpen && items.length && group.items.length) {
+          group.items[group.items.length - 1] += " " + items.shift();
+        }
+        group.items.push(...items);
+        continuationLines++;
+        prevRowOpen = /[,;|]\s*$/.test(line);
+        prevRowFull = fillsWidth(line);
+      } else {
+        prevRowOpen = false;
+        prevRowFull = false;
+      }
+      return;
+    }
+    prevRowOpen = /[,;|]\s*$/.test(line);
+    prevRowFull = fillsWidth(line);
     // Split the remainder on any further inline labels so each labelled group is
     // captured with its own name, in order.
     let firstLabel = m[1].trim();
@@ -860,7 +903,7 @@ function _parseSkills(lines) {
     const cuts = [];
     let im;
     INNER_LABEL.lastIndex = 0;
-    while ((im = INNER_LABEL.exec(rest)) !== null) {
+    while (!itemsCarryColons(rest) && (im = INNER_LABEL.exec(rest)) !== null) {
       if (looksLikeLabel(im[1]) && looksLikeSkillList(rest.slice(im.index + im[0].length))) {
         cuts.push({ idx: im.index, end: im.index + im[0].length, label: im[1].trim() });
       }
@@ -881,7 +924,8 @@ function _parseSkills(lines) {
     if (tail.length) labeledGroups.push({ label: segLabel, items: tail });
   });
 
-  const nonEmptyLineCount = (lines || []).filter(x => String(x || "").trim()).length;
+  // Rows, not physical lines: a wrapped continuation belongs to the row above.
+  const nonEmptyLineCount = (lines || []).filter(x => String(x || "").trim()).length - continuationLines;
   // The preserve-labels path fires when we recovered 2–4 labelled groups and the
   // source was either that many clean lines OR a single glued line we just split.
   const allLinesAreSimpleLabeledGroups = labeledGroups.length >= 2 && labeledGroups.length <= 4 &&
@@ -928,7 +972,7 @@ function _parseSkills(lines) {
     }
     const INNER = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
     let segments = [], lastIdx = 0, lastBucket = bucket, im;
-    while ((im = INNER.exec(line)) !== null) {
+    while (!itemsCarryColons(line) && (im = INNER.exec(line)) !== null) {
       if (looksLikeLabel(im[1]) && looksLikeSkillList(line.slice(im.index + im[0].length))) {
         segments.push({ text: line.slice(lastIdx, im.index), bucket: lastBucket });
         seenLabels.add(im[1].trim());
