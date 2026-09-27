@@ -1,0 +1,38 @@
+{
+  "failureMode": "none",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Happy path: title-first experience, dates on their own lines. Parses correctly today — this fixture exists to catch regressions, not to be fixed.",
+  "expect": {
+    "name": "Jane A. Rivera",
+    "contact": {
+      "email": "jane.rivera@example.com",
+      "phone": "(512) 555-0134",
+      "cityState": "Austin, TX"
+    },
+    "education": [
+      {
+        "school": "The University of Texas at Austin",
+        "degree": "Bachelor of Science in Computer Science",
+        "grad": "May 2025",
+        "gpa": "3.78"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Data Engineering Intern",
+        "org": "Acme Analytics",
+        "location": "Austin, TX",
+        "start": "June 2024",
+        "end": "August 2024",
+        "bulletCount": 3
+      }
+    ],
+    "projects": [
+      {
+        "name": "Campus Transit Tracker",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

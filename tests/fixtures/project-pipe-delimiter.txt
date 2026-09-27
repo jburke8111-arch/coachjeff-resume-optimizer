@@ -1,0 +1,7 @@
+Dana Osei
+Seattle, WA | dana.osei@example.com
+
+PROJECTS
+Campus Transit Tracker | May 2024
+- Developed React app used by 1,200 students
+- Integrated real-time GTFS feed

@@ -152,6 +152,12 @@
 <script type="text/jsx-app" id="app-source">
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
+// ===== LIB START =====
+// Everything between LIB START and LIB END is pure logic: no React, no DOM,
+// no browser globals at module scope. tools/extract-lib.js slices this range
+// verbatim so it can be loaded and tested under Node (npm test).
+// Keep it that way — a bare window/document reference here breaks the tests.
+
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
 const BUILD_VERSION = "v12.3.16-industry";
@@ -356,6 +362,21 @@ function normalizeImportedResumeText(rawText) {
   // assume ordinary spaces/hyphens match reliably (e.g. "Cypress,\u00a0CA").
   t = t.replace(/[\u00a0\u2007\u202f\u2009\u200a\u2002\u2003]/g, " ");
   t = t.replace(/[\u2013\u2014\u2212]/g, "–");
+
+  // Word's Symbol and Wingdings fonts keep their glyphs in the Unicode Private
+  // Use Area, so a PDF exported from Word hands us U+F0B7 for its bullet and
+  // U+F020 for a space. Nothing downstream knew those code points: the bullet
+  // was never recognised as a bullet (so a wrapped line could not be told apart
+  // from a new entry), and every bullet imported with an empty-box glyph that
+  // went straight into the exported resume. A Private Use character at the start
+  // of a line is a list marker in practice, so map it to the "•" every bullet
+  // parser here already understands. Anywhere else it is an icon-font glyph (a
+  // phone or envelope icon in a header) that cannot render: make it a space.
+  t = t.replace(/^([ \t]*)[\uE000-\uF8FF]+[ \t]*/gm, "$1• ");
+  t = t.replace(/[\uE000-\uF8FF]/g, " ");
+  // Ordinary Unicode bullet symbols at the start of a line are list markers
+  // too, but the bullet parsers only recognise • · ▪ ◦ ‣ - – — and *.
+  t = t.replace(/^([ \t]*)[●○■□◆◇♦❖➢➤►▶✓✔][ \t]*/gm, "$1• ");
 
   // v12.3.9: Rescue LETTER-SPACED section headings. Some DOCX/PDF exports flatten
   // a heading's tracked/expanded letter-spacing into a real space after the first
@@ -788,7 +809,9 @@ function _parseSkills(lines) {
   const labeledGroups = [];
 
   const stripLeadMarker = (s) => String(s || "").replace(/^\s*(?:[-–—•*·▪◦‣]|\d+[.)])\s*/, "").trim();
-  const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
+  // A label may contain commas ("Programming, Protocols & Tools:"). Without the
+  // comma the label went unrecognised and its skills spilled into other groups.
+  const GENERIC_LABEL = /^([A-Za-z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-|,|\s)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/;
 
   function normalizeLabel(label) {
     const l = String(label || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -805,12 +828,15 @@ function _parseSkills(lines) {
     if (/\d{3,}/.test(h)) return false;
     return /[A-Za-z]/.test(h);
   };
+  // "|" and ";" separate list items as often as commas do ("DataCamp: SQL |
+  // Google: Data Analytics"). Counting only commas rejected those rows as prose.
   const looksLikeSkillList = (rest) => {
     const r = String(rest || "").trim();
     if (!r) return false;
-    if (/[.!?]$/.test(r) && !/,/.test(r)) return false;
-    if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !/,/.test(r)) return false;
-    return /,/.test(r) || r.split(/\s+/).length <= 4;
+    const hasSeparator = /[,;|]/.test(r);
+    if (/[.!?]$/.test(r) && !hasSeparator) return false;
+    if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !hasSeparator) return false;
+    return hasSeparator || r.split(/\s+/).length <= 4;
   };
   const splitItems = (text) => String(text || "").split(/[,;|••]/).map(x => stripLeadMarker(x)).filter(Boolean);
   const cleanUnique = arr => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
@@ -828,10 +854,48 @@ function _parseSkills(lines) {
   // Lingala) into Technical Skills. Splitting inline labels here preserves the
   // candidate's original grouping and names.
   const INNER_LABEL = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
+  // Items can carry their own "Name: value" colon — certifications listed as
+  // "DataCamp: Intermediate SQL | Google: Data Analytics". When a group's first
+  // item has that shape, later "Word:" matches in the row are more items of the
+  // same kind, not new groups; treating "Microsoft:" as a group label dropped the
+  // word from "Microsoft: Azure Fundamentals" entirely.
+  const itemsCarryColons = (rest) => /^[^,;|]*:/.test(String(rest || "").trim());
+  // A long row wraps onto the next line in a PDF, and a line with no label of
+  // its own that continues it was being dropped — the unmatched line count
+  // then pushed the whole section down the relabelling path below. Two shapes:
+  //  - the row ended on a separator ("... (AZ-900) |"): the next line starts
+  //    new items;
+  //  - the row ran the full width without one ("... | Tableau: Desktop"): it
+  //    was cut mid-item, so the next line's first piece finishes that item.
+  // "Full width" is judged against the longest line in the section, so a short
+  // row ("Languages: Python, SQL") is never read as cut off.
+  const longestLine = Math.max(0, ...(lines || []).map(l => stripLeadMarker(l).length));
+  const fillsWidth = (l) => l.length >= 60 && l.length >= 0.85 * longestLine;
+  let continuationLines = 0;
+  let prevRowOpen = false;
+  let prevRowFull = false;
   (lines || []).forEach(raw => {
     const line = stripLeadMarker(raw);
     const m = line.match(GENERIC_LABEL);
-    if (!(m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length)))) return;
+    if (!(m && looksLikeLabel(m[1]) && looksLikeSkillList(line.slice(m[0].length)))) {
+      if (line && labeledGroups.length && (prevRowOpen || prevRowFull)) {
+        const group = labeledGroups[labeledGroups.length - 1];
+        const items = splitItems(line);
+        if (!prevRowOpen && items.length && group.items.length) {
+          group.items[group.items.length - 1] += " " + items.shift();
+        }
+        group.items.push(...items);
+        continuationLines++;
+        prevRowOpen = /[,;|]\s*$/.test(line);
+        prevRowFull = fillsWidth(line);
+      } else {
+        prevRowOpen = false;
+        prevRowFull = false;
+      }
+      return;
+    }
+    prevRowOpen = /[,;|]\s*$/.test(line);
+    prevRowFull = fillsWidth(line);
     // Split the remainder on any further inline labels so each labelled group is
     // captured with its own name, in order.
     let firstLabel = m[1].trim();
@@ -839,7 +903,7 @@ function _parseSkills(lines) {
     const cuts = [];
     let im;
     INNER_LABEL.lastIndex = 0;
-    while ((im = INNER_LABEL.exec(rest)) !== null) {
+    while (!itemsCarryColons(rest) && (im = INNER_LABEL.exec(rest)) !== null) {
       if (looksLikeLabel(im[1]) && looksLikeSkillList(rest.slice(im.index + im[0].length))) {
         cuts.push({ idx: im.index, end: im.index + im[0].length, label: im[1].trim() });
       }
@@ -860,7 +924,8 @@ function _parseSkills(lines) {
     if (tail.length) labeledGroups.push({ label: segLabel, items: tail });
   });
 
-  const nonEmptyLineCount = (lines || []).filter(x => String(x || "").trim()).length;
+  // Rows, not physical lines: a wrapped continuation belongs to the row above.
+  const nonEmptyLineCount = (lines || []).filter(x => String(x || "").trim()).length - continuationLines;
   // The preserve-labels path fires when we recovered 2–4 labelled groups and the
   // source was either that many clean lines OR a single glued line we just split.
   const allLinesAreSimpleLabeledGroups = labeledGroups.length >= 2 && labeledGroups.length <= 4 &&
@@ -907,7 +972,7 @@ function _parseSkills(lines) {
     }
     const INNER = /\s+([A-Z][A-Za-z0-9+#.\-]*(?:\s*(?:&|and|\/|-)\s*[A-Za-z][A-Za-z0-9+#.\-]*){0,3})\s*:\s*/g;
     let segments = [], lastIdx = 0, lastBucket = bucket, im;
-    while ((im = INNER.exec(line)) !== null) {
+    while (!itemsCarryColons(line) && (im = INNER.exec(line)) !== null) {
       if (looksLikeLabel(im[1]) && looksLikeSkillList(line.slice(im.index + im[0].length))) {
         segments.push({ text: line.slice(lastIdx, im.index), bucket: lastBucket });
         seenLabels.add(im[1].trim());
@@ -1016,14 +1081,58 @@ function _parseEducation(lines) {
     const m = schoolLine.match(re);
     if (!m) return null;
     const idx = schoolLine.lastIndexOf(m[1] + ",");
-    return { city: m[1], st: m[2], school: schoolLine.slice(0, idx).replace(/[|,]\s*$/, "").trim() };
+    return {
+      city: m[1], st: m[2],
+      school: schoolLine.slice(0, idx).replace(/[|,]\s*$/, "").trim(),
+      // True when a comma or pipe sits between the school and the city.
+      separated: /[|,]\s*$/.test(schoolLine.slice(0, idx)),
+    };
   };
+  // Only meaningful for GLUED text ("...International Cypress, CA"): with a
+  // comma between them, a city that repeats the school's last word is simply
+  // correct ("University of Houston, Houston, TX"), and vetoing it left the
+  // city and state stuck on the end of the school name.
   const dupTail = (r) => {
-    if (!r) return false;
+    if (!r || r.separated) return false;
     const w = r.school.split(/\s+/);
     const last = (w[w.length - 1] || "").toLowerCase();
     return r.city.split(/\s+/)[0].toLowerCase() === last;
   };
+
+  // A degree token, bounded so it can't fire inside an ordinary word: the loose
+  // /b\.?s\.?/ used elsewhere matches the "bs" in "Jacobs School". Used to tell
+  // the degree part of a line from the school part, and to keep a degree line
+  // ("B.A. in History, magna cum laude") from being lifted into Awards.
+  const DEGREE_TOKEN = /\b(?:(?:bachelor|master)(?:'?s)?|associate'?s?|doctor(?:ate)?|degree|minor|major|ph\.?d|m\.?b\.?a|b\.?b\.?a|b\.?f\.?a|m\.?f\.?a|b\.?[as]c?|m\.?[as]c?)\.?(?![a-z])/i;
+  // "MA" and "MS" are also state codes: "Boston University, Boston, MA".
+  const STATE_ONLY = new RegExp("^(?:" + STATE_ABBRS + ")$");
+
+  // The degree and the school are often written on ONE line, in either order:
+  //   "B.S. in Computer Science, Minor in Applied Mathematics, Texas State University | May 2026"
+  //   "University of Houston | B.S. in Biology | May 2025"
+  // The same line was then picked as both, so degree and school came out
+  // identical. Split it where the degree part and the school part meet: the
+  // school part runs from the first segment naming an institution, the degree
+  // part from the first segment containing a degree. Dates and GPA are dropped
+  // from the split only — they stay on the line in `clean`, where the grad-date
+  // and GPA finders below read them.
+  const schoolLineAsWritten = schoolLine;
+  let degreeFromSchoolLine = "";
+  {
+    const segs = schoolLine.split("|").map(p => p.trim())
+      .filter(p => p && !/^(?:expected\s+|anticipated\s+)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}\b/i.test(p) && !/^gpa\b/i.test(p))
+      .join(", ")
+      .split(/\s*,\s*/)
+      .filter(Boolean);
+    const k = segs.findIndex(p => INSTITUTION_RE.test(p));
+    const d = segs.findIndex(p => DEGREE_TOKEN.test(p) && !STATE_ONLY.test(p));
+    if (k !== -1 && d !== -1 && k !== d) {
+      const degreeSegs = d < k ? segs.slice(0, k) : segs.slice(d);
+      const schoolSegs = d < k ? segs.slice(k) : segs.slice(0, d);
+      degreeFromSchoolLine = degreeSegs.join(", ");
+      schoolLine = schoolSegs.join(", ");
+    }
+  }
 
   // Prefer a two-word city (San Diego, Boca Raton); fall back to one word when
   // the two-word form's first token is an institution tail (International) or
@@ -1048,10 +1157,50 @@ function _parseEducation(lines) {
 
   let school = (loc ? loc.school : schoolLine).replace(/[|,]\s*$/, "").trim();
 
-  const degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
-  const gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
+  let degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
+  if (!degreeLine) {
+    // A credential written on its own with no field of study ("BA", "M.S.") was
+    // dropped: the pattern above only recognises BS-shaped abbreviations, so the
+    // degree vanished from the resume entirely. Match the common credentials
+    // standalone — case-sensitively, because lowercase "as" and "ma" are
+    // ordinary words, and on word boundaries so "jobs" cannot read as a degree.
+    const DEGREE_ABBR = /(?:^|\s)(?:AA|AS|BA|BS|BSc|BBA|BFA|MA|MS|MSc|MBA|MFA|JD|MD|PhD|EdD)(?:[,)]|\s|$)/;
+    degreeLine = clean.find(l =>
+      l !== schoolLine &&
+      // "Boston, MA" is a city and state, not a master of arts. Anything ending
+      // in a two-letter state code is a location line, never the degree.
+      !/,\s*[A-Z]{2}\s*$/.test(l) &&
+      DEGREE_ABBR.test(l.replace(/\./g, ""))
+    ) || "";
+  }
+  // A graduation date and a GPA very often share one line ("May 2025 | GPA:
+  // 3.78"). Skipping every GPA-bearing line dropped the date entirely — it did
+  // not fall through to another field, it was simply lost. Keep preferring a
+  // date line with no GPA on it, and only fall back to the GPA line when that
+  // is the only place the date appears, so nothing that parses today changes.
+  let gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
+  if (!gradLine) {
+    const sharedLine = clean.find(l => /gpa/i.test(l) && /20\d{2}/.test(l));
+    // Remove the GPA clause before reading a date out of the line, so a value
+    // like "3.78/4.0" can never be mistaken for one.
+    if (sharedLine) gradLine = sharedLine.replace(/gpa\s*:?\s*[0-4]\.\d{1,2}(?:\s*\/\s*[0-4]\.\d{1,2})?/ig, " ");
+  }
+  // The one-line form above: the degree found here IS the school line as written.
+  if (degreeFromSchoolLine && degreeLine === schoolLineAsWritten) degreeLine = degreeFromSchoolLine;
   const gpaLine = clean.find(l => /gpa/i.test(l)) || "";
   const courseworkLine = clean.find(l => /coursework|courses/i.test(l)) || "";
+  // Scholarships and honors listed under the degree ("• Western Digital STEM
+  // Scholarship Awardee") had no field to land in, so they were dropped from the
+  // resume on import. Collect them here; mapImportedResumeToBuilder moves them
+  // into Awards, where the editor and the export can show them. A line already
+  // used as the school, degree, GPA or coursework is skipped — "B.S. in Biology,
+  // cum laude" stays the degree.
+  const HONOR_RE = /\b(?:scholarships?|scholar|awards?|awardee|honou?rs?|dean'?s list|president'?s list|cum laude|phi beta kappa|fellowship)\b/i;
+  const honors = clean
+    .filter(l => l !== schoolLineAsWritten && l !== gpaLine && l !== courseworkLine)
+    .filter(l => l !== degreeLine && HONOR_RE.test(l) && !DEGREE_TOKEN.test(l))
+    .map(l => l.replace(/^[•·▪◦‣\-–—*]\s*/, "").trim())
+    .filter(Boolean);
 
   return [{
     id: _newId(),
@@ -1060,7 +1209,11 @@ function _parseEducation(lines) {
     location,
     grad: (gradLine.match(/(?:expected\s*)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}/i) || [""])[0],
     gpa: (gpaLine.match(/\b[0-4]\.\d{1,2}\s*\/\s*[0-4]\.\d{1,2}\b|\b[0-4]\.\d{1,2}\b/) || [""])[0],
-    coursework: courseworkLine.replace(/relevant coursework\s*:?/i, "").trim()
+    // Strip any "<qualifier> Coursework:" lead-in, not only "Relevant". The export
+    // prints its own "Relevant Coursework:" label, so "Selected Coursework: ..."
+    // came out as "Relevant Coursework: Selected Coursework: ...".
+    coursework: courseworkLine.replace(/^(?:[•·▪◦‣\-–—*]\s*)?(?:(?:relevant|selected|related|key|core|notable|major|graduate|upper[- ]level)\s+)?(?:course\s*work|courses)\s*:?\s*/i, "").trim(),
+    honors
   }];
 }
 function _parseEntry(lines, emptyFactory, titleKey, orgKey) {
@@ -1112,6 +1265,12 @@ function _splitOrgLocation(line) {
     const parts = s.split("|").map(x => x.trim()).filter(Boolean);
     return { org: parts[0] || "", location: parts.slice(1).join(" | ") || "" };
   }
+
+  // "Acme Corp - Chicago, IL": a spaced dash before a trailing City, ST. The
+  // generic match below lets a city run through spaces and dashes, so it took
+  // the whole line as the location and returned it all as the employer.
+  const dashLoc = s.match(/^(.+?)\s+[-–]\s+((?:[A-Z][a-zA-Z.'-]*)(?:\s[A-Z][a-zA-Z.'-]*)*,\s*[A-Z]{2}|Remote(?:,\s*USA)?)$/);
+  if (dashLoc) return { org: dashLoc[1].trim(), location: dashLoc[2].trim() };
 
   const loc = s.match(/([A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}|Remote,\s*USA|Remote)$/);
   if (loc) {
@@ -1197,13 +1356,14 @@ function _parseExperienceEntries(lines) {
     const date = firstDate || secondDate;
     const dateLineIdx = firstDate ? 0 : (secondDate ? 1 : -1);
 
-    let headerText = firstDate ? firstDate.before : first;
+    // Strip the separator left between a header and its dates ("Title - Org |
+    // May 2025 - Jul 2025") BEFORE the header becomes the title. It used to be
+    // stripped afterwards, so every header of that shape kept a trailing "|".
+    let headerText = String((firstDate ? firstDate.before : first) || "").replace(/\s*\|\s*$/, "").trim();
     let title = headerText;
     let org = "";
     let location = "";
     let bulletStart = 1;
-
-    headerText = String(headerText || "").replace(/\|\s*$/, "").trim();
 
     // Parse a pipe header. If one side clearly looks like a job title, use that
     // signal to determine whether the source is "Org | Title" or "Title | Org".
@@ -1227,6 +1387,30 @@ function _parseExperienceEntries(lines) {
           const rest = parts.slice(1);
           org = rest[rest.length - 1] || "";
           if (rest.length > 1) title = [left].concat(rest.slice(0, -1)).join(" — ");
+        }
+      }
+    } else {
+      // "Title - Organization, City, ST" on one line is a common Word layout,
+      // but it was never split: the whole line became the title and the
+      // employer and location were left empty. Split at the first SPACED dash
+      // (never a hyphen inside a word such as "Co-Founder") and let the same
+      // job-title test the pipe header uses decide which side is the title.
+      // When neither side clearly reads as a title, keep the header whole
+      // rather than guess.
+      const dashed = headerText.match(/^(.+?)\s+[-–]\s+(.+)$/);
+      if (dashed) {
+        const left = dashed[1].trim();
+        const right = dashed[2].trim();
+        const leftIsTitle = _looksLikeJobTitle(left);
+        const rightIsTitle = _looksLikeJobTitle(right);
+        const pick = leftIsTitle && !rightIsTitle ? [left, right]
+          : rightIsTitle && !leftIsTitle ? [right, left]
+          : null;
+        if (pick) {
+          const ol = _splitOrgLocation(pick[1]);
+          title = pick[0];
+          org = ol.org;
+          location = ol.location;
         }
       }
     }
@@ -1253,6 +1437,26 @@ function _parseExperienceEntries(lines) {
         location = ol.location || "";
         bulletStart = 2;
       }
+    }
+
+    // Company-first headers are as common as title-first ones:
+    //
+    //     Northwind Logistics, Chicago, IL      <- employer
+    //     Operations Analyst Intern             <- title
+    //
+    // but the stacked two-line header was read purely by position — row one was
+    // always the title, row two always the employer — so that layout imported
+    // with the two swapped and the location stranded inside the title. The pipe
+    // header above already settles this by asking which side reads like a job
+    // title; this applies the same test to the stacked form. Only swap on clear
+    // evidence: the second line reads like a title AND the first does not.
+    if (org && title && _looksLikeJobTitle(org) && !_looksLikeJobTitle(title)) {
+      const fromHeader = _splitOrgLocation(title);
+      title = org;
+      org = fromHeader.org;
+      // Keep a location already recovered from the other row rather than
+      // clearing it when the employer line carries no city/state of its own.
+      if (fromHeader.location) location = fromHeader.location;
     }
 
     // A line that starts with an action/accomplishment verb (or a leading bullet mark) is
@@ -1314,8 +1518,22 @@ function _parseExperienceEntries(lines) {
     let start = idx;
     const prev = clean[idx - 1] || "";
     const prevMarked = idx > 0 ? isMarkedBullet(rawLines[idx - 1]) : false;
-    const datePrefixLooksLocation = /,\s*[A-Z]{2}\b|\bRemote\b/i.test(d.before) || /\|\s*(?:Remote)?\s*$/i.test(d.before);
-    const prevLooksHeader = prev && !prevMarked && !extractDateRangeFromLine(prev) &&
+    // A date row whose prefix is only a location ("Tallahassee, FL | Remote |")
+    // belongs to the header line above it. Three guards keep an ordinary header
+    // from being mistaken for that shape:
+    //  - a state code must be real capitals: with the /i flag, ", Austin" read
+    //    as the state code "Au";
+    //  - a prefix that itself reads as a job title is a full header, not a
+    //    location, even when it ends in the "|" before its dates;
+    //  - a line whose first word is all lowercase is the wrapped tail of the
+    //    previous bullet ("industry experts and researchers."), never a header.
+    //    It was being pulled in as the next job's title, pushing the real title
+    //    into Location. Only the WHOLE first word counts: "iOS Developer" and
+    //    "eBay" are real headers that merely start with a lowercase letter.
+    const datePrefix = d.before.replace(/\s*\|\s*$/, "");
+    const datePrefixLooksLocation = !_looksLikeJobTitle(datePrefix) &&
+      (/,\s*[A-Z]{2}\b/.test(d.before) || /\bRemote\b/i.test(d.before) || /\|\s*(?:Remote)?\s*$/i.test(d.before));
+    const prevLooksHeader = prev && !prevMarked && !/^[a-z]+[\s,.;:]/.test(prev) && !extractDateRangeFromLine(prev) &&
       (prev.includes("|") || _looksLikeJobTitle(prev) || _looksLikeOrgLocation(prev));
     if (idx > 0 && datePrefixLooksLocation && prevLooksHeader) start = idx - 1;
 
@@ -1347,6 +1565,22 @@ function _parseExperienceEntries(lines) {
   clean.forEach((line, idx) => {
     if (!line || isHardSectionHeading(line)) return;
     const marked = isMarkedBullet(rawLines[idx]);
+
+    // Company-first header, dateless-fallback path. The first row of an entry
+    // became the title purely because it came first, so when the employer was
+    // listed above the job title the real title had nowhere to go and was
+    // pushed into the bullets — costing the entry its title, its employer, its
+    // location, and adding a phantom bullet. If this entry is still empty and
+    // its current title does not read like a job title while this line clearly
+    // does, the first row was the employer: promote and re-split it.
+    if (!marked && current && current.title && !current.org && !current.start &&
+        !current.bullets.length && _looksLikeJobTitle(line) && !_looksLikeJobTitle(current.title)) {
+      const ol = _splitOrgLocation(current.title);
+      current.org = ol.org;
+      current.location = ol.location;
+      current.title = line;
+      return;
+    }
 
     // A bullet-marked line is never a job title or org — always content.
     if (!marked && _looksLikeJobTitle(line) && (!current || current.org || current.start || current.bullets.length)) {
@@ -1565,6 +1799,25 @@ function splitProjectLines(bullets) {
   });
   return { context, tools, toolsValue, accomplishments };
 }
+// A project date can be a month OR a season: resumes write "Spring 2024" at
+// least as often as "May 2024", and a month-only pattern split those mid-date —
+// the name kept "Spring" and the date got only the year. The leading \b is load
+// bearing: without it "fall" matches inside "Rainfall 2024 Prediction Model"
+// and the project imports as name "Rain", date "fall 2024 Prediction Model".
+const _MONTH_OR_SEASON =
+  /\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?|spring|summer|fall|autumn|winter)/.source;
+const _YEAR = /\s+20\d{2}/.source;
+const _DATE_OR_RANGE =
+  _MONTH_OR_SEASON + _YEAR +
+  "(?:" + /\s*[–—-]\s*/.source + "(?:present|current|" + _MONTH_OR_SEASON + _YEAR + "))?";
+const _PROJECT_DATE_RE = new RegExp(_DATE_OR_RANGE, "i");
+// A bare year counts as the date only at the END of the line ("Portfolio Site
+// 2023", "Ledger Tool 2023-2024"). Anywhere else the year is part of the name,
+// not a date — "Rainfall 2024 Prediction Model" is one project, not a project
+// called "Rainfall" dated "2024 Prediction Model".
+const _BARE_YEAR_AT_END = /\b20\d{2}(?:\s*[–—-]\s*(?:20\d{2}|present|current))?\s*$/.source;
+const _PROJECT_DATE_OR_YEAR_RE = new RegExp(_DATE_OR_RANGE + "|" + _BARE_YEAR_AT_END, "i");
+
 function _looksLikeProjectTitle(line) {
   const s = String(line || "").trim();
   if (!s || s.length > 140) return false;
@@ -1572,7 +1825,7 @@ function _looksLikeProjectTitle(line) {
   // Never promote a continuation line (tools list, org subtitle) to a title.
   if (_looksLikeProjectContinuation(s)) return false;
   // A title with its own date range is the strongest signal.
-  if (/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?/i.test(s)) return true;
+  if (_PROJECT_DATE_RE.test(s)) return true;
   // Keyword fallback: must read like a project name, and a leading past-tense
   // action verb (e.g. "Led...", "Achieved...") signals a bullet, not a title.
   if (/^(led|analyzed|built|developed|created|managed|designed|implemented|synthesized|conducted|performed|delivered|achieved|reduced|increased|improved|generated|automated|streamlined|launched|spearheaded|coordinated|collaborated|researched|trained|tested|deployed|maintained|configured|resolved|optimized|engineered|established|drafted|produced|secured|negotiated|presented|evaluated|identified|recommended|supported|organized|executed|programmed|published|founded|initiated|mentored|redesigned|forecasted|modeled|wrote|won|applied|documented|utilized|leveraged|integrated)\b/i.test(s)) return false;
@@ -1580,10 +1833,12 @@ function _looksLikeProjectTitle(line) {
 }
 function _parseProjectLine(line) {
   const s = String(line || "").trim();
-  const dateMatch = s.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?|\b20\d{2}\b/i);
+  const dateMatch = s.match(_PROJECT_DATE_OR_YEAR_RE);
   if (dateMatch) {
     const idx = dateMatch.index;
-    return { name: s.slice(0, idx).replace(/[–—-]\s*$/,"").trim(), date: s.slice(idx).trim() };
+    // Strip whatever separated the title from its date. Only dashes were being
+    // removed, so every pipe-delimited title kept its pipe ("Project Name |").
+    return { name: s.slice(0, idx).replace(/[\s|·•,;:–—-]+$/, "").trim(), date: s.slice(idx).trim() };
   }
   return { name: s, date: "" };
 }
@@ -1755,6 +2010,17 @@ function mapImportedResumeToBuilder(rawText) {
     debugHeadings: sections._debugHeadings || [],
     normalizedPreview: sections._normalizedPreview || []
   };
+  // Honors found under Education have no education field to live in (see
+  // _parseEducation), so move them into Awards — kept, editable and exported,
+  // and where the coaching already recommends a standout honor belongs. Skip
+  // any the resume already lists under its own Awards heading.
+  const eduHonors = mapped.education.flatMap(ed => ed.honors || []);
+  mapped.education = mapped.education.map(({ honors, ...ed }) => ed);
+  if (eduHonors.length) {
+    const listed = (mapped.awards || []).filter(a => String(a.name || "").trim());
+    const isListed = h => listed.some(a => a.name.trim().toLowerCase() === h.toLowerCase());
+    mapped.awards = listed.concat(eduHonors.filter(h => !isListed(h)).map(h => ({ ...emptyAward(), name: h })));
+  }
   const confidenceParts = [
     !!mapped.name,
     !!(mapped.contact && mapped.contact.email),
@@ -3954,6 +4220,8 @@ function atsCompatibilityScore(data, resumeStrength) {
   if (resumeStrength && resumeStrength.edu && resumeStrength.edu.issues && resumeStrength.edu.issues.length) score -= 3;
   return Math.max(70, Math.min(100, Math.round(score)));
 }
+
+// ===== LIB END =====
 
 function App() {
   const [data, setData] = useState(STARTER);

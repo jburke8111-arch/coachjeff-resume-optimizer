@@ -1,0 +1,16 @@
+{
+  "failureMode": "bullets",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Bullet symbols other than '•' (●, ➢, ✓). Before: none were recognised as bullets, so all three were merged into one bullet with the symbols left in the text.",
+  "expect": {
+    "name": "Jamie Fox",
+    "projects": [
+      {
+        "name": "Portfolio Site",
+        "date": "May 2024",
+        "bulletCount": 3
+      }
+    ]
+  }
+}

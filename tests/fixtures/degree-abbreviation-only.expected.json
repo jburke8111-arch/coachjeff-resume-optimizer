@@ -1,0 +1,16 @@
+{
+  "failureMode": "education-degree",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Bare degree abbreviation with no field of study. Not recognised as a degree, so it is dropped entirely.",
+  "expect": {
+    "name": "Tomas Novak",
+    "education": [
+      {
+        "school": "Cuyahoga Community College",
+        "degree": "BA",
+        "grad": "May 2024"
+      }
+    ]
+  }
+}
