@@ -1037,14 +1037,58 @@ function _parseEducation(lines) {
     const m = schoolLine.match(re);
     if (!m) return null;
     const idx = schoolLine.lastIndexOf(m[1] + ",");
-    return { city: m[1], st: m[2], school: schoolLine.slice(0, idx).replace(/[|,]\s*$/, "").trim() };
+    return {
+      city: m[1], st: m[2],
+      school: schoolLine.slice(0, idx).replace(/[|,]\s*$/, "").trim(),
+      // True when a comma or pipe sits between the school and the city.
+      separated: /[|,]\s*$/.test(schoolLine.slice(0, idx)),
+    };
   };
+  // Only meaningful for GLUED text ("...International Cypress, CA"): with a
+  // comma between them, a city that repeats the school's last word is simply
+  // correct ("University of Houston, Houston, TX"), and vetoing it left the
+  // city and state stuck on the end of the school name.
   const dupTail = (r) => {
-    if (!r) return false;
+    if (!r || r.separated) return false;
     const w = r.school.split(/\s+/);
     const last = (w[w.length - 1] || "").toLowerCase();
     return r.city.split(/\s+/)[0].toLowerCase() === last;
   };
+
+  // A degree token, bounded so it can't fire inside an ordinary word: the loose
+  // /b\.?s\.?/ used elsewhere matches the "bs" in "Jacobs School". Used to tell
+  // the degree part of a line from the school part, and to keep a degree line
+  // ("B.A. in History, magna cum laude") from being lifted into Awards.
+  const DEGREE_TOKEN = /\b(?:(?:bachelor|master)(?:'?s)?|associate'?s?|doctor(?:ate)?|degree|minor|major|ph\.?d|m\.?b\.?a|b\.?b\.?a|b\.?f\.?a|m\.?f\.?a|b\.?[as]c?|m\.?[as]c?)\.?(?![a-z])/i;
+  // "MA" and "MS" are also state codes: "Boston University, Boston, MA".
+  const STATE_ONLY = new RegExp("^(?:" + STATE_ABBRS + ")$");
+
+  // The degree and the school are often written on ONE line, in either order:
+  //   "B.S. in Computer Science, Minor in Applied Mathematics, Texas State University | May 2026"
+  //   "University of Houston | B.S. in Biology | May 2025"
+  // The same line was then picked as both, so degree and school came out
+  // identical. Split it where the degree part and the school part meet: the
+  // school part runs from the first segment naming an institution, the degree
+  // part from the first segment containing a degree. Dates and GPA are dropped
+  // from the split only — they stay on the line in `clean`, where the grad-date
+  // and GPA finders below read them.
+  const schoolLineAsWritten = schoolLine;
+  let degreeFromSchoolLine = "";
+  {
+    const segs = schoolLine.split("|").map(p => p.trim())
+      .filter(p => p && !/^(?:expected\s+|anticipated\s+)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}\b/i.test(p) && !/^gpa\b/i.test(p))
+      .join(", ")
+      .split(/\s*,\s*/)
+      .filter(Boolean);
+    const k = segs.findIndex(p => INSTITUTION_RE.test(p));
+    const d = segs.findIndex(p => DEGREE_TOKEN.test(p) && !STATE_ONLY.test(p));
+    if (k !== -1 && d !== -1 && k !== d) {
+      const degreeSegs = d < k ? segs.slice(0, k) : segs.slice(d);
+      const schoolSegs = d < k ? segs.slice(k) : segs.slice(0, d);
+      degreeFromSchoolLine = degreeSegs.join(", ");
+      schoolLine = schoolSegs.join(", ");
+    }
+  }
 
   // Prefer a two-word city (San Diego, Boca Raton); fall back to one word when
   // the two-word form's first token is an institution tail (International) or
@@ -1097,8 +1141,22 @@ function _parseEducation(lines) {
     // like "3.78/4.0" can never be mistaken for one.
     if (sharedLine) gradLine = sharedLine.replace(/gpa\s*:?\s*[0-4]\.\d{1,2}(?:\s*\/\s*[0-4]\.\d{1,2})?/ig, " ");
   }
+  // The one-line form above: the degree found here IS the school line as written.
+  if (degreeFromSchoolLine && degreeLine === schoolLineAsWritten) degreeLine = degreeFromSchoolLine;
   const gpaLine = clean.find(l => /gpa/i.test(l)) || "";
   const courseworkLine = clean.find(l => /coursework|courses/i.test(l)) || "";
+  // Scholarships and honors listed under the degree ("• Western Digital STEM
+  // Scholarship Awardee") had no field to land in, so they were dropped from the
+  // resume on import. Collect them here; mapImportedResumeToBuilder moves them
+  // into Awards, where the editor and the export can show them. A line already
+  // used as the school, degree, GPA or coursework is skipped — "B.S. in Biology,
+  // cum laude" stays the degree.
+  const HONOR_RE = /\b(?:scholarships?|scholar|awards?|awardee|honou?rs?|dean'?s list|president'?s list|cum laude|phi beta kappa|fellowship)\b/i;
+  const honors = clean
+    .filter(l => l !== schoolLineAsWritten && l !== gpaLine && l !== courseworkLine)
+    .filter(l => l !== degreeLine && HONOR_RE.test(l) && !DEGREE_TOKEN.test(l))
+    .map(l => l.replace(/^[•·▪◦‣\-–—*]\s*/, "").trim())
+    .filter(Boolean);
 
   return [{
     id: _newId(),
@@ -1107,7 +1165,11 @@ function _parseEducation(lines) {
     location,
     grad: (gradLine.match(/(?:expected\s*)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}/i) || [""])[0],
     gpa: (gpaLine.match(/\b[0-4]\.\d{1,2}\s*\/\s*[0-4]\.\d{1,2}\b|\b[0-4]\.\d{1,2}\b/) || [""])[0],
-    coursework: courseworkLine.replace(/relevant coursework\s*:?/i, "").trim()
+    // Strip any "<qualifier> Coursework:" lead-in, not only "Relevant". The export
+    // prints its own "Relevant Coursework:" label, so "Selected Coursework: ..."
+    // came out as "Relevant Coursework: Selected Coursework: ...".
+    coursework: courseworkLine.replace(/^(?:[•·▪◦‣\-–—*]\s*)?(?:(?:relevant|selected|related|key|core|notable|major|graduate|upper[- ]level)\s+)?(?:course\s*work|courses)\s*:?\s*/i, "").trim(),
+    honors
   }];
 }
 function _parseEntry(lines, emptyFactory, titleKey, orgKey) {
@@ -1904,6 +1966,17 @@ function mapImportedResumeToBuilder(rawText) {
     debugHeadings: sections._debugHeadings || [],
     normalizedPreview: sections._normalizedPreview || []
   };
+  // Honors found under Education have no education field to live in (see
+  // _parseEducation), so move them into Awards — kept, editable and exported,
+  // and where the coaching already recommends a standout honor belongs. Skip
+  // any the resume already lists under its own Awards heading.
+  const eduHonors = mapped.education.flatMap(ed => ed.honors || []);
+  mapped.education = mapped.education.map(({ honors, ...ed }) => ed);
+  if (eduHonors.length) {
+    const listed = (mapped.awards || []).filter(a => String(a.name || "").trim());
+    const isListed = h => listed.some(a => a.name.trim().toLowerCase() === h.toLowerCase());
+    mapped.awards = listed.concat(eduHonors.filter(h => !isListed(h)).map(h => ({ ...emptyAward(), name: h })));
+  }
   const confidenceParts = [
     !!mapped.name,
     !!(mapped.contact && mapped.contact.email),
