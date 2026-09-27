@@ -1,130 +1,99 @@
 # Baseline — parse reliability
 
-Issue #3. This is the measuring instrument that parsing (#1) and insight (#2)
-are judged against. One sample, built here, used by all three.
+Issue #3. The measuring instrument that parsing (#1) and insight (#2) are judged
+against. One sample, built here, used by all three.
 
 ## Numbers
 
-Baseline recorded against `v12.3.16-industry` (commit `87a0073`, before any
-parser fix), scored over the 13-resume labeled sample:
+Baseline: `v12.3.16-industry` (commit `87a0073`, the live site before any parser
+fix), scored over the 21-resume shared sample.
 
-| Metric | Baseline | After #1 v1 | Delta |
+| Metric | Baseline | Now | Delta |
 | --- | --- | --- | --- |
-| **Garble rate** | **69.2%** (9 of 13) | **15.4%** (2 of 13) | **down 53.8 points** |
-| Field accuracy | 74.6% (88/118) | 89.8% (106/118) | up 15.2 points |
+| **Garble rate** | **76.2%** (16 of 21) | **9.5%** (2 of 21) | **down 66.7 points** |
+| Field accuracy | 66.2% (190/287) | 95.8% (275/287) | up 29.6 points |
 
-The committed snapshot is `tests/baseline.json`. Every later parser change
-reports a delta against it.
+The snapshot is `tests/baseline.json`; every later change reports a delta
+against it. Report the **garble rate** — a resume with the job title in the
+employer field is wrong in the way that matters, even if most fields are fine.
 
-Note the gap between the two rows: field accuracy always looks healthier than
-the garble rate, because most fields on most resumes are fine. The garble rate
-is the honest number — a resume with the job title in the employer field is
-wrong in the way the person using it cares about. **Report the garble rate.**
+A real Word-exported resume (kept private, see below) went from 24 wrong fields
+and 20 unreadable characters to none.
 
 ## Running it
 
 ```bash
-npm test              # compile guard + parse quality vs. baseline; non-zero on regression
-npm run parse-quality # the report on its own
-npm run baseline      # re-snapshot after an intended change
+npm install
+npm test                  # compile check + parse quality vs. baseline
+npm run parse-quality     # the report on its own
+npm run baseline          # re-snapshot after an intended change
+npm run make-fixture-pdfs # rebuild PDF fixtures from tests/fixtures/src/*.html
 ```
 
-Both runners take `--index <path>` to score a *different* revision of
-`index.html`, which is how the before/after above was measured over one fixture
-set rather than approximated:
+`npm test` fails only on a **regression** (a resume that parsed cleanly no
+longer does). Fixtures that encode known bugs are expected to fail until fixed.
+
+Both runners take `--index <path>` to score another revision of `index.html`,
+which is how the baseline was measured:
 
 ```bash
-git show HEAD:index.html > /tmp/orig.html
+git show 87a0073:index.html > /tmp/orig.html
 node tests/run.js --index /tmp/orig.html --update-baseline
 ```
 
-`npm test` is the gate, and it is deliberately asymmetric:
+## What a check is
 
-- a fixture that was clean and is now garbled **fails the run** (regression)
-- a fixture that was garbled and is now clean is reported as the win
+Per resume, against a hand-written correct answer:
 
-Fixtures are expected to start red — they encode known bugs. "All green" is not
-the bar. "Nothing that worked stopped working, and the garble rate went down" is.
+- **Sections** — the right number of education / experience / project / award entries
+- **Fields** — title, employer, location, school, degree, dates, GPA, coursework, skill groups and labels
+- **Bullets** — counts, not wording
+- **Unreadable characters** — any empty-box glyph anywhere in the parse (applied to every resume)
 
-`npm test` also runs `tools/check-app-compiles.js` first, which reproduces the
-browser's exact startup path (same Babel version, same preset, same
-`new Function` construction). The app has no build step, so a syntax error in
-`index.html` would otherwise reach users as a blank page rather than failing in
-CI.
+A resume is **clean** only if every check passes.
 
-## How the metric is defined
+## Inputs: text and PDF
 
-Per the issue's instruction to start simple: for each resume we already know the
-correct answer, and we check the fields a downstream engine actually depends on.
+A fixture is `NAME.txt` or `NAME.pdf` plus `NAME.expected.json`. A PDF goes
+through the app's **own** `extractPdfTextFromFile()` using the same PDF.js
+version the site loads (3.11.174), so the line reconstruction users get is what
+is measured.
 
-- **Sections** — did the right number of education / experience / project
-  entries come back?
-- **Entry fields** — title, org, location, school, degree, dates.
-- **Bullets** — counts, not text. A parser that loses or invents a bullet has
-  garbled the resume; whether it reproduced the wording is a different question.
-- **Contact** — name, email, phone, city/state.
+PDF fixtures are made-up resumes built from HTML in `tests/fixtures/src/`, so
+anyone can read what they contain and rebuild them.
 
-Comparison is exact after normalising whitespace and unicode dashes/quotes. A
-resume is **clean** only if every check passes; otherwise it is **garbled**.
+## Real resumes
 
-Fuzzier scoring (bullet text similarity, partial-credit dates) was deliberately
-left out. Add it only if this proves too blunt to show a delta.
+Put real resumes (with an `.expected.json`) in `tests/fixtures/private/`. That
+folder is gitignored and **never pushed**. The site publishes this repo, so a
+committed resume would be public. Private results are shown separately and are
+not part of the shared numbers.
 
 ## The sample
 
-`tests/fixtures/` — one `NAME.txt` (input) plus one `NAME.expected.json`
-(ground truth) per resume. The `expect` block only needs the fields that resume
-is about, so a fixture can target one failure mode without asserting everything.
-
-Stratified on purpose — a sample of only clean single-column resumes would make
-the parser look fine and prove nothing.
-
-| Fixture | Failure mode | Baseline | Now |
+| Failure mode | Fixtures | Baseline | Now |
 | --- | --- | --- | --- |
-| `clean-single-column` | none (regression guard) | clean | clean |
-| `education-school-with-location` | education-location | clean | clean |
-| `headings-nonstandard` | headings | clean | clean |
-| `project-bare-year` | project-titles | clean | clean |
-| `degree-abbreviation-only` | education-degree | garbled | **clean** |
-| `education-date-with-gpa` | education-dates | garbled | **clean** |
-| `experience-company-first` | experience-layout | garbled | **clean** |
-| `experience-tab-aligned-dates` | experience-layout | garbled | **clean** |
-| `project-pipe-delimiter` | project-titles | garbled | **clean** |
-| `project-season-date` | project-titles | garbled | **clean** |
-| `project-year-in-name` | project-titles | garbled | **clean** |
-| `experience-multi-entry-mixed` | experience-layout | garbled | garbled |
-| `experience-company-first-multi` | experience-layout | garbled | garbled |
+| Experience layout | company-first, tab-aligned dates, dash headers, lowercase title, 2 multi-job | 1/6 | 4/6 |
+| Education | date next to GPA, bare degree, school + location, one-line (2), honors | 1/6 | 6/6 |
+| Project titles | pipe, season date, year in name, bare year | 1/4 | 4/4 |
+| PDF / Word export | generated PDF, Word Symbol-font bullets | 0/2 | 2/2 |
+| Bullets | ●, ➢, ✓ symbols | 0/1 | 1/1 |
+| Headings, clean baseline | | 2/2 | 2/2 |
 
-The last two were found by **held-out testing**, not by the sample. After the
-first round of fixes every fixture passed, which is exactly what overfitting
-looks like — so the parser was run against realistic resumes that no fixture
-covered, and two real failures turned up immediately. Both are now fixtures. The
-lesson generalises: a green suite means the sample stopped being adversarial,
-not that the parser is finished.
+## Still failing
 
-### Adding real resumes
+`experience-multi-entry-mixed` and `experience-company-first-multi`: a section
+with several jobs where a job's dates sit on their own line. A new entry only
+starts at a header line that carries a date, so that job is merged into the one
+before it.
 
-Real resumes go in `tests/fixtures/private/`, which is gitignored and picked up
-automatically by the runner.
+## Not covered
 
-**Never commit a real resume.** This repo publishes its own root, so a file in
-`tests/fixtures/` is a file on the public site. That is why the private
-directory exists.
-
-## What this baseline does NOT cover
-
-Stated plainly so the number is not read as more than it is.
-
-1. **PDF and DOCX extraction are untested.** Every fixture is `.txt`, which
-   enters the parser *after* `extractPdfTextFromFile` / mammoth have run. So
-   this measures the text parser, not the PDF.js Y-coordinate line
-   reconstruction that issue #1 names as a prime suspect. Real `.pdf` and
-   `.docx` fixtures are the single biggest gap — and they need real files, not
-   synthetic ones.
-2. **The sample is synthetic and small.** Thirteen hand-written resumes modelled
-   on real failure modes. At n=13 this detects a large move but not a few
-   points. ~25–40 stratified resumes is the target before the number is worth
-   quoting outside the project.
-3. **Usage metrics are not built.** Resumes scored and completion rate are still
-   blanks. The issue says to mirror the Job Finder's cookieless approach rather
-   than design a new one — that needs access to the sibling repo.
+- **DOCX** uploads (read by mammoth) have no fixtures yet.
+- **Word's Symbol-font bullet inside a real PDF.** Edge renders that bullet as a
+  plain `·`, so the generated PDF can't carry it. `word-export-symbol-bullets.txt`
+  holds the exact characters PDF.js returns for a Word PDF instead, and the
+  private real resume covers the full path.
+- **Sample size.** 21 made-up resumes show large changes, not small ones. Real
+  resumes — especially ones that break — are the biggest gap.
+- **Usage metrics** (resumes scored, completion rate) are not built.
