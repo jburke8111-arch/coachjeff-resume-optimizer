@@ -1160,6 +1160,12 @@ function _splitOrgLocation(line) {
     return { org: parts[0] || "", location: parts.slice(1).join(" | ") || "" };
   }
 
+  // "Acme Corp - Chicago, IL": a spaced dash before a trailing City, ST. The
+  // generic match below lets a city run through spaces and dashes, so it took
+  // the whole line as the location and returned it all as the employer.
+  const dashLoc = s.match(/^(.+?)\s+[-–]\s+((?:[A-Z][a-zA-Z.'-]*)(?:\s[A-Z][a-zA-Z.'-]*)*,\s*[A-Z]{2}|Remote(?:,\s*USA)?)$/);
+  if (dashLoc) return { org: dashLoc[1].trim(), location: dashLoc[2].trim() };
+
   const loc = s.match(/([A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}|Remote,\s*USA|Remote)$/);
   if (loc) {
     const location = loc[1].trim();
@@ -1244,13 +1250,14 @@ function _parseExperienceEntries(lines) {
     const date = firstDate || secondDate;
     const dateLineIdx = firstDate ? 0 : (secondDate ? 1 : -1);
 
-    let headerText = firstDate ? firstDate.before : first;
+    // Strip the separator left between a header and its dates ("Title - Org |
+    // May 2025 - Jul 2025") BEFORE the header becomes the title. It used to be
+    // stripped afterwards, so every header of that shape kept a trailing "|".
+    let headerText = String((firstDate ? firstDate.before : first) || "").replace(/\s*\|\s*$/, "").trim();
     let title = headerText;
     let org = "";
     let location = "";
     let bulletStart = 1;
-
-    headerText = String(headerText || "").replace(/\|\s*$/, "").trim();
 
     // Parse a pipe header. If one side clearly looks like a job title, use that
     // signal to determine whether the source is "Org | Title" or "Title | Org".
@@ -1274,6 +1281,30 @@ function _parseExperienceEntries(lines) {
           const rest = parts.slice(1);
           org = rest[rest.length - 1] || "";
           if (rest.length > 1) title = [left].concat(rest.slice(0, -1)).join(" — ");
+        }
+      }
+    } else {
+      // "Title - Organization, City, ST" on one line is a common Word layout,
+      // but it was never split: the whole line became the title and the
+      // employer and location were left empty. Split at the first SPACED dash
+      // (never a hyphen inside a word such as "Co-Founder") and let the same
+      // job-title test the pipe header uses decide which side is the title.
+      // When neither side clearly reads as a title, keep the header whole
+      // rather than guess.
+      const dashed = headerText.match(/^(.+?)\s+[-–]\s+(.+)$/);
+      if (dashed) {
+        const left = dashed[1].trim();
+        const right = dashed[2].trim();
+        const leftIsTitle = _looksLikeJobTitle(left);
+        const rightIsTitle = _looksLikeJobTitle(right);
+        const pick = leftIsTitle && !rightIsTitle ? [left, right]
+          : rightIsTitle && !leftIsTitle ? [right, left]
+          : null;
+        if (pick) {
+          const ol = _splitOrgLocation(pick[1]);
+          title = pick[0];
+          org = ol.org;
+          location = ol.location;
         }
       }
     }
@@ -1381,8 +1412,22 @@ function _parseExperienceEntries(lines) {
     let start = idx;
     const prev = clean[idx - 1] || "";
     const prevMarked = idx > 0 ? isMarkedBullet(rawLines[idx - 1]) : false;
-    const datePrefixLooksLocation = /,\s*[A-Z]{2}\b|\bRemote\b/i.test(d.before) || /\|\s*(?:Remote)?\s*$/i.test(d.before);
-    const prevLooksHeader = prev && !prevMarked && !extractDateRangeFromLine(prev) &&
+    // A date row whose prefix is only a location ("Tallahassee, FL | Remote |")
+    // belongs to the header line above it. Three guards keep an ordinary header
+    // from being mistaken for that shape:
+    //  - a state code must be real capitals: with the /i flag, ", Austin" read
+    //    as the state code "Au";
+    //  - a prefix that itself reads as a job title is a full header, not a
+    //    location, even when it ends in the "|" before its dates;
+    //  - a line whose first word is all lowercase is the wrapped tail of the
+    //    previous bullet ("industry experts and researchers."), never a header.
+    //    It was being pulled in as the next job's title, pushing the real title
+    //    into Location. Only the WHOLE first word counts: "iOS Developer" and
+    //    "eBay" are real headers that merely start with a lowercase letter.
+    const datePrefix = d.before.replace(/\s*\|\s*$/, "");
+    const datePrefixLooksLocation = !_looksLikeJobTitle(datePrefix) &&
+      (/,\s*[A-Z]{2}\b/.test(d.before) || /\bRemote\b/i.test(d.before) || /\|\s*(?:Remote)?\s*$/i.test(d.before));
+    const prevLooksHeader = prev && !prevMarked && !/^[a-z]+[\s,.;:]/.test(prev) && !extractDateRangeFromLine(prev) &&
       (prev.includes("|") || _looksLikeJobTitle(prev) || _looksLikeOrgLocation(prev));
     if (idx > 0 && datePrefixLooksLocation && prevLooksHeader) start = idx - 1;
 
