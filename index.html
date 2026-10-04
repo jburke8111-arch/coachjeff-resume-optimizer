@@ -4,6 +4,8 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.20: SCORE GAP vs. MANUAL EVALUATION. The scorecard rewarded what a resume has and could not see layout or content problems, so it ran 20+ points above the manual audit. (1) LAYOUT CHECK: for PDF uploads, body / heading / name / contact font sizes, the four margins, words per page and page count are measured from the file and compared with the BEST standards (new data.importedLayout, analyzeLayout). (2) CONTENT CHECKS: near-duplicate bullets under different entries, skills listed but not shown in any bullet, and certification names that read like training (analyzeContentIntegrity). Both appear in the on-screen Coach Review and the Word report, add risk flags, and lower the matching scorecard category only when a problem is found. (3) Summary and Positioning now uses the summary-quality score. (4) Recruiter confidence ceiling steps down 3 points per open flag (it was fixed at 94). (5) Resume Health shows the scorecard overall, so the page and the report give one headline number. (6) Coach Jeff's First Impression is built from the findings instead of fixed text. (7) Recommended order for technology and data fields is Experience before Projects, matching the advice text; "rebuilt resume" wording removed from messages about the uploaded file. -->
+<!-- v12.3.19: POST-DEPLOY CLEANUP (Andrin live test). (1) "Sections detected" in the page header, the Import Quality tile and the ATS checklist now counts sections that actually hold content (7 for Andrin) instead of every key in the order list (which read 14 after v12.3.18 added four sections, and 10 for every resume before that). (2) The Section Order advice, previously only in the Word report, now also shows in the on-screen Coach Review above Section Headers. (3) The header quick win reads "Fix N section headers" because a split is not a rename. (4) The metric-credibility fix no longer suggests "in benchmark tests", which only suits software projects. -->
 <!-- v12.3.18: STANDARD ATS SECTION HEADERS. (1) Four standard sections added to the builder and every export: Internships and Research Experience (entries stay in data.experience with a `section` tag and a per-entry "Appears under this section" selector, so all experience analyzers still see them) plus Professional Affiliations and Languages (new data.affiliations / data.languages). Headings such as "INTERNSHIPS", "RESEARCH EXPERIENCE", "PROFESSIONAL AFFILIATIONS" and a spoken-language "LANGUAGES" block now import into their own sections instead of being folded into Experience, Leadership and Activities, or Skills; a "LANGUAGES" block of programming languages still goes to Skills. "Publications / Research" is renamed "Publications". (2) New Section Headers check in the Review Report and the on-screen coach review: each header in the uploaded resume is listed beside the standard header with an action (matches / widely recognized variant / rename / split a combined header / not a standard header / header missing), plus a quick win when renames are needed. (3) Section order now uses degree and experience for every target field, not only technology and data: Education moves directly under the Summary for a new or current graduate, or below Experience when experience is the stronger credential. Older saved drafts are migrated with completeOrder(). -->
 <!-- v12.3.17: SINGLE-LINE HEADER + ROUND-BULLET PDF FIX (Andrin regression). A Word-exported PDF with "Title | Employer | City, ST  Dates" on one line, Word's round bullet (U+25CF), a combined "CERTIFICATIONS & SKILLS" heading and an "ACADEMIC PROJECT EXPERIENCE" heading produced a report with 5 bullets instead of 13, no projects, 3 certifications instead of 2, employers stored as cities, and a missing phone. Fixes: (1) PDF text runs are joined by their real horizontal gap, so words split at hyphens/kerning are no longer spaced apart ("detail - oriented", "or der", "682 - 307 - 9207"); (2) PDF link annotations are imported like DOCX hyperlinks, so a clickable "LinkedIn" label yields its URL, with a new note when the visible text is only the word "LinkedIn"; (3) all common bullet glyphs at line start are normalized to "•"; (4) a trailing "City, ST" segment is peeled off piped job headers so employer and location land in the right fields; (5) lowercase-start wrapped lines are never dropped as employer rows, and "inc"/"corp" org keywords need word boundaries ("increase" no longer matches); (6) "<qualifier> PROJECT EXPERIENCE" headings map to Projects; (7) combined Skills/Certifications headings are split by label; "Name – Detail (Issuer)" certifications keep the issuer; (8) "School | City, ST  Date" education lines split correctly; (9) the summary hook check accepts spelled-out years and named standout results; (10) section-order advice and the Section Ordering score now describe the UPLOADED resume's heading order (new data.importedOrder), not the order the builder applied at import; (11) the "weak opener" and "move your strongest section" quick wins print only when they apply. -->
 <!-- v12.3.16: AMBIGUOUS-MINOR COACHING (eval #16). Adds a soft coaching note when a minor references a named school/program by a single word that outsiders may not recognize — e.g. "Smith Minor in General Business" (UMD's Robert H. Smith School of Business). The Education Review now suggests spelling it out ("Smith School of Business"). Detection fires ONLY on a curated list of known business-school program names directly followed by "Minor" (Smith, Ross, Wharton, Haas, Booth, Stern, etc.), and stays silent when the school is already spelled out nearby. Deliberately NOT generic: subject-name minors share the exact "<Word> Minor" shape ("Spanish Minor", "Business Minor"), so a generic rule would false-positive constantly. The note is a soft suggestion only — it does NOT reduce the Education score or change "cleanly structured," it just appears in the Education suggestions. Verified: fires on Smith/Ross/Haas minors; silent on subject minors, spelled-out programs, non-minor uses of a listed word ("Johnson Scholarship"), and resumes with no minor. -->
@@ -156,7 +158,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.18-industry";
+const BUILD_VERSION = "v12.3.20-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -1989,6 +1991,7 @@ async function extractPdfTextFromFile(file) {
   const pdf = await loadingTask.promise;
   const pages = [];
   const urls = [];
+  const layoutRaw = { pages: pdf.numPages, pageW: 612, pageH: 792, lines: [] };
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
@@ -2047,6 +2050,22 @@ async function extractPdfTextFromFile(file) {
       return line.replace(/\s{2,}/g, " ").trim();
     }).filter(Boolean);
     pages.push(lines.join("\n"));
+    // v12.3.20: keep each line's font size and horizontal extent, plus the page
+    // size, so font sizes and margins can be MEASURED instead of left to a
+    // "human-eye pass". Only summary numbers are stored (see summarizePdfLayout).
+    try {
+      const view = page.view || [0, 0, 612, 792];
+      if (pageNum === 1) { layoutRaw.pageW = view[2] - view[0]; layoutRaw.pageH = view[3] - view[1]; }
+      rows.forEach(row => {
+        const real = row.runs.filter(rn => String(rn.str || "").trim());
+        if (!real.length) return;
+        const text = row.runs.map(rn => rn.str).join("").replace(/\s+/g, " ").trim();
+        const size = real.reduce((m, rn) => Math.max(m, rn.h || 0), 0);
+        const x0 = real.reduce((m, rn) => Math.min(m, rn.x), Infinity);
+        const x1 = real.reduce((m, rn) => Math.max(m, rn.x + Math.max(rn.w, 0)), 0);
+        layoutRaw.lines.push({ t: text, s: size, x0, x1, y: row.y, p: pageNum });
+      });
+    } catch (e) { /* layout capture is best-effort */ }
     // v12.3.17: collect clickable link targets (e.g. a "LinkedIn" label whose URL
     // lives only in the PDF link annotation), mirroring the DOCX hyperlink import.
     try {
@@ -2057,7 +2076,9 @@ async function extractPdfTextFromFile(file) {
       });
     } catch (e) { /* link extraction is best-effort */ }
   }
-  return { text: pages.join("\n").trim(), urls };
+  let layout = null;
+  try { layout = summarizePdfLayout(layoutRaw); } catch (e) { layout = null; }
+  return { text: pages.join("\n").trim(), urls, layout };
 }
 
 async function extractTextFromImportedFile(file) {
@@ -2085,7 +2106,7 @@ async function extractTextFromImportedFile(file) {
     const pdfText = pdfResult && pdfResult.text ? pdfResult.text : "";
     const pdfLinks = pdfResult && pdfResult.urls && pdfResult.urls.length ? summarizeImportedLinks(pdfResult.urls) : null;
     if (!pdfText || pdfText.length < 30) throw new Error("PDF import could not extract enough text. If this is a scanned/image PDF, copy/paste the resume text or upload a DOCX version.");
-    return { resumeText: pdfText, fileName: file.name || "", transfer: false, links: pdfLinks };
+    return { resumeText: pdfText, fileName: file.name || "", transfer: false, links: pdfLinks, layout: pdfResult && pdfResult.layout ? pdfResult.layout : null };
   }
   throw new Error("Unsupported file type. Please upload a .docx, .pdf, .txt, or Resume Readiness Check .json file, or paste the resume text.");
 }
@@ -2366,6 +2387,30 @@ const EXP_SECTION_LABELS = { experience: "Experience", internships: "Internships
 function expSectionOf(e) {
   const sec = e && e.section;
   return (sec === "internships" || sec === "research") ? sec : "experience";
+}
+// v12.3.19: count the sections that actually hold content. The "sections
+// detected" figures used to count every key in the order list, so they showed
+// 10 (then 14) for any resume regardless of what was imported.
+function sectionHasContent(data, key) {
+  const d = data || {};
+  const any = (arr, keys) => (arr || []).some(x => x && keys.some(k => Array.isArray(x[k]) ? x[k].some(v => String(v || "").trim()) : String(x[k] || "").trim()));
+  if (key === "summary") return !!String(d.summary || "").trim();
+  if (key === "skills") { const k = d.skills || {}; return !!(k.technical || k.dataVisualization || k.tools || k.domain); }
+  if (key === "experience" || key === "internships" || key === "research") return (d.experience || []).some(e => e && (e.title || e.org || (e.bullets || []).some(b => String(b || "").trim())) && expSectionOf(e) === key);
+  if (key === "projects") return any(d.projects, ["name", "bullets"]);
+  if (key === "education") return any(d.education, ["degree", "school"]);
+  if (key === "activities") return any(d.activities, ["role", "org"]);
+  if (key === "certifications") return any(d.certifications, ["name"]);
+  if (key === "awards") return any(d.awards, ["name"]);
+  if (key === "publications") return any(d.publications, ["citation"]);
+  if (key === "volunteer") return any(d.volunteer, ["role", "org"]);
+  if (key === "affiliations") return any(d.affiliations, ["name"]);
+  if (key === "languages") return !!String(d.languages || "").trim();
+  return false;
+}
+function countFilledSections(data) {
+  const hidden = (data && data.hidden) || {};
+  return ((data && data.order) || []).filter(k => !hidden[k] && sectionHasContent(data, k)).length;
 }
 // Make sure an order list contains every section key (older drafts and the
 // field presets predate the four sections added in v12.3.18).
@@ -3026,7 +3071,7 @@ function analyzeMetricCredibility(data, rawImportText) {
       const n = parseInt(pctImp[1], 10);
       const hasContext = /(benchmark|measured|tracked|A\/B|baseline|from\s+\d|to\s+\d|over\s+\d|in\s+testing|in\s+simulation)/i.test(b);
       if (n >= 30 && !hasContext) {
-        push(b, "A " + n + "% improvement with no baseline or measurement reads as a guess. Anchor it (\u201C~" + n + "% in benchmark tests\u201D) or explain how you measured it.");
+        push(b, "A " + n + "% improvement with no baseline or measurement reads as a guess. Anchor it with the before-and-after figures or the time period, or be ready to explain how you measured it.");
       }
     }
     // Metrics attached to simulated / synthetic work stated as if real.
@@ -3171,7 +3216,20 @@ function analyzeFileNaming(data, importedFileName) {
 // exact font sizes, line-level spacing/density, or word-breaks. Rather than
 // stay silent (and let a student assume those were checked), we say so plainly
 // and point them to the one human-eye pass that still matters.
-function parserLimitationNote() {
+function parserLimitationNote(data) {
+  // v12.3.20: when the layout was measured from a PDF, margins, font sizes and
+  // density are reported in the Layout Check and drop off this list.
+  if (data && data.importedLayout && data.importedLayout.bodyPt) {
+    return {
+      title: "What this tool can't check (do a 30-second human-eye pass)",
+      items: [
+        "Spacing between entries and sections \u2014 about 6pt between entries and 12pt before each section heading.",
+        "Bold, italics and color \u2014 bold only your name, section headings, job titles, degree and skills sub-headers.",
+        "Words broken across lines (e.g. a hyphen splitting a term mid-line) \u2014 these only show in the rendered layout."
+      ],
+      why: "Font sizes, margins and page density were measured from your PDF and are in the Layout Check above. These remaining visual details still need a quick look from you."
+    };
+  }
   return {
     title: "What this tool can't check (do a 30-second human-eye pass)",
     items: [
@@ -3204,17 +3262,31 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   // Metric-credibility findings pull down the Content score, because an
   // inflated-looking number damages content credibility more than a missing one.
   const metricPenalty = metricCred ? Math.min(22, (metricCred.count || 0) * 8) : 0;
+  // v12.3.20: the scorecard used to reward what a resume HAS and could not see
+  // layout or the content problems a manual audit catches, so it ran 20+ points
+  // above the manual evaluation. These findings now lower the matching category.
+  // Each deduction applies only when the problem is detected.
+  const layoutCheck = analyzeLayout(data);
+  const integrity = analyzeContentIntegrity(data);
+  const headerCheck = analyzeSectionHeaders(data);
+  const summaryCheck = analyzeSummaryQuality(data);
+  const dupPenalty = Math.min(16, integrity.duplicates.length * 8);
+  const unsupportedPenalty = Math.min(24, integrity.unsupported.length * 4);
+  const structurePenalty = Math.min(12, (headerCheck.mustFix || 0) * 3) + Math.min(6, integrity.certFlags.length * 3);
   const contentScore = clamp(
-    (expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60) - metricPenalty
+    (expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60) - metricPenalty - dupPenalty
   );
-  const skillsScore = clamp(typeof skills.score === "number" ? skills.score : 75);
-  const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75));
+  const skillsScore = clamp((typeof skills.score === "number" ? skills.score : 75) - unsupportedPenalty);
+  const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75) - structurePenalty);
   const tenseScore = clamp(verbTense ? verbTense.score : 100);
   const orderScore = clamp((order.importedMismatch != null ? order.importedMismatch : order.mismatch) ? 72 : 92);
-  const summaryScore = clamp(hasSummary ? 90 : 55);
+  const summaryScore = clamp(hasSummary ? Math.min(90, summaryCheck && typeof summaryCheck.score === "number" ? summaryCheck.score : 90) : 55);
   // Mechanics (typos, casing, punctuation) belong to Formatting & Polish along
   // with run-on bullets — both are "does this read clean" signals.
-  const formattingScore = clamp(Math.round(((runOn ? runOn.score : 100) * 0.5) + ((mechanics ? mechanics.score : 100) * 0.5)));
+  const textFormatting = Math.round(((runOn ? runOn.score : 100) * 0.5) + ((mechanics ? mechanics.score : 100) * 0.5));
+  // When the layout was measured from the PDF, half of Formatting & Polish is the
+  // measured layout (font sizes, margins, density).
+  const formattingScore = clamp(layoutCheck.measured ? Math.round(textFormatting * 0.5 + layoutCheck.score * 0.5) : textFormatting);
 
   const categories = [
     { key: "Content & Quantification", score: contentScore },
@@ -3271,6 +3343,14 @@ function buildRiskFlags(data, ctx) {
         " pack multiple results into one line, which tires the eye and buries your strongest number. Lead each bullet with one headline metric and move or drop the rest."
     });
   }
+  // v12.3.20: layout and content-check flags.
+  const _lay = analyzeLayout(data);
+  if (_lay.measured && _lay.issues >= 2) {
+    flags.push({ title: "Readability", note: _lay.issues + " layout items fall short of the standard (" + _lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + ": " + f.yours).join("; ") + "). See the Layout Check." });
+  }
+  const _ci = analyzeContentIntegrity(data);
+  if (_ci.duplicates.length) flags.push({ title: "Repeated bullet", note: "Two bullets under different entries read almost the same. An interviewer may ask which job the work was done in. See Content Checks." });
+  if (_ci.unsupported.length >= 3) flags.push({ title: "Unsupported skills", note: _ci.unsupported.length + " listed skills are not shown in any bullet. Expect \u201Ctell me about a time you used\u2026\u201D questions. See Content Checks." });
   // Verb inflation (populated once analyzeVerbTense returns `inflatedCount`).
   if (verbTense && verbTense.inflatedCount) {
     flags.push({
@@ -3599,8 +3679,11 @@ function smartRecommendedOrder(data) {
     const educationFirst = educationPlacementSignal(data).educationFirst;
 
     const order = educationFirst ? ["summary", "education", "skills"] : ["summary", "skills"];
+    // v12.3.20: Experience (then Internships) comes before Projects, matching the
+    // standard header order and the advice text. Order is driven by degree and
+    // experience only: Education leads for a new graduate, otherwise it follows.
+    if (hasExperience) order.push("experience", "internships");
     if (hasProjects) order.push("projects");
-    if (hasExperience) order.push("experience");
     if (!educationFirst) order.push("education");
     if (hasPublications) order.push("publications");
     if (hasCerts) order.push("certifications");
@@ -3645,7 +3728,7 @@ function analyzeSectionOrderAdvice(data) {
   // student whose Education sat fourth that it was "near the top".
   const importedOrder = Array.isArray(data.importedOrder) && data.importedOrder.length >= 3 ? data.importedOrder : null;
   const current = importedOrder || (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
-  const rebuiltNote = importedOrder ? " In your uploaded resume, Education sits below those sections; the rebuilt version here already applies the recommended order." : "";
+  const rebuiltNote = importedOrder ? " In the resume you uploaded, Education sits below those sections." : "";
 
   // Is Education currently sitting BELOW Skills, Experience, or Projects?
   const idxEdu = current.indexOf("education");
@@ -3690,6 +3773,149 @@ function analyzeSectionOrderAdvice(data) {
   return { applies: false };
 }
 
+// ---- Layout measurement (v12.3.20) ----
+// Turns the per-line geometry captured from an uploaded PDF into a handful of
+// numbers: body / heading / name / contact font size, the four margins, page
+// count and word count. Sizes are rounded to the nearest half point.
+function summarizePdfLayout(raw) {
+  const lines = (raw && raw.lines || []).filter(l => l && l.t && l.s > 0);
+  if (lines.length < 8) return null;
+  const half = n => Math.round(n * 2) / 2;
+  const mode = (arr) => {
+    const w = {};
+    arr.forEach(l => { const k = half(l.s); w[k] = (w[k] || 0) + l.t.length; });
+    const best = Object.keys(w).sort((a, b) => w[b] - w[a])[0];
+    return best ? parseFloat(best) : 0;
+  };
+  const bodyPt = mode(lines);
+  const headLines = lines.filter(l => { try { return !!_headingKey(l.t); } catch (e) { return false; } });
+  const headingPt = headLines.length ? mode(headLines) : 0;
+  const p1 = lines.filter(l => l.p === 1);
+  const namePt = p1.length ? half(p1[0].s) : 0;
+  const contactLine = p1.slice(0, 6).find(l => /@|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(l.t));
+  const contactPt = contactLine ? half(contactLine.s) : 0;
+  const inch = n => Math.round((n / 72) * 100) / 100;
+  const wide = lines.filter(l => l.t.length > 3);
+  const marginL = inch(Math.min.apply(null, wide.map(l => l.x0)));
+  const marginR = inch((raw.pageW || 612) - Math.max.apply(null, wide.map(l => l.x1)));
+  const marginT = inch((raw.pageH || 792) - Math.max.apply(null, p1.map(l => l.y + l.s * 0.8)));
+  const lastP = lines.filter(l => l.p === raw.pages);
+  const marginB = inch(Math.min.apply(null, (raw.pages > 1 ? p1 : lastP).map(l => l.y - l.s * 0.2)));
+  const words = lines.reduce((n, l) => n + l.t.split(/\s+/).filter(Boolean).length, 0);
+  return { source: "pdf", pages: raw.pages || 1, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words };
+}
+
+// Compares the measured layout with the BEST-format standards (11 pt body,
+// 13 pt headings, 20 pt name, 0.75 inch margins). Applies only when a PDF was
+// imported; otherwise `measured` is false and nothing is scored.
+function analyzeLayout(data) {
+  const L = data && data.importedLayout;
+  if (!L || !L.bodyPt) return { measured: false, rows: [], findings: [], issues: 0, score: null };
+  const rows = [];
+  let penalty = 0;
+  const add = (item, yours, standard, ok, pts, fix) => { rows.push({ item, yours, standard, ok, fix: ok ? "Meets the standard" : fix }); if (!ok) penalty += pts; };
+  add("Body text size", L.bodyPt + " pt", "11 pt", L.bodyPt >= 10.5, 15, "Raise body text and bullets to 11 pt");
+  if (L.headingPt) add("Section heading size", L.headingPt + " pt", "13 pt", L.headingPt >= 12, 8, "Raise section headings to 13 pt so they stand out by size");
+  if (L.namePt) add("Name size", L.namePt + " pt", "20 pt", L.namePt >= 18 && L.namePt <= 22, 4, "Set your name to 20 pt");
+  if (L.contactPt) add("Contact line size", L.contactPt + " pt", "11 pt", L.contactPt >= 10.5, 4, "Raise the contact line to 11 pt");
+  const side = Math.min(L.marginL, L.marginR);
+  add("Left and right margins", "about " + side.toFixed(2) + " in", "0.75 in", side >= 0.7, 12, "Set left and right margins to 0.75 inch");
+  const tb = Math.min(L.marginT, L.marginB);
+  add("Top and bottom margins", "about " + tb.toFixed(2) + " in", "0.75 in", tb >= 0.6, 6, "Set top and bottom margins to 0.75 inch");
+  const perPage = Math.round(L.words / Math.max(1, L.pages));
+  add("Words per page", String(perPage), "about 450 or fewer", perPage <= 500, 10, "Trim the summary and long bullets so the page is easier to scan");
+  add("Page count", String(L.pages), "1 (up to 2 if the content warrants it)", L.pages <= 2, 10, "Cut to 2 pages or fewer");
+  const bad = rows.filter(r => !r.ok);
+  const intro = !bad.length
+    ? "Measured from your uploaded PDF: font sizes, margins, and page density all meet the standard."
+    : "Measured from your uploaded PDF: " + bad.length + " of " + rows.length + " layout items fall short of the standard. Small text and tight margins make a resume harder to read and are the most common reason strong content gets skimmed past.";
+  return { measured: true, rows, findings: bad, issues: bad.length, score: Math.max(40, 100 - penalty), intro };
+}
+
+// ---- Content checks (v12.3.20) ----
+// Three checks a manual audit makes that presence-based scoring cannot:
+//   (1) near-duplicate bullets under DIFFERENT entries (often one bullet reused
+//       for two jobs, sometimes carrying the wrong employer's wording along);
+//   (2) skills listed in the Skills section that no bullet shows in use;
+//   (3) "certifications" whose names read like training programs.
+function analyzeContentIntegrity(data) {
+  const STOP = new Set(["with","that","this","from","into","over","under","than","then","their","them","they","were","been","being","have","having","also","such","each","which","while","where","when","what","your","using","used","across","through","within","between","about","more","most","other","some","both","these","those","team","teams","work","worked"]);
+  const stem = w => w.replace(/(ing|ed|es|s)$/, "");
+  const toks = (b) => Array.from(new Set(String(b || "").toLowerCase().replace(/[^a-z0-9+#\s-]/g, " ").split(/[\s-]+/).filter(w => w.length >= 4 && !STOP.has(w)).map(stem)));
+  const entries = [];
+  (data.experience || []).forEach(e => entries.push({ where: e.org || e.title || "Experience", bullets: e.bullets || [] }));
+  (data.projects || []).forEach(p => entries.push({ where: p.name || "Project", bullets: p.bullets || [] }));
+  (data.activities || []).forEach(a => entries.push({ where: a.org || a.role || "Leadership", bullets: a.bullets || [] }));
+  const flat = [];
+  entries.forEach((e, ei) => (e.bullets || []).forEach(b => { const t = String(b || "").trim(); if (t.length > 40) flat.push({ ei, where: e.where, text: t, tk: toks(t) }); }));
+  const duplicates = [];
+  for (let i = 0; i < flat.length; i++) {
+    for (let j = i + 1; j < flat.length; j++) {
+      if (flat[i].ei === flat[j].ei) continue;
+      const A = flat[i].tk, B = new Set(flat[j].tk);
+      const shared = A.filter(x => B.has(x));
+      const union = new Set(A.concat(flat[j].tk)).size;
+      if (shared.length >= 5 && shared.length / Math.max(1, union) >= 0.4) {
+        duplicates.push({ a: flat[i].text, whereA: flat[i].where, b: flat[j].text, whereB: flat[j].where });
+      }
+    }
+  }
+  // (2) skills with no supporting bullet
+  const sk = data.skills || {};
+  const listed = [sk.technical, sk.dataVisualization, sk.tools, sk.domain].map(v => String(v || "")).join(",")
+    .split(/[,;|]/).map(x => x.trim()).filter(x => x && x.length <= 40);
+  const evidence = " " + flat.map(f => f.text).concat((data.projects || []).map(p => p.name || "")).join(" ").toLowerCase() + " ";
+  const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const shown = (skill) => {
+    const base = skill.toLowerCase();
+    const variants = new Set([base, base.replace(/\s*\(.*?\)\s*/g, " ").trim(), base.replace(/^(microsoft|ms|adobe|google)\s+/, "").trim()]);
+    const paren = base.match(/\(([^)]+)\)/);
+    if (paren) paren[1].split(/[,/]/).forEach(p => variants.add(p.trim()));
+    return Array.from(variants).filter(v => v.length >= 1).some(v => new RegExp("(^|[^a-z0-9+#])" + esc(v) + "([^a-z0-9+#]|$)").test(evidence));
+  };
+  const seen = new Set();
+  const unsupported = flat.length >= 3 ? listed.filter(x => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return !shown(x); }) : [];
+  // (3) certification labels
+  const certFlags = (data.certifications || []).filter(c => c && c.name).filter(c =>
+    /\b(series|program|course|training|bootcamp|workshop|simulation|virtual experience|job simulation)\b/i.test(c.name) && !/\b(certif|certified|licen[cs]e)/i.test(c.name)
+  ).map(c => c.name);
+  const findings = [];
+  duplicates.slice(0, 2).forEach(d => findings.push({ label: "Two bullets read almost the same",
+    detail: "Under " + d.whereA + ": \u201C" + (d.a.length > 110 ? d.a.slice(0, 107) + "\u2026" : d.a) + "\u201D and under " + d.whereB + ": \u201C" + (d.b.length > 110 ? d.b.slice(0, 107) + "\u2026" : d.b) + "\u201D. A reader may think one was copied from the other. Rewrite each in its own terms, and check that every word fits that employer." }));
+  if (unsupported.length >= 2) findings.push({ label: "Skills listed but not shown in use",
+    detail: unsupported.slice(0, 8).join(", ") + (unsupported.length > 8 ? ", and " + (unsupported.length - 8) + " more" : "") + " appear in your Skills section, but no bullet shows you using them. Add a bullet (coursework and projects count) for each one you keep, or remove the ones you could not discuss in an interview." });
+  if (certFlags.length) findings.push({ label: "Certification or training?",
+    detail: certFlags.join("; ") + " \u2014 the name reads like a training program. Confirm the exact credential name and issuer; if it was training or a virtual experience, label the section \u201CCertifications and Training.\u201D" });
+  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, findings, count: findings.length };
+}
+
+// ---- First impression (v12.3.20) ----
+// Built from what the analyzers actually found, so it can no longer tell a
+// student with quantified bullets to "add measurable accomplishments".
+function buildFirstImpression(data) {
+  const bullets = (data.experience || []).flatMap(e => e.bullets || []).map(b => String(b || "").trim()).filter(Boolean);
+  const quant = bullets.filter(b => isQuantifiedBullet(b)).length;
+  const good = [];
+  if (bullets.length && quant >= Math.ceil(bullets.length / 2)) good.push(quant + " of your " + bullets.length + " experience bullets already include a number");
+  if ((data.projects || []).some(p => p.name)) good.push("you have project work to show");
+  if (String(data.summary || "").trim().length > 80) good.push("your summary tells a recruiter what you are aiming for");
+  const todo = [];
+  const lay = analyzeLayout(data);
+  if (lay.measured && lay.issues >= 2) todo.push("the page is hard to read (" + lay.findings.slice(0, 2).map(f => f.item.toLowerCase() + " " + f.yours).join(", ") + ")");
+  const soa = analyzeSectionOrderAdvice(data);
+  if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) todo.push("Education should move up, right under your summary");
+  const ci = analyzeContentIntegrity(data);
+  if (ci.duplicates.length) todo.push("two bullets under different employers read almost the same");
+  if (ci.unsupported.length >= 3) todo.push(ci.unsupported.length + " listed skills are not shown in any bullet");
+  const sh = analyzeSectionHeaders(data);
+  if (sh.mustFix) todo.push(sh.mustFix + " section header" + (sh.mustFix === 1 ? "" : "s") + " should use the standard name" + (sh.mustFix === 1 ? "" : "s"));
+  if (bullets.length && quant < Math.ceil(bullets.length / 2)) todo.push("only " + quant + " of your " + bullets.length + " experience bullets include a number, so add measurable results where they are true");
+  const list = a => a.length <= 1 ? a.join("") : a.slice(0, -1).join("; ") + "; and " + a[a.length - 1];
+  const first = good.length ? "What is working: " + list(good) + "." : "Your resume has content to build on.";
+  const second = todo.length ? " What to fix first: " + list(todo.slice(0, 3)) + "." : " I did not find a major problem, so focus on tailoring the summary and skills to each posting.";
+  return first + second;
+}
+
 // ---- Section Header check (v12.3.18) ----
 // Compares every section header found in the UPLOADED resume with the standard
 // ATS header for that section and flags the ones that differ. Reads
@@ -3727,7 +3953,7 @@ function analyzeSectionHeaders(data) {
       return;
     }
     if (key === "unrecognized") {
-      rows.push({ raw, standard: "\u2014", status: "unrecognized", action: "Not a standard header, so its content is left out of the rebuilt resume \u2014 rename it to the closest standard header, or move the content into one" });
+      rows.push({ raw, standard: "\u2014", status: "unrecognized", action: "Not a standard header, so its content was not read into any section \u2014 rename it to the closest standard header, or move the content into one" });
       return;
     }
     const std = STANDARD_SECTION_HEADERS[key];
@@ -3746,7 +3972,7 @@ function analyzeSectionHeaders(data) {
   if (rows.length) {
     intro = !flagged.length
       ? "All " + rows.length + " section headers on your uploaded resume match the standard ATS names."
-      : flagged.length + " of the " + rows.length + " section headers on your uploaded resume differ" + (flagged.length === 1 ? "s" : "") + " from the standard ATS names. Standard headers are the ones applicant tracking systems and recruiters are most used to, so they leave the least room for content to be misfiled. The rebuilt resume here already uses the standard names.";
+      : flagged.length + " of the " + rows.length + " section headers on your uploaded resume differ" + (flagged.length === 1 ? "s" : "") + " from the standard ATS names. Standard headers are the ones applicant tracking systems and recruiters are most used to, so they leave the least room for content to be misfiled.";
   }
   return { applies: rows.length > 0, rows, flagged, count: flagged.length, mustFix: must, intro };
 }
@@ -3760,8 +3986,8 @@ function sectionOrderExplanation(data) {
   if (/Technology|CS|Engineering|Data|Analytics|AI/i.test(field)) {
     const reasons = [];
     reasons.push("Skills stay near the top so recruiters can quickly confirm technical fit.");
-    if (hasProjects) reasons.push("Projects are placed high because they show tools, code, analysis, and applied work.");
-    if (hasExperience) reasons.push("Experience follows projects because this resume has substantive applied work.");
+    if (hasExperience) reasons.push("Experience comes before Projects because paid and internship work is the stronger evidence.");
+    if (hasProjects) reasons.push("Projects follow directly, since they show tools, analysis, and applied work.");
     reasons.push("Education remains visible, but not above stronger project/experience evidence.");
     if (hasPublications) reasons.push("Publications move higher because research output is a differentiator.");
     return reasons.join(" ");
@@ -4257,6 +4483,7 @@ function App() {
   const [jobUrlStatus, setJobUrlStatus] = useState("");
   const [currentResumeName, setCurrentResumeName] = useState("");
   const [importLinks, setImportLinks] = useState(null);
+  const [importLayout, setImportLayout] = useState(null);
   const [importIntelligence, setImportIntelligence] = useState(null);
   const [lastSkillImportNote, setLastSkillImportNote] = useState([]);
   const [importBlocked, setImportBlocked] = useState(false);
@@ -4346,6 +4573,7 @@ function App() {
     setCurrentResumeName("");
     setImportBlocked(false);
     setImportLinks(null);
+    setImportLayout(null);
     setLastSkillImportNote([]);
     setImportIntelligence(null);
     setShowBuilderWorkspace(false);
@@ -4381,6 +4609,7 @@ function App() {
       const extracted = normalizeImportedResumeText(extractedRaw);
       const fileName = extractedResult && extractedResult.fileName ? extractedResult.fileName : (file.name || "");
       setImportLinks(extractedResult && extractedResult.links ? extractedResult.links : null);
+      setImportLayout(extractedResult && extractedResult.layout ? extractedResult.layout : null);
       if (!(extractedResult && extractedResult.transfer) && looksLikeResumeEvaluationReport(extracted, fileName)) {
         setImportText("");
         setImportPreview(null);
@@ -4409,6 +4638,7 @@ function App() {
       contact: { cityState: "", phone: "", email: "", linkedin: "", portfolio: "" },
       importedOrder: [],
       importedHeadings: [],
+      importedLayout: null,
       affiliations: [emptyAffil()],
       languages: "",
       summary: "",
@@ -4470,6 +4700,8 @@ function App() {
       awards: mapped.awards && mapped.awards.length ? mapped.awards : [emptyAward()],
       publications: mapped.publications && mapped.publications.length ? mapped.publications : [emptyPub()],
       volunteer: mapped.volunteer && mapped.volunteer.length ? mapped.volunteer : [emptyVol()],
+      // v12.3.20: measured layout of the uploaded PDF (null for DOCX / pasted text).
+      importedLayout: importLayout || null,
       // v12.3.18: keep the uploaded file's headers for the Section Header check.
       importedHeadings: (mapped.debugHeadings || []).map(h => ({ raw: h.raw, mapped: h.mapped, duplicate: !!h.duplicate })),
       affiliations: mapped.affiliations && mapped.affiliations.length ? mapped.affiliations : [emptyAffil()],
@@ -4772,6 +5004,24 @@ function App() {
       parts.push(P(soa.headline, "font-weight:700;color:#5980a6;"));
       parts.push(P(soa.body));
       if (soa.caveat) parts.push(P(soa.caveat, "font-style:italic;color:#475569;"));
+    }
+
+    // Layout Check + Content Checks (v12.3.20).
+    const lc = cr.layoutCheck || {};
+    if (lc.measured && Array.isArray(lc.rows) && lc.rows.length) {
+      parts.push(H2("Layout Check"));
+      parts.push(P(lc.intro, "color:#475569;"));
+      const thL = 'text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;';
+      const tdL = 'padding:4pt 8pt;font-size:10.5pt;color:#1d1f20;border-bottom:0.5pt solid #d6d6d8;vertical-align:top;';
+      parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thL + '">Item</th><th style="' + thL + '">Your resume</th><th style="' + thL + '">Standard</th><th style="' + thL + '">What to do</th></tr>' +
+        lc.rows.map(r => '<tr><td style="' + tdL + '">' + esc(r.item) + '</td><td style="' + tdL + '">' + esc(r.yours) + '</td><td style="' + tdL + '">' + esc(r.standard) + '</td><td style="' + tdL + (r.ok ? 'color:#166534;' : 'color:#b45309;font-weight:700;') + '">' + esc(r.fix) + '</td></tr>').join("") +
+        '</table>');
+    }
+    const cc = cr.contentChecks || {};
+    if (cc.count && Array.isArray(cc.findings)) {
+      parts.push(H2("Content Checks"));
+      parts.push(P("These are the items an interviewer is most likely to ask about. None of them need new experience, only more precise wording.", "color:#475569;"));
+      parts.push(UL(cc.findings, f => '<b>' + esc(f.label) + ':</b> ' + esc(f.detail)));
     }
 
     // Section Header check (v12.3.18) — every header in the uploaded resume vs. the
@@ -5333,7 +5583,7 @@ function App() {
   // Real, checkable findings mirroring the atsCompatibilityScore rules.
   const atsFindings = useMemo(() => {
     const out = [];
-    const detected = (data.order || []).filter(k => !data.hidden[k]).length;
+    const detected = countFilledSections(data);
     out.push({ ok: detected >= 3, text: detected + " sections detected" + (detected >= 3 ? " and readable" : " — add more so the resume looks complete") });
     out.push({ ok: !!(data.name && data.contact && data.contact.email), text: (data.name && data.contact && data.contact.email) ? "Name and contact information parse cleanly" : "Add your name and a professional email so ATS parsers capture them" });
     out.push({ ok: !!data.summary, text: data.summary ? "Professional summary present" : "Add a 2–3 line summary near the top" });
@@ -5503,9 +5753,7 @@ function App() {
     !leadershipCount ? "Add leadership, campus involvement, team projects, or volunteer leadership if accurate." : "",
     priorityDetail
   ].filter(Boolean).filter(s => !isRawBlob(s)).slice(0,3);
-  const firstImpression = resumeStrength.overall >= 85
-    ? "Your resume has a strong foundation. The main opportunity is to make your value easier to see quickly by tightening the summary, highlighting measurable accomplishments, and keeping the strongest evidence near the top."
-    : "Your resume has useful content, but it needs clearer positioning before applying. Start with the professional summary, measurable accomplishments, and section organization so recruiters can understand your direction faster.";
+  const firstImpression = buildFirstImpression(data);
   // Bug fix: never surface a raw unparsed blob as "Today's Top Priority". If the
   // top priority's detail is a mis-bucketed content blob, fall back to a clean,
   // meaningful default so the card always makes sense.
@@ -5576,13 +5824,24 @@ function App() {
       if ((_runOn && _runOn.count) || (_density && _density.count)) { openRiskFlags++; confidence -= 3; }
       if (_mech && _mech.count) { openRiskFlags++; confidence -= Math.min(6, _mech.count * 2); }
       if (_expEntries.length <= 1) { openRiskFlags++; confidence -= 3; }
+      // v12.3.20: layout, repeated bullets, unsupported skills and non-standard
+      // headers are also things a recruiter notices.
+      const _layout = analyzeLayout(data);
+      if (_layout.measured && _layout.issues >= 2) { openRiskFlags++; confidence -= 5; }
+      const _integrity = analyzeContentIntegrity(data);
+      if (_integrity.duplicates.length) { openRiskFlags++; confidence -= 4; }
+      if (_integrity.unsupported.length >= 3) { openRiskFlags++; confidence -= 3; }
+      if ((analyzeSectionHeaders(data).mustFix || 0) >= 2) { openRiskFlags++; confidence -= 2; }
     } catch (e) { /* analyzers are best-effort; never block the review */ }
 
     // Hard ceiling while credibility flags remain: a resume with open, recruiter-
     // visible issues should not read as 95%+ ("confident, no reservations"). This
     // also restores headroom so the Game Plan can show a real projected gain
     // instead of "98% → 98%".
-    const confidenceCeiling = openRiskFlags > 0 ? 94 : 98;
+    // v12.3.20: the ceiling now steps down 3 points per open flag (floor 72).
+    // Presence signals alone add up to more than 100, so a fixed 94 ceiling meant
+    // every complete resume scored 94 no matter how many flags were open.
+    const confidenceCeiling = openRiskFlags > 0 ? Math.max(72, Math.min(94, 98 - 3 * openRiskFlags)) : 98;
     confidence = Math.max(45, Math.min(confidenceCeiling, Math.round(confidence)));
 
     let outcome = "🔴 Not Yet";
@@ -5799,13 +6058,15 @@ function App() {
     const summaryQuality = analyzeSummaryQuality(data);
     const sectionOrderAdvice = analyzeSectionOrderAdvice(data);
     const sectionHeaders = analyzeSectionHeaders(data);
+    const layoutCheck = analyzeLayout(data);
+    const contentChecks = analyzeContentIntegrity(data);
     // ---- Credibility & mechanics analyzers (Coach Jeff eval Sections 6,7,14,15,16,19,22,24) ----
     const mechanics = analyzeMechanics(data, importText);
     const metricCred = analyzeMetricCredibility(data, importText);
     const titleMatch = analyzeTitleContentMatch(data);
     const sectionQuality = analyzeSectionQuality(data, importText);
     const fileNaming = analyzeFileNaming(data, currentResumeName);
-    const limitations = parserLimitationNote();
+    const limitations = parserLimitationNote(data);
     const scorecard = buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics, metricCred);
 
     // ---- Manual-eval parity additions: evaluation context (§0), consolidated
@@ -6278,7 +6539,7 @@ function App() {
     const hasWeakOpener = [...(data.experience || []), ...(data.projects || []), ...(data.activities || [])]
       .flatMap(e => (e && e.bullets) || [])
       .some(b => /^\s*(responsible for|was responsible for|worked on|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|duties included|tasked with)\b/i.test(String(b || "")));
-    if (sectionHeaders && sectionHeaders.mustFix) quickWins.push("Rename " + sectionHeaders.mustFix + " section header" + (sectionHeaders.mustFix === 1 ? "" : "s") + " to the standard ATS name" + (sectionHeaders.mustFix === 1 ? "" : "s") + " (see Section Headers).");
+    if (sectionHeaders && sectionHeaders.mustFix) quickWins.push("Fix " + sectionHeaders.mustFix + " section header" + (sectionHeaders.mustFix === 1 ? "" : "s") + " so " + (sectionHeaders.mustFix === 1 ? "it uses the standard ATS name" : "they use the standard ATS names") + " (see Section Headers).");
     if (hasWeakOpener) quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
     if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length) quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
@@ -6367,9 +6628,14 @@ function App() {
       summaryQuality,
       metricDensity,
       sectionOrderAdvice,
-      sectionHeaders
+      sectionHeaders,
+      layoutCheck,
+      contentChecks
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
+  // v12.3.20: one headline number. Resume Health now shows the scorecard overall
+  // (the same figure as the Word report) instead of a separate, higher formula.
+  const healthScore = (coachReview && coachReview.scorecard && typeof coachReview.scorecard.overall === "number") ? coachReview.scorecard.overall : resumeStrength.overall;
 
   // v12.2.0: guidance rail. Brings the Coach's star-ranked improvements, the
   // recruiter tips, and (when a job is loaded) the job-specific priorities into
@@ -6508,17 +6774,17 @@ function App() {
                 <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>Imported successfully • Target: {data.field || "Not selected"}</div>
               </div>
               <div style={{ textAlign: "right", fontSize: 11, color: "#6d7073", lineHeight: 1.4 }}>
-                <div><b>Sections detected:</b> {data.order.filter(k => !data.hidden[k]).length}</div>
+                <div><b>Sections detected:</b> {countFilledSections(data)}</div>
                 <div><b>Import confidence:</b> {importPreview || importIntelligence ? "High" : "Draft"}</div>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 10 }}>
-              <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}><div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>Resume Health</div><div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{resumeStrength.overall}</div><div style={{ fontSize: 11, color: "#6d7073" }}>Overall resume quality</div></div>
+              <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}><div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>Resume Health</div><div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{healthScore}</div><div style={{ fontSize: 11, color: "#6d7073" }}>Overall resume quality</div></div>
               <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
                 <div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "ATS Compatibility" : "Import Quality"}</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: "#5980a6" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? atsScore : ((importPreview || importIntelligence) ? "High" : "Draft")}</div>
-                <div style={{ fontSize: 11, color: "#6d7073" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "Technical formatting and parsing check" : (data.order.filter(k => !data.hidden[k]).length + " sections detected")}</div>
+                <div style={{ fontSize: 11, color: "#6d7073" }}>{showBuilderWorkspace && activeWorkshopSection === "ATS Inspection" ? "Technical formatting and parsing check" : (countFilledSections(data) + " sections detected")}</div>
               </div>
               <div style={{ padding: "9px 11px", borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8" }}>
                 <div style={{ fontSize: 10.5, color: "#6d7073", fontWeight: 900, textTransform: "uppercase" }}>{thirdSummaryCard.title}</div>
@@ -6564,18 +6830,18 @@ function App() {
           </div>
 
           <div style={{ background: "#e6ecf3", borderLeft: "5px solid #5980a6", borderRadius: 0, padding: 15, color: "#3f5f7f", fontSize: 14, lineHeight: 1.45, marginBottom: 12, textAlign: "left" }}>
-            <b>💬 Coach Jeff's First Impression:</b> Your resume already shows useful experience and relevant skills. Your selected target is {data.field || "the target field"}, but the resume itself should state that direction clearly near the top. Before applying, add measurable accomplishments so recruiters can quickly understand the value you bring.
+            <b>💬 Coach Jeff's First Impression:</b> {buildFirstImpression(data)}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "0.85fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
               <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 6px" }}>Resume Health</h3>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <div style={{ fontSize: 42, fontWeight: 900, color: "#5980a6" }}>{resumeStrength.overall}</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: resumeStrength.overall >= 80 ? "#166534" : "#854d0e" }}>🟢 {scoreStatus(resumeStrength.overall)}</div>
+                <div style={{ fontSize: 42, fontWeight: 900, color: "#5980a6" }}>{healthScore}</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: healthScore >= 80 ? "#166534" : "#854d0e" }}>{healthScore >= 80 ? "🟢" : "🟡"} {scoreStatus(healthScore)}</div>
               </div>
               <div style={{ height: 8, background: "#d6d6d8", borderRadius: 0, overflow: "hidden", marginTop: 8 }}>
-                <div style={{ height: "100%", width: Math.min(100, resumeStrength.overall) + "%", background: "#5980a6" }}></div>
+                <div style={{ height: "100%", width: Math.min(100, healthScore) + "%", background: "#5980a6" }}></div>
               </div>
               <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: High</div>
             </div>
@@ -6908,6 +7174,58 @@ function App() {
               ? "I never add facts you didn't provide. Where a number would help, I point to where you should add one truthfully — only ever use details that are true for you."
               : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
+
+          {/* 6a-00. Layout Check + Content Checks (v12.3.20) */}
+          {(() => {
+            const lc = coachReview.layoutCheck || {};
+            if (!lc.measured || !lc.rows || !lc.rows.length) return null;
+            const th = { textAlign: "left", padding: "6px 8px", fontSize: 11, color: "#6d7073", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid #5980a6" };
+            const td = { padding: "6px 8px", fontSize: 13, color: "#1d1f20", borderBottom: "1px solid #e9e9ea", verticalAlign: "top", textAlign: "left" };
+            return (
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid " + (lc.issues ? "#b45309" : "#166534"), borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>📐 Layout Check</h3>
+                <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>{lc.intro}</p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                    <thead><tr><th style={th}>Item</th><th style={th}>Your resume</th><th style={th}>Standard</th><th style={th}>What to do</th></tr></thead>
+                    <tbody>
+                      {lc.rows.map((r, i) => (
+                        <tr key={i}><td style={td}>{r.item}</td><td style={td}>{r.yours}</td><td style={td}>{r.standard}</td><td style={{ ...td, color: r.ok ? "#166534" : "#b45309", fontWeight: r.ok ? 400 : 700 }}>{r.fix}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+          {(() => {
+            const cc = coachReview.contentChecks || {};
+            if (!cc.count || !cc.findings) return null;
+            return (
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #b45309", borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🧾 Content Checks</h3>
+                <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>The items an interviewer is most likely to ask about. None of them need new experience, only more precise wording.</p>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {cc.findings.map((f, i) => (<li key={i} style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5, marginBottom: 6, textAlign: "left" }}><b>{f.label}:</b> {f.detail}</li>))}
+                </ul>
+              </div>
+            );
+          })()}
+
+          {/* 6a-0. Section Order advice (v12.3.19) — previously only in the Word report */}
+          {(() => {
+            const soa = coachReview.sectionOrderAdvice || {};
+            if (!soa.applies) return null;
+            const needsMove = soa.recommendedTop && soa.recommendedTop.length;
+            return (
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid " + (needsMove ? "#b45309" : "#166534"), borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🧭 Section Order</h3>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#3a3d3f", margin: "0 0 6px" }}>{soa.headline}</p>
+                <p style={{ fontSize: 13, color: "#3a3d3f", lineHeight: 1.5, margin: "0 0 6px" }}>{soa.body}</p>
+                {soa.caveat ? <p style={{ fontSize: 12.5, color: "#6d7073", fontStyle: "italic", margin: 0 }}>{soa.caveat}</p> : null}
+              </div>
+            );
+          })()}
 
           {/* 6a. Section Headers (v12.3.18) */}
           {(() => {
