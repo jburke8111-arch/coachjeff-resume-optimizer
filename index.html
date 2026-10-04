@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.21: SNAPSHOT PRIORITIES. "Top Opportunities" and "Today's Top Priority" on the Resume Snapshot now lead with the biggest problems actually found (near-identical bullets, measured layout, Education placement, unsupported skills, non-standard headers) via buildTopFixes(), ahead of the older presence-based items. The project-metrics note now says what is missing (a measured result) instead of the generic "add more measurable project outcomes". -->
 <!-- v12.3.20: SCORE GAP vs. MANUAL EVALUATION. The scorecard rewarded what a resume has and could not see layout or content problems, so it ran 20+ points above the manual audit. (1) LAYOUT CHECK: for PDF uploads, body / heading / name / contact font sizes, the four margins, words per page and page count are measured from the file and compared with the BEST standards (new data.importedLayout, analyzeLayout). (2) CONTENT CHECKS: near-duplicate bullets under different entries, skills listed but not shown in any bullet, and certification names that read like training (analyzeContentIntegrity). Both appear in the on-screen Coach Review and the Word report, add risk flags, and lower the matching scorecard category only when a problem is found. (3) Summary and Positioning now uses the summary-quality score. (4) Recruiter confidence ceiling steps down 3 points per open flag (it was fixed at 94). (5) Resume Health shows the scorecard overall, so the page and the report give one headline number. (6) Coach Jeff's First Impression is built from the findings instead of fixed text. (7) Recommended order for technology and data fields is Experience before Projects, matching the advice text; "rebuilt resume" wording removed from messages about the uploaded file. -->
 <!-- v12.3.19: POST-DEPLOY CLEANUP (Andrin live test). (1) "Sections detected" in the page header, the Import Quality tile and the ATS checklist now counts sections that actually hold content (7 for Andrin) instead of every key in the order list (which read 14 after v12.3.18 added four sections, and 10 for every resume before that). (2) The Section Order advice, previously only in the Word report, now also shows in the on-screen Coach Review above Section Headers. (3) The header quick win reads "Fix N section headers" because a split is not a rename. (4) The metric-credibility fix no longer suggests "in benchmark tests", which only suits software projects. -->
 <!-- v12.3.18: STANDARD ATS SECTION HEADERS. (1) Four standard sections added to the builder and every export: Internships and Research Experience (entries stay in data.experience with a `section` tag and a per-entry "Appears under this section" selector, so all experience analyzers still see them) plus Professional Affiliations and Languages (new data.affiliations / data.languages). Headings such as "INTERNSHIPS", "RESEARCH EXPERIENCE", "PROFESSIONAL AFFILIATIONS" and a spoken-language "LANGUAGES" block now import into their own sections instead of being folded into Experience, Leadership and Activities, or Skills; a "LANGUAGES" block of programming languages still goes to Skills. "Publications / Research" is renamed "Publications". (2) New Section Headers check in the Review Report and the on-screen coach review: each header in the uploaded resume is listed beside the standard header with an action (matches / widely recognized variant / rename / split a combined header / not a standard header / header missing), plus a quick win when renames are needed. (3) Section order now uses degree and experience for every target field, not only technology and data: Education moves directly under the Summary for a new or current graduate, or below Experience when experience is the stronger credential. Older saved drafts are migrated with completeOrder(). -->
@@ -158,7 +159,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.20-industry";
+const BUILD_VERSION = "v12.3.21-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3889,6 +3890,36 @@ function analyzeContentIntegrity(data) {
   return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, findings, count: findings.length };
 }
 
+// ---- Top fixes (v12.3.21) ----
+// One ranked list of the biggest problems actually found, used for the Snapshot's
+// "Top Opportunities" and "Today's Top Priority". Those cards were still built
+// from presence checks, so they led with minor items (a LinkedIn label, project
+// metrics) while the same page's First Impression named the real issues.
+function buildTopFixes(data) {
+  const out = [];
+  const ci = analyzeContentIntegrity(data);
+  if (ci.duplicates.length) {
+    const d = ci.duplicates[0];
+    out.push({ label: "Rewrite the two near-identical bullets", detail: "Two bullets under " + d.whereA + " and " + d.whereB + " read almost the same. Rewrite each in its own terms and check that every word fits that employer." });
+  }
+  const lay = analyzeLayout(data);
+  if (lay.measured && lay.issues >= 2) {
+    out.push({ label: "Fix the text size and margins", detail: "Your page is hard to read: " + lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + " is " + f.yours + " (standard " + f.standard + ")").join("; ") + "." });
+  }
+  const soa = analyzeSectionOrderAdvice(data);
+  if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) {
+    out.push({ label: "Move Education up", detail: "Move Education up so it sits right under your Professional Summary. Your degree is your leading credential." });
+  }
+  if (ci.unsupported.length >= 3) {
+    out.push({ label: "Back up your listed skills", detail: "Show these skills in a bullet or remove them: " + ci.unsupported.slice(0, 6).join(", ") + ". No bullet shows you using them." });
+  }
+  const sh = analyzeSectionHeaders(data);
+  if (sh.mustFix) {
+    out.push({ label: "Use the standard section headers", detail: "Fix " + sh.mustFix + " section header" + (sh.mustFix === 1 ? "" : "s") + " so " + (sh.mustFix === 1 ? "it uses the standard ATS name." : "they use the standard ATS names.") });
+  }
+  return out;
+}
+
 // ---- First impression (v12.3.20) ----
 // Built from what the analyzers actually found, so it can no longer tell a
 // student with quantified bullets to "add measurable accomplishments".
@@ -4150,7 +4181,7 @@ function analyzeProjectStrength(data) {
   const score = projects.length ? Math.max(55, Math.min(100, 72 + Math.min(18, quantified * 3) + Math.min(10, techDetected * 2))) : 60;
   const notes = [];
   if (!projects.length) notes.push("No projects detected.");
-  if (projects.length && quantified < Math.ceil(bullets.length / 3)) notes.push("Add more measurable project outcomes where accurate.");
+  if (projects.length && quantified < Math.ceil(bullets.length / 3)) notes.push("Your project bullets describe the work but not a measured result. Add one where it is true, such as how many teams you placed ahead of, how many people used it, or what changed.");
   if (projects.length && techDetected < projects.length) notes.push("Make sure each project names the tools, methods, or technologies used.");
 
   return { score, projects: projects.length, bullets: bullets.length, quantified, techDetected, notes };
@@ -5745,7 +5776,9 @@ function App() {
     ? (links.linkedInTextOnly ? "Your LinkedIn is on the page but imported as plain text — make sure it's a live, clickable URL (linkedin.com/in/yourname) so recruiters can click through."
         : (links.linkedInUrlHidden ? "Your LinkedIn link works when clicked, but the page shows only the word “LinkedIn.” Type out the address (linkedin.com/in/yourname) so it survives ATS text parsing and printing." : ""))
     : "Add a LinkedIn URL to your header — recruiters expect it for verification and outreach.";
+  const topFixes = buildTopFixes(data);
   const snapshotOpportunities = [
+    ...topFixes.map(f => f.detail),
     linkOpportunity,
     !hasSummary ? "Strengthen the professional summary so the target role is clear." : "",
     expBulletCount && resumeStrength && resumeStrength.exp && resumeStrength.exp.quantified < Math.ceil(expBulletCount / 3) ? "Add more measurable results to experience bullets where accurate." : "",
@@ -5758,7 +5791,7 @@ function App() {
   // top priority's detail is a mis-bucketed content blob, fall back to a clean,
   // meaningful default so the card always makes sense.
   const cleanTopPriority = (topPriorities || []).find(p => p && p.detail && !isRawBlob(p.detail));
-  const todaysRecommendation = cleanTopPriority || { label: "Strengthen the Professional Summary", detail: "Make your target role, strongest skills, and best evidence clear in 2–4 lines." };
+  const todaysRecommendation = (topFixes.length ? topFixes[0] : null) || cleanTopPriority || { label: "Strengthen the Professional Summary", detail: "Make your target role, strongest skills, and best evidence clear in 2–4 lines." };
 
   const recruiterReview = useMemo(() => {
     const signals = [];
