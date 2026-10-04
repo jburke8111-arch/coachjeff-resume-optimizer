@@ -4,6 +4,8 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.18: STANDARD ATS SECTION HEADERS. (1) Four standard sections added to the builder and every export: Internships and Research Experience (entries stay in data.experience with a `section` tag and a per-entry "Appears under this section" selector, so all experience analyzers still see them) plus Professional Affiliations and Languages (new data.affiliations / data.languages). Headings such as "INTERNSHIPS", "RESEARCH EXPERIENCE", "PROFESSIONAL AFFILIATIONS" and a spoken-language "LANGUAGES" block now import into their own sections instead of being folded into Experience, Leadership and Activities, or Skills; a "LANGUAGES" block of programming languages still goes to Skills. "Publications / Research" is renamed "Publications". (2) New Section Headers check in the Review Report and the on-screen coach review: each header in the uploaded resume is listed beside the standard header with an action (matches / widely recognized variant / rename / split a combined header / not a standard header / header missing), plus a quick win when renames are needed. (3) Section order now uses degree and experience for every target field, not only technology and data: Education moves directly under the Summary for a new or current graduate, or below Experience when experience is the stronger credential. Older saved drafts are migrated with completeOrder(). -->
+<!-- v12.3.17: SINGLE-LINE HEADER + ROUND-BULLET PDF FIX (Andrin regression). A Word-exported PDF with "Title | Employer | City, ST  Dates" on one line, Word's round bullet (U+25CF), a combined "CERTIFICATIONS & SKILLS" heading and an "ACADEMIC PROJECT EXPERIENCE" heading produced a report with 5 bullets instead of 13, no projects, 3 certifications instead of 2, employers stored as cities, and a missing phone. Fixes: (1) PDF text runs are joined by their real horizontal gap, so words split at hyphens/kerning are no longer spaced apart ("detail - oriented", "or der", "682 - 307 - 9207"); (2) PDF link annotations are imported like DOCX hyperlinks, so a clickable "LinkedIn" label yields its URL, with a new note when the visible text is only the word "LinkedIn"; (3) all common bullet glyphs at line start are normalized to "•"; (4) a trailing "City, ST" segment is peeled off piped job headers so employer and location land in the right fields; (5) lowercase-start wrapped lines are never dropped as employer rows, and "inc"/"corp" org keywords need word boundaries ("increase" no longer matches); (6) "<qualifier> PROJECT EXPERIENCE" headings map to Projects; (7) combined Skills/Certifications headings are split by label; "Name – Detail (Issuer)" certifications keep the issuer; (8) "School | City, ST  Date" education lines split correctly; (9) the summary hook check accepts spelled-out years and named standout results; (10) section-order advice and the Section Ordering score now describe the UPLOADED resume's heading order (new data.importedOrder), not the order the builder applied at import; (11) the "weak opener" and "move your strongest section" quick wins print only when they apply. -->
 <!-- v12.3.16: AMBIGUOUS-MINOR COACHING (eval #16). Adds a soft coaching note when a minor references a named school/program by a single word that outsiders may not recognize — e.g. "Smith Minor in General Business" (UMD's Robert H. Smith School of Business). The Education Review now suggests spelling it out ("Smith School of Business"). Detection fires ONLY on a curated list of known business-school program names directly followed by "Minor" (Smith, Ross, Wharton, Haas, Booth, Stern, etc.), and stays silent when the school is already spelled out nearby. Deliberately NOT generic: subject-name minors share the exact "<Word> Minor" shape ("Spanish Minor", "Business Minor"), so a generic rule would false-positive constantly. The note is a soft suggestion only — it does NOT reduce the Education score or change "cleanly structured," it just appears in the Education suggestions. Verified: fires on Smith/Ross/Haas minors; silent on subject minors, spelled-out programs, non-minor uses of a listed word ("Johnson Scholarship"), and resumes with no minor. -->
 <!-- v12.3.15: LANGUAGE REPAIR (self-healing skills). v12.3.14 preserves a resume's own skill labels, but that means re-importing an ALREADY-mislabelled file (e.g. a prior export where "English, French, Lingala" was stuck under Technical Skills and the original "Languages:" group name was lost) faithfully preserves the mistake — garbage in, garbage out. New repairMisfiledLanguages() detects a run of 2+ known spoken languages sitting in the wrong bucket (Technical Skills / Domain Knowledge) with no Languages group present, and lifts them into their own "Languages" group using the first free slot (records a note; if no slot is free, flags it for the report). Conservative: only recognized language names, only 2+ together (a lone "English" is left alone), never touches an existing Languages group. This self-heals prior exports and any DOCX/PDF that flattened the Languages line away. Verified: the damaged v12.3.14 export re-imports with English/French/Lingala restored to a Languages group; clean resumes and single-language cases are untouched. NOTE (workflow): validating skills parsing requires importing the ORIGINAL resume, not a prior tool export, or the input already carries earlier damage. -->
 <!-- v12.3.14: SKILLS CATEGORY PRESERVATION (glued labels). When a resume's skills block arrived as ONE flattened line gluing several labelled groups together ("Business & Operations: ... Data & Analytics: ... Tools: ... Languages: ...") the parser fell through to the force-fit path, which ran each label through normalizeLabel() and DISCARDED the resume's own category names. That mislabelled "Business & Operations" as "Technical Skills", "Data & Analytics" as "Domain Knowledge", and dumped "Languages: English, French, Lingala" into Technical Skills (normalizeLabel maps "Languages" to technical, a rule meant for "Programming Languages"). Fix: the preserve-original-labels path now also splits a single glued line on its inline labels, so 2-4 labelled groups keep their exact names and order whether they arrive as separate lines OR one glued line. Regression-checked: unlabelled flat lists still force-fit to defaults; >4 groups still fall back (only four slots exist). Verified on Rachel: Business & Operations / Data & Analytics / Tools / Languages all preserved. -->
@@ -154,7 +156,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.16-industry";
+const BUILD_VERSION = "v12.3.18-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -306,7 +308,8 @@ function tokenizeImportant(text) {
 }
 function collectResumeText(data) {
   const parts = [data.name, data.summary, data.skills && data.skills.technical, data.skills && data.skills.dataVisualization, data.skills && data.skills.tools, data.skills && data.skills.domain];
-  ["experience", "projects", "education", "activities", "certifications", "awards", "publications", "volunteer"].forEach(k => {
+  parts.push(data.languages);
+  ["experience", "projects", "education", "activities", "certifications", "awards", "publications", "volunteer", "affiliations"].forEach(k => {
     (data[k] || []).forEach(item => Object.keys(item).forEach(key => {
       if (key === "id") return;
       const v = item[key];
@@ -344,6 +347,9 @@ function detectProfileLinks(data, rawImportText) {
     hasAny: hasLinkedIn || hasGithub || hasPortfolio,
     // "URL missing but anchor present" — a distinct, softer coaching case.
     linkedInTextOnly: textLinkedIn && !fieldLinkedIn,
+    // v12.3.17: the link works (URL recovered from the file's hyperlink) but the
+    // page shows only the word "LinkedIn" — ATS text extraction and print lose it.
+    linkedInUrlHidden: fieldLinkedIn && String(rawImportText || "").length >= 40 && /\blinked ?in\b/i.test(head) && !/linkedin\.com/i.test(text),
     githubTextOnly: textGithub && !fieldGithub
   };
 }
@@ -356,6 +362,14 @@ function normalizeImportedResumeText(rawText) {
   // assume ordinary spaces/hyphens match reliably (e.g. "Cypress,\u00a0CA").
   t = t.replace(/[\u00a0\u2007\u202f\u2009\u200a\u2002\u2003]/g, " ");
   t = t.replace(/[\u2013\u2014\u2212]/g, "–");
+
+  // v12.3.17: Normalize every common bullet glyph at the START of a line to "•".
+  // Word's default round bullet exports to PDF as "●" (U+25CF), which none of the
+  // bullet-marker tests recognized — so the first bullet under each job was read
+  // as the employer row and dropped, and the rest merged or kept a stray glyph.
+  t = t.replace(/^[ \t]*[\u25CF\u25CB\u25E6\u25AA\u25A0\u25A1\u25AB\u2023\u2043\u2219\u27A2\u27A4\u25BA\u25B8\u25C6\u2756\uF0B7\uF0A7\u2022][ \t]*/gm, "• ");
+  // Phone numbers extracted with spaces around the separators ("682 - 307 - 9207").
+  t = t.replace(/(\(?\b\d{3}\)?)\s*[-.–]\s*(\d{3})\s*[-.–]\s*(\d{4})\b/g, "$1-$2-$3");
 
   // v12.3.9: Rescue LETTER-SPACED section headings. Some DOCX/PDF exports flatten
   // a heading's tracked/expanded letter-spacing into a real space after the first
@@ -480,8 +494,25 @@ function _headingKey(line) {
   if (/^extracted hyperlinks$/i.test(s)) return "ignore";
 
   if (/^(professional\s+summary|summary|profile|professional\s+profile|career\s+profile|career\s+summary|personal\s+profile|about\s+me|objective|career\s+objective|professional\s+objective)$/.test(s)) return "summary";
-  if (/^(skills|technical\s+skills|technical\s+proficiencies|technical\s+competencies|core\s+skills|core\s+competencies|competencies|areas\s+of\s+expertise|technologies|technology|technology\s+skills|tools|tools\s+\/\s+platforms|tools\s+and\s+platforms|platforms|software|software\s+skills|computer\s+skills|data\s+&\s+analytics|data\s+and\s+analytics|analytics\s+skills|programming|programming\s+languages|languages|systems|applications|technical\s+toolkit|toolkit)$/i.test(s)) return "skills";
-  if (/^(?:(?:relevant|related|additional|other|professional|core)\s+){0,2}(experience|professional\s+experience|work\s+experience|employment|employment\s+history|work\s+history|relevant\s+experience|internship\s+experience|internships|clinical\s+experience|field\s+experience|career\s+experience|related\s+experience|additional\s+experience|employment\s+experience|professional\s+work\s+experience|research\s+experience|teaching\s+experience|customer\s+service\s+experience|sales\s+experience|administrative\s+experience)$/i.test(s)) return "experience";
+  if (/^(skills|technical\s+skills|technical\s+proficiencies|technical\s+competencies|core\s+skills|core\s+competencies|competencies|areas\s+of\s+expertise|technologies|technology|technology\s+skills|tools|tools\s+\/\s+platforms|tools\s+and\s+platforms|platforms|software|software\s+skills|computer\s+skills|data\s+&\s+analytics|data\s+and\s+analytics|analytics\s+skills|programming|programming\s+languages|systems|applications|technical\s+toolkit|toolkit)$/i.test(s)) return "skills";
+  // v12.3.17: combined "CERTIFICATIONS & SKILLS" / "SKILLS AND CERTIFICATIONS"
+  // headings. _splitResume routes labelled certification lines to Certifications
+  // and everything else to Skills, instead of filing the whole block under one.
+  if (/^(?:(?:technical|core|professional)\s+)?(?:skills\s*(?:&|and|\/|,)\s*(?:certifications?|certificates?|licenses?|training)|(?:certifications?|certificates?|licenses?|training)\s*(?:&|and|\/|,)\s*(?:(?:technical|core)\s+)?skills)$/i.test(s)) return "skillscerts";
+  // v12.3.18: Internships, Research Experience, Professional Affiliations and
+  // Languages are standard sections of their own (previously folded into
+  // Experience, Leadership & Activities, and Skills). Checked before the tolerant
+  // experience matcher, which would otherwise claim "<qualifier> ... experience".
+  if (/^(?:(?:relevant|related|additional|other|professional)\s+)?(?:internships?|internship\s+experience|internships?\s*(?:&|and)\s*co-?ops?|co-?ops?(?:\s+experience)?|co-?ops?\s*(?:&|and)\s*internships?)$/i.test(s)) return "internships";
+  if (/^(?:(?:relevant|related|additional|other|professional|undergraduate|graduate|academic)\s+){0,2}research\s+(?:experience|positions?|assistantships?)$/i.test(s) || /^(?:undergraduate|graduate|academic)\s+research$/i.test(s)) return "research";
+  if (/^(?:professional\s+)?(?:affiliations?|memberships?|associations?)$/i.test(s) || /^(?:professional\s+)?(?:memberships?\s*(?:&|and)\s*affiliations?|affiliations?\s*(?:&|and)\s*memberships?|organizations?\s*(?:&|and)\s*affiliations?)$/i.test(s) || /^professional\s+organizations?$/i.test(s)) return "affiliations";
+  if (/^(?:languages?|spoken\s+languages?|foreign\s+languages?|language\s+skills|language\s+proficienc(?:y|ies))$/i.test(s)) return "languages";
+  // v12.3.17: "ACADEMIC PROJECT EXPERIENCE", "Relevant Project Experience" and
+  // similar are PROJECT headings. Checked before the experience matchers, whose
+  // tolerant "<qualifier> ... experience" form would otherwise claim them (and an
+  // unrecognized one left the whole project block glued into Education).
+  if (/^(?:(?:academic|technical|relevant|selected|personal|capstone|course|class|research|data|software|engineering|key|notable)\s+){0,2}projects?(?:\s+(?:experience|work|highlights))?$/i.test(s)) return "projects";
+  if (/^(?:(?:relevant|related|additional|other|professional|core)\s+){0,2}(experience|professional\s+experience|work\s+experience|employment|employment\s+history|work\s+history|relevant\s+experience|clinical\s+experience|field\s+experience|career\s+experience|related\s+experience|additional\s+experience|employment\s+experience|professional\s+work\s+experience|teaching\s+experience|customer\s+service\s+experience|sales\s+experience|administrative\s+experience)$/i.test(s)) return "experience";
   // v12.3.1: Descriptive headings often insert a specialty between the qualifier
   // and EXPERIENCE (e.g. "RELEVANT ANALYST & TECHNOLOGY EXPERIENCE"). The old
   // exact matcher missed these, leaving the entire block inside the preceding
@@ -490,7 +521,7 @@ function _headingKey(line) {
   if (/^(?:relevant|related|additional|other|professional|core)(?:\s+[a-z0-9&/+.-]+){1,5}\s+experience$/i.test(s)) return "experience";
   if (/^(projects|academic\s+projects|technical\s+projects|relevant\s+projects|project\s+experience|selected\s+projects|capstone|capstone\s+project|portfolio\s+projects|course\s+projects|class\s+projects|research\s+projects|personal\s+projects|data\s+projects|software\s+projects|engineering\s+projects|project\s+portfolio)$/i.test(s)) return "projects";
   if (/^(education|academic\s+background|educational\s+background|degrees|academic\s+history|university\s+education|college\s+education)$/i.test(s)) return "education";
-  if (/^(leadership|leadership\s+experience|leadership\s+and\s+volunteering|leadership\s+&\s+volunteering|leadership\s+and\s+volunteer\s+experience|leadership\s+\/\s+volunteer\s+experience|leadership\s+&\s+volunteer\s+experience|leadership\s+&\s+activities|activities|campus\s+involvement|campus\s+leadership|student\s+organizations|organizations|extracurricular\s+activities|involvement|clubs|affiliations)$/i.test(s)) return "activities";
+  if (/^(leadership|leadership\s+experience|leadership\s+and\s+volunteering|leadership\s+&\s+volunteering|leadership\s+and\s+volunteer\s+experience|leadership\s+\/\s+volunteer\s+experience|leadership\s+&\s+volunteer\s+experience|leadership\s+&\s+activities|activities|campus\s+involvement|campus\s+leadership|student\s+organizations|organizations|extracurricular\s+activities|involvement|clubs)$/i.test(s)) return "activities";
   if (/^(certifications|certificates|licenses|licensure|professional\s+certifications|training|trainings|additional\s+training)$/i.test(s)) return "certifications";
   if (/^(awards|honors|awards\s+&\s+honors|awards\s+and\s+honors|awards\s+&\s+recognition|awards\s+and\s+recognition|awards\s+&\s+activities|awards\s+and\s+activities|honors\s+&\s+activities|honors\s+and\s+activities|awards\s+&\s+achievements|awards\s+and\s+achievements|honors\s+&\s+awards|honors\s+and\s+awards|recognition|achievements|accomplishments|scholarships)$/i.test(s)) return "awards";
   if (/^(publications|publication|research|publications\s+\/\s+research|presentations|conference\s+presentations|proceedings)$/i.test(s)) return "publications";
@@ -507,7 +538,8 @@ function _headingKey(line) {
   const shortLine = s.length <= 32 && s.split(" ").length <= 4;
   const startsAction = /^(published|presented|developed|designed|built|created|led|managed|conducted|analyzed|implemented|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|coordinated|organized|spearheaded|launched|contributed|architected|engineered|optimized|streamlined)\b/i.test(s);
   if (shortLine && !startsAction) {
-    if (/^(?:(?:relevant|related|additional|other|professional|core)\s+){0,2}(work\s+experience|professional\s+experience|experience|employment(\s+history)?|work\s+history|internships?)\b/i.test(s)) return "experience";
+    if (/^(?:(?:relevant|related|additional|other|professional|core)\s+){0,2}(work\s+experience|professional\s+experience|experience|employment(\s+history)?|work\s+history)\b/i.test(s)) return "experience";
+    if (/^internships?\b/i.test(s)) return "internships";
     if (/^(projects?|academic\s+projects|technical\s+projects)\b/i.test(s)) return "projects";
     if (/^(education|academic\s+background)\b/i.test(s)) return "education";
     if (/^(skills|technical\s+skills|core\s+competencies)\b/i.test(s)) return "skills";
@@ -550,10 +582,24 @@ function _splitResume(rawText) {
       // surface the duplication instead of silently merging fragments.
       const isDuplicate = !!sections[current];
       if (!sections[current]) sections[current] = [];
-      debugHeadings.push({ raw: line, mapped: h, duplicate: isDuplicate });
+      debugHeadings.push({ raw: line, mapped: h === "skillscerts" ? "skills + certifications" : h, duplicate: isDuplicate });
       return;
     }
     if (current === "ignore") return;
+
+    // v12.3.18: note a line that LOOKS like a section header but is not one of
+    // the recognized names (e.g. "ADDITIONAL INFORMATION", "INTERESTS"). Handling
+    // The Section Header check reports it to the student.
+    if (sawExplicitHeading && /^[A-Z][A-Z &\/,\-]{3,44}$/.test(line) && line.split(/\s+/).length <= 5 &&
+        /\b(EXPERIENCES?|SKILLS|EDUCATION|PROJECTS|ACTIVITIES|INFORMATION|INTERESTS|HOBBIES|COURSEWORK|COURSES|REFERENCES|QUALIFICATIONS|HIGHLIGHTS|PROFILE|BACKGROUND|TRAINING|HONORS|INVOLVEMENT|ACHIEVEMENTS|STRENGTHS|COMPETENCIES|EXTRACURRICULARS?|PORTFOLIO|TECHNOLOGIES|ENGAGEMENT)$/.test(line)) {
+      debugHeadings.push({ raw: line, mapped: "unrecognized", duplicate: false });
+      // Content under an unknown header used to be appended to whatever section
+      // came before it (e.g. "Open to relocation" landing in Languages). Hold it
+      // aside instead; the Section Header check tells the student it was left out.
+      current = "_other";
+      sections._other = sections._other || [];
+      return;
+    }
 
     if (!sawExplicitHeading && current === "header" && idx > 0) {
       const looksLikeContact = /@|linkedin|github|https?:\/\/|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}|[A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}/i.test(line);
@@ -571,6 +617,35 @@ function _splitResume(rawText) {
     sections[current].push(line);
   });
 
+  // v12.3.18: a "LANGUAGES" heading holds spoken languages only when its lines
+  // name at least one known language. Otherwise it is a programming-languages
+  // list and stays in Skills, exactly as before.
+  if (sections.languages) {
+    const langText = sections.languages.join(" ").toLowerCase();
+    const spoken = Array.from(KNOWN_LANGUAGES).some(l => new RegExp("\\b" + l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(langText));
+    if (!spoken) {
+      sections.skills = (sections.skills || []).concat(sections.languages);
+      delete sections.languages;
+      debugHeadings.forEach(h => { if (h.mapped === "languages") h.mapped = "skills"; });
+    }
+  }
+
+  // v12.3.17: distribute a combined Skills/Certifications block. A line labelled
+  // "Certifications:" (or Licenses/Certificates/Credentials) goes to Certifications,
+  // one entry per ";"-separated item; every other line is a Skills line.
+  if (sections.skillscerts) {
+    const certLabel = /^\s*(?:[•\-*]\s*)?(?:certifications?|certificates?|licenses?(?:\s*(?:&|and)\s*certifications?)?|credentials?)\s*:\s*/i;
+    sections.skillscerts.forEach(l => {
+      if (certLabel.test(l)) {
+        const items = l.replace(certLabel, "").split(/\s*;\s*/).map(x => x.trim()).filter(Boolean);
+        if (items.length) { sections.certifications = (sections.certifications || []).concat(items); }
+      } else {
+        sections.skills = (sections.skills || []).concat([l]);
+      }
+    });
+    delete sections.skillscerts;
+  }
+
   if ((!sections.summary || !sections.summary.length) && sections.header && sections.header.length > 1) {
     const isContactOrProfileLine = l => /@|linkedin|github|https?:\/\/|\b(?:www\.)?[a-z0-9.-]+\.(?:com|net|org|io|dev|me)\//i.test(String(l || "")) || /\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(String(l || ""));
     const contactIdx = sections.header.findIndex(l => isContactOrProfileLine(l));
@@ -585,7 +660,7 @@ function _splitResume(rawText) {
   }
 
   // If no explicit Experience section was found, infer one from job-like lines after education.
-  if (!sections.experience || !sections.experience.length) {
+  if ((!sections.experience || !sections.experience.length) && !(sections.internships && sections.internships.length) && !(sections.research && sections.research.length)) {
     const expStart = lines.findIndex(l =>
       /(intern|assistant|associate|analyst|specialist|coordinator|representative|manager|cashier|server|tutor|researcher|consultant|volunteer|ambassador|technician|developer|engineer|clerk|advisor|aide)/i.test(l) &&
       !/(summary|profile|education|skills|certification|award)/i.test(l)
@@ -991,6 +1066,9 @@ function _parseEducation(lines) {
   if (!text.trim()) return [emptyEdu()];
 
   let schoolLine = clean.find(l => /(university|college|institute|school)/i.test(l)) || "";
+  // v12.3.17: "School | City, ST   Dec 2025" on one line — drop the trailing
+  // graduation date so the location can be peeled off the end of the school.
+  schoolLine = schoolLine.replace(/[\s|,–-]*(?:(?:expected|anticipated)\s*:?\s*)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}\s*$/i, "").trim();
 
   // Extract location ONLY from the school line (not the whole section, which can
   // pull stray "Word, XX" matches from skills/coursework like "Statistics, SQL").
@@ -1104,7 +1182,9 @@ function _looksLikeOrgLocation(line) {
   const hasStateLocation = /(\||,)\s*(?:[A-Z][a-zA-Z .'-]+,\s*)?[A-Z]{2}\b/.test(s);
   const hasRemoteLocation = /(\||,)\s*(?:remote|usa)\b/i.test(s) || /\bRemote$/i.test(s);
   return hasStateLocation || hasRemoteLocation ||
-         /(inc\.?|llc|company|college|university|group|corp|corporation|solutions|systems|connect|staffing|department|handshake|foundever|kelly|pharma|st\.?\s*petersburg)/i.test(s);
+         // v12.3.17: "inc" and "corp" need word boundaries — unanchored they matched
+         // "increase", "including", "incorporate" inside ordinary bullet text.
+         /(\binc\b\.?|llc|company|college|university|group|\bcorp\b\.?|corporation|solutions|systems|connect|staffing|department|handshake|foundever|kelly|pharma|st\.?\s*petersburg)/i.test(s);
 }
 function _splitOrgLocation(line) {
   const s = String(line || "").trim();
@@ -1209,6 +1289,14 @@ function _parseExperienceEntries(lines) {
     // signal to determine whether the source is "Org | Title" or "Title | Org".
     if (headerText.includes("|")) {
       const parts = headerText.split("|").map(x => x.trim()).filter(Boolean);
+      // v12.3.17: single-line "Title | Employer | City, ST   Dates" headers. Peel a
+      // trailing location segment off first; otherwise the LAST segment (the city)
+      // was stored as the employer and the real employer was lost or folded into
+      // the title ("Title — Employer").
+      if (parts.length >= 2 && /^(?:[A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}|Remote(?:,\s*USA)?|[A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}\s*\(?(?:Remote|Hybrid)\)?)$/.test(parts[parts.length - 1])) {
+        location = parts.pop();
+        if (parts.length === 1) title = parts[0];
+      }
       if (parts.length >= 2) {
         const left = parts[0];
         const right = parts[parts.length - 1];
@@ -1250,7 +1338,7 @@ function _parseExperienceEntries(lines) {
           (_looksLikeOrgLocation(second) || second.replace(/\s+/g, " ").length < 100)) {
         const ol = _splitOrgLocation(second);
         org = org || ol.org;
-        location = ol.location || "";
+        location = ol.location || location || "";
         bulletStart = 2;
       }
     }
@@ -1273,7 +1361,10 @@ function _parseExperienceEntries(lines) {
       text &&
       !isHardSectionHeading(text) &&
       !extractDateRangeFromLine(text) &&
-      (marked || looksLikeContentBullet(text) || !(_looksLikeOrgLocation(text) && text.length < 90))
+      // v12.3.17: an unmarked line that starts lowercase is the wrapped tail of a
+      // bullet, never an employer/location row — keep it even if it contains an
+      // org-like word ("systems", "group", "university").
+      (marked || looksLikeContentBullet(text) || /^[a-z]/.test(text) || !(_looksLikeOrgLocation(text) && text.length < 90))
     );
     // Merge wrapped continuation lines: an UNMARKED kept line that continues the previous
     // bullet (see _isBulletContinuation) is joined to it rather than counted as its own
@@ -1583,7 +1674,9 @@ function _parseProjectLine(line) {
   const dateMatch = s.match(/(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}(?:\s*[–—-]\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+20\d{2}))?|\b20\d{2}\b/i);
   if (dateMatch) {
     const idx = dateMatch.index;
-    return { name: s.slice(0, idx).replace(/[–—-]\s*$/,"").trim(), date: s.slice(idx).trim() };
+    // v12.3.17: drop a trailing "| City, ST" segment from a piped project header.
+    const nm = s.slice(0, idx).replace(/[–—-]\s*$/,"").trim().replace(/\s*\|\s*[A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}\s*$/, "").trim();
+    return { name: nm, date: s.slice(idx).trim() };
   }
   return { name: s, date: "" };
 }
@@ -1697,6 +1790,17 @@ function _parseCertificationEntries(lines) {
       }
     }
 
+    // v12.3.17: "Name – Detail (Issuer)" with no pipes: a trailing parenthetical
+    // that reads like an organization (not an acronym such as "(PMP)" or a status
+    // such as "(In Progress)") is the issuer, and the dash stays inside the name —
+    // "Lean Six Sigma – Yellow Belt Series (Fidelity Investments)".
+    if (!line.includes("|")) {
+      const base = date ? line.replace(dateRe, "").replace(/[,|\s]+$/, "").trim() : line;
+      const pm = base.match(/^(.*\S)\s*\(([^()]{3,60})\)$/);
+      if (pm && /^[A-Z]/.test(pm[2]) && !/^[A-Z0-9&.\-]{2,8}$/.test(pm[2].trim()) && !/\b(in progress|expected|pending|current|ongoing|anticipated)\b/i.test(pm[2])) {
+        return { id: _newId(), name: pm[1].trim(), issuer: pm[2].trim(), date: date };
+      }
+    }
     return { id: _newId(), name: parts[0] || line, issuer: parts.slice(1).join(" — "), date: date };
   }) : [emptyCert()];
 }
@@ -1743,12 +1847,22 @@ function mapImportedResumeToBuilder(rawText) {
     contact: contact.contact,
     summary: (sections.summary || []).join(" "),
     skills: (sections.skills && sections.skills.length) ? _parseSkills(sections.skills || []) : inferSkillsFromResumeText(rawText),
-    experience: _sortEntriesByRecency(_parseExperienceEntries(sections.experience || []).map(e => ({ ...e, location: abbreviateState(e.location) }))),
+    // v12.3.18: Internships and Research Experience parse like Experience and
+    // live in the same array, tagged with the section they render under.
+    experience: (() => {
+      const tag = (lines, sec) => (lines && lines.length ? _parseExperienceEntries(lines) : [])
+        .filter(e => e.title || e.org || (e.bullets || []).some(Boolean))
+        .map(e => ({ ...e, section: sec, location: abbreviateState(e.location) }));
+      const all = tag(sections.experience, "experience").concat(tag(sections.internships, "internships"), tag(sections.research, "research"));
+      return all.length ? _sortEntriesByRecency(all) : [emptyExp()];
+    })(),
     projects: _parseProjectEntries(sections.projects || []),
     education: cleanEducationEntries(_parseEducation(sections.education || [])).map(ed => ({ ...ed, location: abbreviateState(ed.location) })),
     activities: (sections.activities && sections.activities.length) ? _parseActivityEntries(sections.activities || []) : [emptyAct()],
     certifications: _parseCertificationEntries(sections.certifications || []),
     awards: _parseSimpleListEntries(sections.awards || [], emptyAward, "name"),
+    affiliations: _parseSimpleListEntries(sections.affiliations || [], emptyAffil, "name"),
+    languages: _dropSectionNoise(sections.languages || []).map(l => l.replace(/^\s*(?:spoken\s+)?languages?\s*:\s*/i, "").trim()).filter(Boolean).join(", "),
     publications: _parsePublicationEntries(sections.publications || []),
     volunteer: _parseEntry(sections.volunteer || [], emptyVol, "role", "org").map(v => ({ ...v, location: abbreviateState(v.location) })),
     found: Object.keys(sections).filter(k => !k.startsWith("_") && k !== "header" && sections[k] && sections[k].length),
@@ -1874,6 +1988,7 @@ async function extractPdfTextFromFile(file) {
   const loadingTask = window.pdfjsLib.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;
   const pages = [];
+  const urls = [];
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
@@ -1900,18 +2015,49 @@ async function extractPdfTextFromFile(file) {
         if (rows[r].y - y > Y_TOL * 6) break;
       }
       if (!row) { row = { y, runs: [] }; rows.push(row); }
-      row.runs.push({ x, str: it.str });
+      // v12.3.17: keep each run's width and font height so runs can be joined by
+      // their real horizontal gap instead of a blanket space (see below).
+      const h = Math.abs(it.height || 0) || Math.hypot(tr[2] || 0, tr[3] || 0) || 10;
+      row.runs.push({ x, str: it.str, w: (typeof it.width === "number" ? it.width : -1), h });
     });
     // Sort rows top-to-bottom (PDF Y increases upward, so descending Y = top-down),
     // then each row left-to-right by X, and join runs into a line.
     rows.sort((a, b) => b.y - a.y);
     const lines = rows.map(row => {
       row.runs.sort((a, b) => a.x - b.x);
-      return row.runs.map(rn => rn.str).join(" ").replace(/\s{2,}/g, " ").trim();
+      // v12.3.17: GEOMETRY-AWARE JOIN. Word-exported PDFs split one visual word
+      // into several text runs (at hyphens, kerning pairs, font switches). Joining
+      // every run with a space produced "detail - oriented", "or der", "Power B I"
+      // and "682 - 307 - 9207", which broke phone detection, inflated word counts
+      // and garbled quoted bullets. Insert a space only when the horizontal gap
+      // between two runs is a real word gap (or the run widths are unknown).
+      let line = "";
+      let prev = null;
+      row.runs.forEach(rn => {
+        if (prev) {
+          const known = prev.w >= 0;
+          const gap = rn.x - (prev.x + Math.max(prev.w, 0));
+          const tol = Math.max(1, 0.15 * Math.min(prev.h || 10, rn.h || 10));
+          const touching = /\s$/.test(line) || /^\s/.test(rn.str);
+          if (!touching && (!known || gap > tol)) line += " ";
+        }
+        line += rn.str;
+        prev = rn;
+      });
+      return line.replace(/\s{2,}/g, " ").trim();
     }).filter(Boolean);
     pages.push(lines.join("\n"));
+    // v12.3.17: collect clickable link targets (e.g. a "LinkedIn" label whose URL
+    // lives only in the PDF link annotation), mirroring the DOCX hyperlink import.
+    try {
+      const annots = await page.getAnnotations();
+      (annots || []).forEach(an => {
+        const u = an && (an.url || an.unsafeUrl);
+        if (an && an.subtype === "Link" && u && /^https?:\/\//i.test(u)) urls.push(u);
+      });
+    } catch (e) { /* link extraction is best-effort */ }
   }
-  return pages.join("\n").trim();
+  return { text: pages.join("\n").trim(), urls };
 }
 
 async function extractTextFromImportedFile(file) {
@@ -1935,9 +2081,11 @@ async function extractTextFromImportedFile(file) {
     return { resumeText: (result.value || "").trim(), fileName: file.name || "", transfer: false, links: linkSummary };
   }
   if (name.endsWith(".pdf")) {
-    const pdfText = await extractPdfTextFromFile(file);
+    const pdfResult = await extractPdfTextFromFile(file);
+    const pdfText = pdfResult && pdfResult.text ? pdfResult.text : "";
+    const pdfLinks = pdfResult && pdfResult.urls && pdfResult.urls.length ? summarizeImportedLinks(pdfResult.urls) : null;
     if (!pdfText || pdfText.length < 30) throw new Error("PDF import could not extract enough text. If this is a scanned/image PDF, copy/paste the resume text or upload a DOCX version.");
-    return { resumeText: pdfText, fileName: file.name || "", transfer: false, links: null };
+    return { resumeText: pdfText, fileName: file.name || "", transfer: false, links: pdfLinks };
   }
   throw new Error("Unsupported file type. Please upload a .docx, .pdf, .txt, or Resume Readiness Check .json file, or paste the resume text.");
 }
@@ -2200,16 +2348,57 @@ function analyzeBuilderOptimization(data) {
 
 // New sections start hidden; user reveals them from the Section Order panel.
 const DEFAULT_HIDDEN = {};
+// v12.3.18: the 14 standard ATS section headers for recent graduates. Used for
+// the rebuilt resume's headings AND for the Section Header check, which flags
+// any header in the uploaded resume that differs from these names.
+const STANDARD_SECTION_HEADERS = {
+  summary: "Professional Summary", education: "Education", skills: "Skills",
+  experience: "Experience", internships: "Internships", projects: "Projects",
+  certifications: "Certifications", activities: "Leadership & Activities",
+  awards: "Awards & Honors", volunteer: "Volunteer Experience",
+  research: "Research Experience", publications: "Publications",
+  affiliations: "Professional Affiliations", languages: "Languages"
+};
+// Internships and Research Experience are stored as entries in data.experience
+// carrying a `section` tag, so every analyzer that reads data.experience keeps
+// seeing them; they are only RENDERED under their own headings.
+const EXP_SECTION_LABELS = { experience: "Experience", internships: "Internships", research: "Research Experience" };
+function expSectionOf(e) {
+  const sec = e && e.section;
+  return (sec === "internships" || sec === "research") ? sec : "experience";
+}
+// Make sure an order list contains every section key (older drafts and the
+// field presets predate the four sections added in v12.3.18).
+function completeOrder(order) {
+  const out = (Array.isArray(order) ? order : []).filter((k, i, a) => a.indexOf(k) === i);
+  const ins = (k, afterKey, beforeKey) => {
+    if (out.includes(k)) return;
+    let i = afterKey ? out.indexOf(afterKey) : -1;
+    if (i > -1) { out.splice(i + 1, 0, k); return; }
+    i = beforeKey ? out.indexOf(beforeKey) : -1;
+    if (i > -1) { out.splice(i, 0, k); return; }
+    out.push(k);
+  };
+  ins("internships", "experience");
+  ins("research", null, "publications");
+  ins("affiliations");
+  ins("languages");
+  return out;
+}
 const SECTION_META = {
   summary: { label: "Professional Summary", removable: false },
   skills: { label: "Skills", removable: true },
   experience: { label: "Experience", removable: true },
+  internships: { label: "Internships", removable: true },
+  research: { label: "Research Experience", removable: true },
+  affiliations: { label: "Professional Affiliations", removable: true },
+  languages: { label: "Languages", removable: true },
   projects: { label: "Projects", removable: true },
   education: { label: "Education", removable: false },
   activities: { label: "Leadership & Activities", removable: true },
   certifications: { label: "Certifications", removable: true },
   awards: { label: "Awards & Honors", removable: true },
-  publications: { label: "Publications / Research", removable: true },
+  publications: { label: "Publications", removable: true },
   volunteer: { label: "Volunteer Experience", removable: true },
 };
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -2218,6 +2407,7 @@ const emptyProj = () => ({ id: uid(), name: "", date: "", bullets: ["", ""] });
 const emptyEdu = () => ({ id: uid(), degree: "", school: "", location: "", grad: "", gpa: "", coursework: "" });
 const emptyAct = () => ({ id: uid(), role: "", org: "", start: "", end: "", bullets: [""] });
 const emptyCert = () => ({ id: uid(), name: "", issuer: "", date: "" });
+const emptyAffil = () => ({ id: uid(), name: "", issuer: "", date: "" });
 const emptyAward = () => ({ id: uid(), name: "", issuer: "", date: "" });
 const emptyPub = () => ({ id: uid(), citation: "", date: "" });
 const emptyVol = () => ({ id: uid(), role: "", org: "", location: "", start: "", end: "", bullets: [""] });
@@ -2238,7 +2428,11 @@ const STARTER = {
   awards: [emptyAward()],
   publications: [emptyPub()],
   volunteer: [emptyVol()],
-  order: [...FIELD_PRESETS["Technology / CS / Engineering"]],
+  affiliations: [emptyAffil()],
+  languages: "",
+  importedOrder: [],
+  importedHeadings: [],
+  order: completeOrder([...FIELD_PRESETS["Technology / CS / Engineering"]]),
   hidden: { ...DEFAULT_HIDDEN },
 };
 const STORAGE_KEY = "resume_optimizer_v12_draft";
@@ -2614,7 +2808,12 @@ function analyzeSummaryQuality(data) {
   // (3) No concrete proof point. A strong summary carries at least one number,
   // percentage, or hard credential (GPA, years). Its absence is the manual
   // audit's "no specific hook" note.
-  const hasMetric = /\b\d+(\.\d+)?\s*%|\b\d{2,}\b|\bGPA\b|\b\d+\+?\s*(years?|yrs?)\b/i.test(summary);
+  // v12.3.17: also accept spelled-out years ("over seven years") and a named
+  // standout result ("first-place", "award-winning", "Dean's List") as the hook —
+  // the finding text itself says "no metric, GPA, years, or standout result".
+  const hasSpelledYears = /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)\+?\s+(?:years?|yrs?)\b/i.test(summary);
+  const hasStandout = /\b(?:first|1st|second|2nd|third|3rd|top)[\s-]+(?:place|prize)\b|\baward[\s-]winning\b|\b(?:winner|awarded|dean'?s\s+list|summa|magna|cum\s+laude|valedictorian|scholarship\s+recipient|patent(?:ed)?)\b/i.test(summary);
+  const hasMetric = hasSpelledYears || hasStandout || /\b\d+(\.\d+)?\s*%|\b\d{2,}\b|\bGPA\b|\b\d+\+?\s*(years?|yrs?)\b/i.test(summary);
   if (!hasMetric) {
     findings.push("Your summary states what you do but offers no concrete hook \u2014 no metric, GPA, years, or standout result. Add one proof point (e.g. a headline number from your best bullet) so the opening lands.");
   }
@@ -3011,7 +3210,7 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   const skillsScore = clamp(typeof skills.score === "number" ? skills.score : 75);
   const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75));
   const tenseScore = clamp(verbTense ? verbTense.score : 100);
-  const orderScore = clamp(order.mismatch ? 72 : 92);
+  const orderScore = clamp((order.importedMismatch != null ? order.importedMismatch : order.mismatch) ? 72 : 92);
   const summaryScore = clamp(hasSummary ? 90 : 55);
   // Mechanics (typos, casing, punctuation) belong to Formatting & Polish along
   // with run-on bullets — both are "does this read clean" signals.
@@ -3289,7 +3488,18 @@ function recommendSectionOrder(data) {
   const currentSet = new Set(current);
   const recommendedPresent = recommended.filter(k => currentSet.has(k));
   const mismatch = recommendedPresent.some((k, i) => current[i] !== k);
-  return { recommended, current, mismatch };
+  // v12.3.17: the builder re-orders sections at import, so `current` always
+  // matches the recommendation afterwards. To score the resume the student
+  // actually uploaded, also compare the ORIGINAL heading order from the file.
+  let importedMismatch = null;
+  const imported = Array.isArray(data.importedOrder) ? data.importedOrder : [];
+  if (imported.length >= 3) {
+    const impSet = new Set(imported);
+    const recInImported = recommended.filter(k => impSet.has(k));
+    const impInRec = imported.filter(k => recommended.includes(k));
+    importedMismatch = recInImported.some((k, i) => impInRec[i] !== k);
+  }
+  return { recommended, current, mismatch, importedMismatch };
 }
 
 function analyzeSkillChangeExplanations(data, lastSkillImportNote) {
@@ -3397,10 +3607,28 @@ function smartRecommendedOrder(data) {
     if (hasAwards) order.push("awards");
     if (hasLeadership) order.push("activities");
     order.push("volunteer");
-    return Array.from(new Set([...order, "projects", "experience", "education", "publications", "certifications", "awards", "activities", "volunteer"]));
+    return completeOrder(Array.from(new Set([...order, "projects", "experience", "education", "publications", "certifications", "awards", "activities", "volunteer"])));
   }
 
-  return FIELD_PRESETS[data.field] ? [...FIELD_PRESETS[data.field]] : [...FIELD_PRESETS["Technology / CS / Engineering"]];
+  // v12.3.18: every other field also orders by DEGREE + EXPERIENCE. The field
+  // preset supplies the base sequence; Education then moves right after the
+  // Summary for a new or current graduate, or below Experience for a candidate
+  // whose experience is the stronger credential.
+  const preset = FIELD_PRESETS[data.field] ? [...FIELD_PRESETS[data.field]] : [...FIELD_PRESETS["Technology / CS / Engineering"]];
+  const sig = educationPlacementSignal(data);
+  if (sig.eduEntries.length) {
+    const without = preset.filter(k => k !== "education");
+    if (sig.educationFirst) {
+      const at = without.indexOf("summary") + 1;
+      without.splice(at, 0, "education");
+      return completeOrder(without);
+    }
+    if (hasExperience && !sig.newGrad && preset.indexOf("education") < preset.indexOf("experience")) {
+      without.splice(without.indexOf("experience") + 1, 0, "education");
+      return completeOrder(without);
+    }
+  }
+  return completeOrder(preset);
 }
 
 // ---- Stage-aware section-order advice (manual eval §11) ----
@@ -3412,7 +3640,12 @@ function smartRecommendedOrder(data) {
 // a concrete, defensible recommendation to make.
 function analyzeSectionOrderAdvice(data) {
   const sig = educationPlacementSignal(data);
-  const current = (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
+  // v12.3.17: judge the order of the UPLOADED resume when we have it. The builder
+  // applies the recommended order at import, so reading data.order here told a
+  // student whose Education sat fourth that it was "near the top".
+  const importedOrder = Array.isArray(data.importedOrder) && data.importedOrder.length >= 3 ? data.importedOrder : null;
+  const current = importedOrder || (data.order || []).filter(k => !(data.hidden && data.hidden[k]));
+  const rebuiltNote = importedOrder ? " In your uploaded resume, Education sits below those sections; the rebuilt version here already applies the recommended order." : "";
 
   // Is Education currently sitting BELOW Skills, Experience, or Projects?
   const idxEdu = current.indexOf("education");
@@ -3437,7 +3670,7 @@ function analyzeSectionOrderAdvice(data) {
     return {
       applies: true,
       headline: "Move Education higher — right after your Summary.",
-      body: "As a " + timingPhrase + ", your degree is a leading credential and entry-level recruiters expect to see it early. Placement is driven by degree, experience, and timing — and your timing (a fresh, in-progress degree) plus limited full-time experience both point to Education near the top. Recommended order: Summary → Education → Skills → Experience → Projects." + gpaClause,
+      body: "As a " + timingPhrase + ", your degree is a leading credential and entry-level recruiters expect to see it early. Placement is driven by degree, experience, and timing — and your timing (" + (sig.currentStudent || sig.expectedGrad ? "a fresh, in-progress degree" : "a recent degree") + ") plus limited full-time experience both point to Education near the top. Recommended order: Summary → Education → Skills → Experience → Projects." + rebuiltNote + gpaClause,
       caveat: "Judgment call: this is the safer default for new-grad and internship applications. If you were targeting senior individual-contributor roles where years of hands-on experience dominate the decision, you'd keep Experience higher and drop Education toward the bottom.",
       recommendedTop: ["summary", "education", "skills", "experience", "projects"]
     };
@@ -3455,6 +3688,67 @@ function analyzeSectionOrderAdvice(data) {
   }
 
   return { applies: false };
+}
+
+// ---- Section Header check (v12.3.18) ----
+// Compares every section header found in the UPLOADED resume with the standard
+// ATS header for that section and flags the ones that differ. Reads
+// data.importedHeadings (captured at import), so it only applies to imported
+// resumes — a resume typed into the builder already uses the standard names.
+function analyzeSectionHeaders(data) {
+  const heads = Array.isArray(data.importedHeadings) ? data.importedHeadings : [];
+  const norm = (t) => String(t || "").toLowerCase().replace(/\s*&\s*/g, " and ").replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
+  const CLOSE = {
+    summary: ["summary", "professional profile", "profile"],
+    experience: ["professional experience", "work experience"],
+    skills: ["technical skills", "core skills"],
+    activities: ["leadership", "activities", "leadership and involvement", "activities and leadership"],
+    awards: ["awards", "honors", "honors and awards"],
+    volunteer: ["volunteer", "volunteering", "volunteer work"],
+    certifications: ["certifications and licenses", "licenses and certifications"],
+    affiliations: ["affiliations", "professional memberships"],
+    research: ["research"],
+    projects: ["academic projects"]
+  };
+  const rows = [];
+  heads.forEach(h => {
+    if (!h || !h.raw || h.mapped === "ignored") return;
+    const raw = String(h.raw).trim();
+    const key = String(h.mapped || "");
+    if (/^Inferred /.test(raw)) {
+      if (key === "summary" || key === "experience") {
+        const std = STANDARD_SECTION_HEADERS[key];
+        rows.push({ raw: "(no header)", standard: std, status: "missing", action: "Add the header \u201C" + std.toUpperCase() + "\u201D above this content" });
+      }
+      return;
+    }
+    if (key === "skills + certifications") {
+      rows.push({ raw, standard: "Skills / Certifications", status: "split", action: "Split into two sections: \u201CSKILLS\u201D and \u201CCERTIFICATIONS\u201D" });
+      return;
+    }
+    if (key === "unrecognized") {
+      rows.push({ raw, standard: "\u2014", status: "unrecognized", action: "Not a standard header, so its content is left out of the rebuilt resume \u2014 rename it to the closest standard header, or move the content into one" });
+      return;
+    }
+    const std = STANDARD_SECTION_HEADERS[key];
+    if (!std) return;
+    const n = norm(raw);
+    let status = "rename";
+    let action = "Rename to \u201C" + std.toUpperCase() + "\u201D";
+    if (n === norm(std)) { status = "standard"; action = "Matches the standard header"; }
+    else if ((CLOSE[key] || []).includes(n)) { status = "variant"; action = "Widely recognized, but the standard header is \u201C" + std.toUpperCase() + "\u201D"; }
+    if (h.duplicate) action += " (this section appears more than once \u2014 combine it)";
+    rows.push({ raw, standard: std, status: h.duplicate && status === "standard" ? "variant" : status, action });
+  });
+  const flagged = rows.filter(r => r.status !== "standard");
+  const must = flagged.filter(r => r.status !== "variant").length;
+  let intro = "";
+  if (rows.length) {
+    intro = !flagged.length
+      ? "All " + rows.length + " section headers on your uploaded resume match the standard ATS names."
+      : flagged.length + " of the " + rows.length + " section headers on your uploaded resume differ" + (flagged.length === 1 ? "s" : "") + " from the standard ATS names. Standard headers are the ones applicant tracking systems and recruiters are most used to, so they leave the least room for content to be misfiled. The rebuilt resume here already uses the standard names.";
+  }
+  return { applies: rows.length > 0, rows, flagged, count: flagged.length, mustFix: must, intro };
 }
 
 function sectionOrderExplanation(data) {
@@ -3994,6 +4288,12 @@ function App() {
           if (s.jobPostUrl === undefined) s.jobPostUrl = "";
           if (!s.certifications) s.certifications = [emptyCert()];
           if (!s.awards) s.awards = [emptyAward()];
+          // v12.3.18: four new standard sections.
+          if (!Array.isArray(s.affiliations) || !s.affiliations.length) s.affiliations = [emptyAffil()];
+          if (typeof s.languages !== "string") s.languages = "";
+          if (!Array.isArray(s.importedOrder)) s.importedOrder = [];
+          if (!Array.isArray(s.importedHeadings)) s.importedHeadings = [];
+          s.order = completeOrder(s.order);
           if (!s.publications) s.publications = [emptyPub()];
           if (!s.volunteer) s.volunteer = [emptyVol()];
           if (!s.skills) s.skills = { technical: "", dataVisualization: "", tools: "", domain: "", importChanges: [] };
@@ -4030,7 +4330,7 @@ function App() {
 
   const saveNow = () => { if (saveTimer.current) clearTimeout(saveTimer.current); persist(data); setJustSaved(true); setTimeout(() => setJustSaved(false), 1600); };
   const set = (patch) => setData((d) => ({ ...d, ...patch }));
-  const applyPreset = (field) => setData((d) => ({ ...d, field, order: [...(FIELD_PRESETS[field] || FIELD_PRESETS["Technology / CS / Engineering"])], hidden: { ...DEFAULT_HIDDEN } }));
+  const applyPreset = (field) => setData((d) => ({ ...d, field, order: completeOrder([...(FIELD_PRESETS[field] || FIELD_PRESETS["Technology / CS / Engineering"])]), hidden: { ...DEFAULT_HIDDEN } }));
   const previewImport = () => {
     if (!String(data.field || "").trim()) { alert("Select your Target Field / Industry before starting. This helps Coach Jeff carry the right career direction through the full workflow."); return; }
     if (!importText.trim()) { alert("Paste or upload the existing resume text first."); return; }
@@ -4107,6 +4407,10 @@ function App() {
     set({
       name: "",
       contact: { cityState: "", phone: "", email: "", linkedin: "", portfolio: "" },
+      importedOrder: [],
+      importedHeadings: [],
+      affiliations: [emptyAffil()],
+      languages: "",
       summary: "",
       skills: { technical: "", dataVisualization: "", tools: "", domain: "", labels: { technical: "Technical Skills", dataVisualization: "Data Visualization", tools: "Tools & Platforms", domain: "Domain Knowledge" }, importChanges: [] },
       experience: [emptyExp()],
@@ -4166,6 +4470,24 @@ function App() {
       awards: mapped.awards && mapped.awards.length ? mapped.awards : [emptyAward()],
       publications: mapped.publications && mapped.publications.length ? mapped.publications : [emptyPub()],
       volunteer: mapped.volunteer && mapped.volunteer.length ? mapped.volunteer : [emptyVol()],
+      // v12.3.18: keep the uploaded file's headers for the Section Header check.
+      importedHeadings: (mapped.debugHeadings || []).map(h => ({ raw: h.raw, mapped: h.mapped, duplicate: !!h.duplicate })),
+      affiliations: mapped.affiliations && mapped.affiliations.length ? mapped.affiliations : [emptyAffil()],
+      languages: mapped.languages || "",
+      // v12.3.17: remember the section order of the uploaded file (from its headings)
+      // so the report can describe the original resume, not the rebuilt one.
+      importedOrder: (() => {
+        const valid = ["summary", "skills", "experience", "internships", "research", "projects", "education", "activities", "certifications", "awards", "publications", "volunteer", "affiliations", "languages"];
+        const out = [];
+        (mapped.debugHeadings || []).forEach(h => {
+          const m = String(h.mapped || "");
+          const keys = m === "skills + certifications"
+            ? (/^\s*(?:technical\s+|core\s+|professional\s+)?skills/i.test(String(h.raw || "")) ? ["skills", "certifications"] : ["certifications", "skills"])
+            : [m];
+          keys.forEach(k => { if (valid.includes(k) && !out.includes(k)) out.push(k); });
+        });
+        return out;
+      })(),
       order: smartRecommendedOrder({
         ...data,
         experience: mapped.experience && mapped.experience.length ? mapped.experience : [emptyExp()],
@@ -4234,7 +4556,7 @@ function App() {
           if (s.dataVisualization) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.dataVisualization) || 'Data Visualization') + ':</b> ' + escapeHtml(s.dataVisualization), 0));
           if (s.tools) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.tools) || 'Tools & Platforms') + ':</b> ' + escapeHtml(s.tools), 0));
           if (s.domain) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.domain) || 'Domain Knowledge') + ':</b> ' + escapeHtml(s.domain), 6)); }
-        if (key === "experience") { const items = data.experience.filter((e) => e.title || e.org); if (!items.length) continue; parts.push(headerHtml("Experience"));
+        if (key === "experience" || key === "internships" || key === "research") { const items = data.experience.filter((e) => (e.title || e.org) && expSectionOf(e) === key); if (!items.length) continue; parts.push(headerHtml(EXP_SECTION_LABELS[key]));
           items.forEach((e) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true, after: 3 })); e.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); parts.push('<p style="margin:0 0 6pt 0;font-size:4pt;">&nbsp;</p>'); }); }
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
           items.forEach((p) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); sp.accomplishments.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
@@ -4246,8 +4568,11 @@ function App() {
           items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), { lb: true })); }); }
         if (key === "awards") { const items = data.awards.filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Awards & Honors"));
           items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), { lb: true })); }); }
-        if (key === "publications") { const items = data.publications.filter((x) => x.citation); if (!items.length) continue; parts.push(headerHtml("Publications / Research"));
+        if (key === "publications") { const items = data.publications.filter((x) => x.citation); if (!items.length) continue; parts.push(headerHtml("Publications"));
           items.forEach((x) => { parts.push(twoCol(x.citation || "", x.date || "", {})); }); }
+        if (key === "affiliations") { const items = (data.affiliations || []).filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Professional Affiliations"));
+          items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), {})); }); }
+        if (key === "languages") { if (!String(data.languages || "").trim()) continue; parts.push(headerHtml("Languages")); parts.push(para(escapeHtml(data.languages), 6)); }
         if (key === "volunteer") { const items = data.volunteer.filter((v) => v.role || v.org); if (!items.length) continue; parts.push(headerHtml("Volunteer Experience"));
           items.forEach((v) => { parts.push(twoCol(v.role || "", [v.start, v.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(v.org || "", v.location || "", { ri: true })); v.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
       }
@@ -4449,6 +4774,19 @@ function App() {
       if (soa.caveat) parts.push(P(soa.caveat, "font-style:italic;color:#475569;"));
     }
 
+    // Section Header check (v12.3.18) — every header in the uploaded resume vs. the
+    // standard ATS header for that section.
+    const sh = cr.sectionHeaders || {};
+    if (sh.applies && Array.isArray(sh.rows) && sh.rows.length) {
+      parts.push(H2("Section Headers"));
+      parts.push(P(sh.intro, "color:#475569;"));
+      const thS = 'text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;';
+      const tdS = 'padding:4pt 8pt;font-size:10.5pt;color:#1d1f20;border-bottom:0.5pt solid #d6d6d8;vertical-align:top;';
+      parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thS + '">Your header</th><th style="' + thS + '">Standard header</th><th style="' + thS + '">What to do</th></tr>' +
+        sh.rows.map(r => '<tr><td style="' + tdS + '">' + esc(r.raw) + '</td><td style="' + tdS + '">' + esc(r.standard) + '</td><td style="' + tdS + (r.status === "standard" ? 'color:#166534;' : (r.status === "variant" ? 'color:#6d7073;' : 'color:#b45309;font-weight:700;')) + '">' + esc(r.action) + '</td></tr>').join("") +
+        '</table>');
+    }
+
     const anyCredibility = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
     if (anyCredibility) {
       parts.push(H2("Credibility & Mechanics Check"));
@@ -4624,10 +4962,10 @@ function App() {
         if (s.domain) P.push(xPar([xRun(((s.labels && s.labels.domain) || "Domain Knowledge") + ": ", { bold: true, size: 11 }), xRun(s.domain, { size: 11 })], { after: 60 }));
       }
 
-      if (key === "experience") {
-        const items = data.experience.filter((e) => e.title || e.org);
+      if (key === "experience" || key === "internships" || key === "research") {
+        const items = data.experience.filter((e) => (e.title || e.org) && expSectionOf(e) === key);
         if (!items.length) continue;
-        P.push(xHeader("Experience"));
+        P.push(xHeader(EXP_SECTION_LABELS[key]));
         items.forEach((e, idx) => {
           const dateRange = [e.start, e.end].filter(Boolean).join(" – ");
           const title = e.title || "";
@@ -4727,6 +5065,22 @@ function App() {
           const tail = [x.issuer, x.date ? "(" + x.date + ")" : ""].filter(Boolean).join(" ");
           P.push(xBody((x.name || "") + (tail ? " — " + tail : ""), { after: 60 }));
         });
+      }
+
+      if (key === "affiliations") {
+        const items = (data.affiliations || []).filter((x) => x.name);
+        if (!items.length) continue;
+        P.push(xHeader("Professional Affiliations"));
+        items.forEach((x) => {
+          const tail = [x.issuer, x.date ? "(" + x.date + ")" : ""].filter(Boolean).join(" ");
+          P.push(xBullet((x.name || "") + (tail ? " — " + tail : "")));
+        });
+      }
+
+      if (key === "languages") {
+        if (!String(data.languages || "").trim()) continue;
+        P.push(xHeader("Languages"));
+        P.push(xBody(data.languages, { after: 60 }));
       }
 
       if (key === "volunteer") {
@@ -4836,6 +5190,9 @@ function App() {
     if (key === "activities") set({ activities: [emptyAct()] });
     if (key === "certifications") set({ certifications: [emptyCert()] });
     if (key === "awards") set({ awards: [emptyAward()] });
+    if (key === "internships" || key === "research") { const rest = (data.experience || []).filter(e => expSectionOf(e) !== key); set({ experience: rest.length ? rest : [emptyExp()] }); }
+    if (key === "affiliations") set({ affiliations: [emptyAffil()] });
+    if (key === "languages") set({ languages: "" });
     if (key === "publications") set({ publications: [emptyPub()] });
     if (key === "volunteer") set({ volunteer: [emptyVol()] });
   };
@@ -5135,7 +5492,8 @@ function App() {
   // Link opportunity: distinguish "no link at all" from "link shown as text but
   // the URL didn't import" — the latter is NOT missing, just needs a live URL.
   const linkOpportunity = links.hasLinkedIn
-    ? (links.linkedInTextOnly ? "Your LinkedIn is on the page but imported as plain text — make sure it's a live, clickable URL (linkedin.com/in/yourname) so recruiters can click through." : "")
+    ? (links.linkedInTextOnly ? "Your LinkedIn is on the page but imported as plain text — make sure it's a live, clickable URL (linkedin.com/in/yourname) so recruiters can click through."
+        : (links.linkedInUrlHidden ? "Your LinkedIn link works when clicked, but the page shows only the word “LinkedIn.” Type out the address (linkedin.com/in/yourname) so it survives ATS text parsing and printing." : ""))
     : "Add a LinkedIn URL to your header — recruiters expect it for verification and outreach.";
   const snapshotOpportunities = [
     linkOpportunity,
@@ -5440,6 +5798,7 @@ function App() {
     const metricDensity = analyzeMetricDensity(data);
     const summaryQuality = analyzeSummaryQuality(data);
     const sectionOrderAdvice = analyzeSectionOrderAdvice(data);
+    const sectionHeaders = analyzeSectionHeaders(data);
     // ---- Credibility & mechanics analyzers (Coach Jeff eval Sections 6,7,14,15,16,19,22,24) ----
     const mechanics = analyzeMechanics(data, importText);
     const metricCred = analyzeMetricCredibility(data, importText);
@@ -5914,8 +6273,14 @@ function App() {
     // (credential fields get no work-sample nudge; LinkedIn below is the relevant link.)
     if (!c.linkedin) quickWins.push("Add your LinkedIn URL so recruiters can verify and connect.");
     if (expBullets && expQuant < expBullets) quickWins.push("Add one number to a bullet you already have (scope, %, count, or time saved).");
-    quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
-    quickWins.push("Move your strongest section higher so it's seen first.");
+    // v12.3.17: only offer these two when they apply to THIS resume — they used
+    // to print for everyone, including resumes with no weak opener at all.
+    const hasWeakOpener = [...(data.experience || []), ...(data.projects || []), ...(data.activities || [])]
+      .flatMap(e => (e && e.bullets) || [])
+      .some(b => /^\s*(responsible for|was responsible for|worked on|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|duties included|tasked with)\b/i.test(String(b || "")));
+    if (sectionHeaders && sectionHeaders.mustFix) quickWins.push("Rename " + sectionHeaders.mustFix + " section header" + (sectionHeaders.mustFix === 1 ? "" : "s") + " to the standard ATS name" + (sectionHeaders.mustFix === 1 ? "" : "s") + " (see Section Headers).");
+    if (hasWeakOpener) quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
+    if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length) quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
     // Mechanics quick wins — each specific error is its own fast fix.
     mechanics.findings.slice(0, 2).forEach(f => {
@@ -6001,7 +6366,8 @@ function App() {
       fiveMajorAreas,
       summaryQuality,
       metricDensity,
-      sectionOrderAdvice
+      sectionOrderAdvice,
+      sectionHeaders
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
 
@@ -6543,6 +6909,34 @@ function App() {
               : "These are illustrative examples to show the pattern. Only ever use numbers and details that are true for you."}</div>
           </div>
 
+          {/* 6a. Section Headers (v12.3.18) */}
+          {(() => {
+            const sh = coachReview.sectionHeaders || {};
+            if (!sh.applies || !sh.rows || !sh.rows.length) return null;
+            const th = { textAlign: "left", padding: "6px 8px", fontSize: 11, color: "#6d7073", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid #5980a6" };
+            const td = { padding: "6px 8px", fontSize: 13, color: "#1d1f20", borderBottom: "1px solid #e9e9ea", verticalAlign: "top", textAlign: "left" };
+            return (
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid " + (sh.count ? "#b45309" : "#166534"), borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🏷️ Section Headers</h3>
+                <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>{sh.intro}</p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                    <thead><tr><th style={th}>Your header</th><th style={th}>Standard header</th><th style={th}>What to do</th></tr></thead>
+                    <tbody>
+                      {sh.rows.map((r, i) => (
+                        <tr key={i}>
+                          <td style={td}>{r.raw}</td>
+                          <td style={td}>{r.standard}</td>
+                          <td style={{ ...td, color: r.status === "standard" ? "#166534" : (r.status === "variant" ? "#6d7073" : "#b45309"), fontWeight: (r.status === "standard" || r.status === "variant") ? 400 : 700 }}>{r.action}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 6b. Credibility & Mechanics Check */}
           {(() => {
             const mech = coachReview.mechanics || {};
@@ -6869,6 +7263,14 @@ function App() {
                         <input style={iC} placeholder="End" value={e.end} onChange={(ev) => updItem("experience", e.id, { end: ev.target.value })} />
                       </div>
                     </div>
+                    <div style={{ margin: "8px 0 4px" }}>
+                      <label style={lC}>Appears under this section</label>
+                      <select style={iC} value={expSectionOf(e)} onChange={(ev) => updItem("experience", e.id, { section: ev.target.value })}>
+                        <option value="experience">Experience</option>
+                        <option value="internships">Internships</option>
+                        <option value="research">Research Experience</option>
+                      </select>
+                    </div>
                     <Bullets bullets={e.bullets} onChange={(bi, v) => updBullet("experience", e.id, bi, v)} onAdd={() => addBullet("experience", e.id)} onDel={(bi) => delBullet("experience", e.id, bi)} hint="Action verb + what you did + measurable result (use %, $, #)." />
                   </Entry>
                 ))}
@@ -6961,6 +7363,25 @@ function App() {
                   </Entry>
                 ))}
                 <AddBtn label="Add publication" onClick={() => addItem("publications", emptyPub)} />
+              </Card>
+            );
+            if (key === "affiliations") return (
+              <Card key={key} title="Professional Affiliations" onClear={() => clearSection("affiliations")}>
+                {(data.affiliations || []).map((x) => (
+                  <Entry key={x.id} onDelete={() => delItem("affiliations", x.id)} canDelete={(data.affiliations || []).length > 1}>
+                    <div style={grid2}>
+                      <input style={iC} placeholder="Organization / Association" value={x.name} onChange={(ev) => updItem("affiliations", x.id, { name: ev.target.value })} />
+                      <input style={iC} placeholder="Role (e.g. Member)" value={x.issuer} onChange={(ev) => updItem("affiliations", x.id, { issuer: ev.target.value })} />
+                      <input style={iC} placeholder="Dates" value={x.date} onChange={(ev) => updItem("affiliations", x.id, { date: ev.target.value })} />
+                    </div>
+                  </Entry>
+                ))}
+                <AddBtn label="Add affiliation" onClick={() => addItem("affiliations", emptyAffil)} />
+              </Card>
+            );
+            if (key === "languages") return (
+              <Card key={key} title="Languages" onClear={() => clearSection("languages")}>
+                <input style={iC} placeholder="e.g. English (native), Spanish (conversational)" value={data.languages || ""} onChange={(ev) => set({ languages: ev.target.value })} />
               </Card>
             );
             if (key === "volunteer") return (
@@ -7126,13 +7547,15 @@ function Preview({ data }) {
         if (data.hidden[key]) return null;
         if (key === "summary" && data.summary.trim()) return <C key={key}><H>Professional Summary</H><p style={{ fontSize: 11 }}>{data.summary}</p></C>;
         if (key === "skills") { const s = data.skills; if (!s.technical && !s.tools) return null; return <C key={key}><H>Skills</H>{s.technical && <div style={{ fontSize: 11 }}><b>Technical:</b> {s.technical}</div>}{s.tools && <div style={{ fontSize: 11 }}><b>Tools/Platforms:</b> {s.tools}</div>}</C>; }
-        if (key === "experience") { const it = data.experience.filter((e) => e.title || e.org); if (!it.length) return null; return <C key={key}><H>Experience</H>{it.map((e) => <div key={e.id} style={{ marginBottom: 6 }}><Row l={e.title} r={[e.start, e.end].filter(Boolean).join(" – ")} bl /><Row l={e.org} r={e.location} ri /><Bul items={e.bullets} /></div>)}</C>; }
+        if (key === "experience" || key === "internships" || key === "research") { const it = data.experience.filter((e) => (e.title || e.org) && expSectionOf(e) === key); if (!it.length) return null; return <C key={key}><H>{EXP_SECTION_LABELS[key]}</H>{it.map((e) => <div key={e.id} style={{ marginBottom: 6 }}><Row l={e.title} r={[e.start, e.end].filter(Boolean).join(" – ")} bl /><Row l={e.org} r={e.location} ri /><Bul items={e.bullets} /></div>)}</C>; }
         if (key === "projects") { const it = data.projects.filter((p) => p.name); if (!it.length) return null; return <C key={key}><H>Projects</H>{it.map((p) => { const sp = splitProjectLines(p.bullets); return <div key={p.id} style={{ marginBottom: 6 }}><Row l={p.name} r={p.date} bl />{sp.context && <div style={{ fontSize: 11 }}>{sp.context}</div>}{sp.toolsValue && <div style={{ fontSize: 11 }}><b>Technologies:</b> {sp.toolsValue}</div>}<Bul items={sp.accomplishments} /></div>; })}</C>; }
         if (key === "education") { const it = data.education.filter((ed) => ed.degree || ed.school); if (!it.length) return null; return <C key={key}><H>Education</H>{it.map((ed) => { const dm = splitDegreeMinor(ed.degree || ""); const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(); const longDegree = degreeText.length > 58 && (ed.grad || "").trim(); return <div key={ed.id} style={{ marginBottom: 6 }}>{longDegree ? (<><div style={{ fontSize: 11, fontWeight: "bold" }}>{degreeText}</div><Row l={ed.school} r={ed.grad} /></>) : (<><Row l={degreeText} r={ed.grad} bl />{ed.school && <div style={{ fontSize: 11 }}>{ed.school}</div>}</>)}{ed.location && <div style={{ fontSize: 11 }}>{ed.location}</div>}{dm.minor && <div style={{ fontSize: 11 }}>{dm.minor}</div>}{(ed.gpa || ed.coursework) && <div style={{ fontSize: 11, color: "#595959" }}>{[ed.gpa && "GPA: " + ed.gpa, ed.coursework && "Relevant Coursework: " + ed.coursework].filter(Boolean).join("  •  ")}</div>}</div>; })}</C>; }
         if (key === "activities") { const it = data.activities.filter((a) => a.role || a.org); if (!it.length) return null; return <C key={key}><H>Leadership & Activities</H>{it.map((a) => <div key={a.id} style={{ marginBottom: 6 }}><Row l={[a.role, a.org].filter(Boolean).join(" — ")} r={[a.start, a.end].filter(Boolean).join(" – ")} bl /><Bul items={a.bullets} /></div>)}</C>; }
         if (key === "certifications") { const it = data.certifications.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Certifications</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
         if (key === "awards") { const it = data.awards.filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Awards & Honors</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} bl />)}</C>; }
-        if (key === "publications") { const it = data.publications.filter((x) => x.citation); if (!it.length) return null; return <C key={key}><H>Publications / Research</H>{it.map((x) => <div key={x.id} style={{ marginBottom: 4 }}><Row l={x.citation} r={x.date} /></div>)}</C>; }
+        if (key === "publications") { const it = data.publications.filter((x) => x.citation); if (!it.length) return null; return <C key={key}><H>Publications</H>{it.map((x) => <div key={x.id} style={{ marginBottom: 4 }}><Row l={x.citation} r={x.date} /></div>)}</C>; }
+        if (key === "affiliations") { const it = (data.affiliations || []).filter((x) => x.name); if (!it.length) return null; return <C key={key}><H>Professional Affiliations</H>{it.map((x) => <Row key={x.id} l={x.name} r={[x.issuer, x.date].filter(Boolean).join(", ")} />)}</C>; }
+        if (key === "languages") { if (!String(data.languages || "").trim()) return null; return <C key={key}><H>Languages</H><p style={{ fontSize: 11 }}>{data.languages}</p></C>; }
         if (key === "volunteer") { const it = data.volunteer.filter((v) => v.role || v.org); if (!it.length) return null; return <C key={key}><H>Volunteer Experience</H>{it.map((v) => <div key={v.id} style={{ marginBottom: 6 }}><Row l={v.role} r={[v.start, v.end].filter(Boolean).join(" – ")} bl /><Row l={v.org} r={v.location} ri /><Bul items={v.bullets} /></div>)}</C>; }
         return null;
       })}
