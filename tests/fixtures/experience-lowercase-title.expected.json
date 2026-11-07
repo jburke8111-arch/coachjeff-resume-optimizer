@@ -1,0 +1,18 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Regression guard. A header can start with a lowercase letter ('iOS', 'eBay'). The rule that stops a wrapped bullet line ('industry experts and researchers.') from being read as a header must look at the whole first word, not the first letter.",
+  "expect": {
+    "name": "Riley Park",
+    "experience": [
+      {
+        "title": "iOS Developer Intern",
+        "location": "Cupertino, CA",
+        "start": "May 2024",
+        "end": "Aug 2024",
+        "bulletCount": 1
+      }
+    ]
+  }
+}

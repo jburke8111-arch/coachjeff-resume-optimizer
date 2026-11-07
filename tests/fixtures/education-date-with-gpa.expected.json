@@ -1,0 +1,17 @@
+{
+  "failureMode": "education-dates",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Graduation date shares a line with GPA. The date is silently dropped — it does not land in any other field.",
+  "expect": {
+    "name": "Priya Raman",
+    "education": [
+      {
+        "school": "Boston University",
+        "degree": "Bachelor of Arts in Economics",
+        "grad": "May 2025",
+        "gpa": "3.62"
+      }
+    ]
+  }
+}

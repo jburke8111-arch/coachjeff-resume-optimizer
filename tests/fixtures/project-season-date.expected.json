@@ -1,0 +1,16 @@
+{
+  "failureMode": "project-titles",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Season-and-year date. Seasons are not in the date pattern, so the split lands mid-date: name keeps 'Spring', date gets only '2024'.",
+  "expect": {
+    "name": "Luis Ferrer",
+    "projects": [
+      {
+        "name": "Storefront Analytics Dashboard",
+        "date": "Spring 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

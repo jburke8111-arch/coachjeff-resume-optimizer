@@ -1,0 +1,82 @@
+{
+  "failureMode": "pdf-symbol-glyphs",
+  "layout": "single-column",
+  "source": "synthetic; text of word-style-export.pdf with Word Symbol-font glyphs restored",
+  "notes": "What PDF.js returns for a Word-exported PDF: the Symbol-font bullet arrives as U+F0B7 and a Symbol space as U+F020 (Private Use Area). Same resume as word-style-export.pdf, whose Edge-rendered bullets come through as a plain middle dot instead. Before the fix these rendered as empty boxes on every bullet and in the export, and the unrecognised bullet let wrapped lines be read as new entries.",
+  "expect": {
+    "name": "JORDAN REYES",
+    "contact": {
+      "email": "jordan.reyes@example.com"
+    },
+    "education": [
+      {
+        "degree": "B.S. in Information Systems, Minor in Statistics",
+        "school": "University of North Texas",
+        "grad": "May 2026",
+        "gpa": "3.8 / 4.0",
+        "coursework": "Database Systems, Data Mining, Operating Systems"
+      }
+    ],
+    "awards": [
+      {
+        "name": "Regents Merit Scholarship Recipient"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Data Analyst Intern",
+        "org": "Office of Institutional Research, University of North Texas",
+        "location": "",
+        "start": "Jan 2026",
+        "end": "May 2026",
+        "bulletCount": 1
+      },
+      {
+        "title": "Student Assistant",
+        "org": "Career Center, University of North Texas",
+        "location": "",
+        "start": "Aug 2025",
+        "end": "Dec 2025",
+        "bulletCount": 1
+      },
+      {
+        "title": "Research Intern",
+        "org": "Southwest Energy Lab (SEL)",
+        "location": "Houston, TX",
+        "start": "May 2025",
+        "end": "Jul 2025",
+        "bulletCount": 2
+      },
+      {
+        "title": "Operations Intern II",
+        "org": "Center for Workforce Programs, Austin Community College",
+        "location": "",
+        "start": "May 2024",
+        "end": "Aug 2024",
+        "bulletCount": 2
+      }
+    ],
+    "projects": [
+      {
+        "name": "Campus Energy Dashboard - 1st Place | Team Project",
+        "date": "Mar 2026",
+        "bulletCount": 1
+      },
+      {
+        "name": "Library Demand Forecast | Solo Project",
+        "date": "Nov 2025",
+        "bulletCount": 1
+      }
+    ],
+    "skills": {
+      "technical": "Python, SQL, R, PostgreSQL, Git/GitHub, Tableau, Excel",
+      "dataVisualization": "Regression, Clustering, A/B Testing, Forecasting",
+      "tools": "Coursera: Google Data Analytics, Microsoft: Power BI Data Analyst (PL-300), Tableau: Desktop Specialist, AWS Cloud Practitioner (In Progress)",
+      "labels": {
+        "technical": "Programming, Databases & Tools",
+        "dataVisualization": "Analytics",
+        "tools": "Certifications"
+      }
+    }
+  }
+}

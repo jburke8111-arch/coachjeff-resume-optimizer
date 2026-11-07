@@ -1,0 +1,26 @@
+{
+  "failureMode": "headings",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Non-standard section headings ('ACADEMIC BACKGROUND', 'WORK HISTORY') instead of EDUCATION/EXPERIENCE.",
+  "expect": {
+    "name": "Grace Okafor",
+    "education": [
+      {
+        "school": "Georgia State University",
+        "degree": "Bachelor of Business Administration in Marketing",
+        "grad": "May 2025"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Marketing Assistant",
+        "org": "Peachtree Media",
+        "location": "Atlanta, GA",
+        "start": "January 2024",
+        "end": "December 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

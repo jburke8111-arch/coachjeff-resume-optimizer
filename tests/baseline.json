@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-09-27",
+  "metric": "parse-quality",
+  "revision": "v12.3.16-industry (commit 87a0073) — index.html as on main, before any parser fix",
+  "resumes": 21,
+  "garbleRate": 0.7619,
+  "fieldAccuracy": 0.662,
+  "perFixture": {
+    "bullets-unicode-symbols": "garbled",
+    "clean-single-column": "clean",
+    "degree-abbreviation-only": "garbled",
+    "education-date-with-gpa": "garbled",
+    "education-honors": "garbled",
+    "education-one-line-school-first": "garbled",
+    "education-one-line-with-city": "garbled",
+    "education-school-with-location": "clean",
+    "experience-company-first-multi": "garbled",
+    "experience-company-first": "garbled",
+    "experience-dash-headers": "garbled",
+    "experience-lowercase-title": "clean",
+    "experience-multi-entry-mixed": "garbled",
+    "experience-tab-aligned-dates": "garbled",
+    "headings-nonstandard": "clean",
+    "project-bare-year": "clean",
+    "project-pipe-delimiter": "garbled",
+    "project-season-date": "garbled",
+    "project-year-in-name": "garbled",
+    "word-export-symbol-bullets": "garbled",
+    "word-style-export": "garbled"
+  }
+}

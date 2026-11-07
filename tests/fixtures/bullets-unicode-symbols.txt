@@ -1,0 +1,8 @@
+Jamie Fox
+Dallas, TX | jamie.fox@example.com
+
+PROJECTS
+Portfolio Site | May 2024
+● Built a static site with 12 case studies
+➢ Cut load time to 400ms
+✓ Added a dark mode toggle

@@ -1,0 +1,12 @@
+{
+  "failureMode": "project-titles",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "A bare trailing year IS the date. Pairs with project-year-in-name: together they pin down where the name ends and the date begins.",
+  "expect": {
+    "name": "Omar Haddad",
+    "projects": [
+      { "name": "Portfolio Site", "date": "2023", "bulletCount": 2 }
+    ]
+  }
+}

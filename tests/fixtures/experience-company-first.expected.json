@@ -1,0 +1,19 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Company line above title line. Parser assumes title-first, so title and org swap and the location is lost.",
+  "expect": {
+    "name": "Marcus Webb",
+    "experience": [
+      {
+        "title": "Operations Analyst Intern",
+        "org": "Northwind Logistics",
+        "location": "Chicago, IL",
+        "start": "June 2024",
+        "end": "August 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}
