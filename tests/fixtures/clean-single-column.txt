@@ -1,0 +1,29 @@
+Jane A. Rivera
+Austin, TX | jane.rivera@example.com | (512) 555-0134
+linkedin.com/in/janerivera | github.com/janerivera
+
+PROFESSIONAL SUMMARY
+Computer science graduate focused on data engineering, with production ETL experience and a 3.78 GPA.
+
+EDUCATION
+The University of Texas at Austin
+Bachelor of Science in Computer Science
+May 2025
+GPA: 3.78
+
+TECHNICAL SKILLS
+Technical: Python, SQL, JavaScript, Java
+Tools: Git, Docker, Tableau, AWS
+
+EXPERIENCE
+Data Engineering Intern
+Acme Analytics, Austin, TX
+June 2024 - August 2024
+- Built ETL pipeline processing 2.5M records daily, cutting runtime from 45 to 12 minutes
+- Redesigned warehouse schema with a team of 4 engineers
+- Automated daily reconciliation, eliminating 6 hours of manual review weekly
+
+PROJECTS
+Campus Transit Tracker
+- Developed React app used by 1,200 students
+- Integrated real-time GTFS feed

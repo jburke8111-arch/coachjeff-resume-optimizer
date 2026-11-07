@@ -1,0 +1,9 @@
+Marcus Webb
+Chicago, IL | marcus.webb@example.com | (312) 555-0199
+
+EXPERIENCE
+Northwind Logistics, Chicago, IL
+Operations Analyst Intern
+June 2024 - August 2024
+- Reduced dispatch errors 22% by rebuilding the routing checklist
+- Analyzed 18 months of delivery data to identify three bottlenecks

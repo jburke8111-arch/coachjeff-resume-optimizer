@@ -1,0 +1,5 @@
+node_modules/
+
+# Real resumes used as parse fixtures. Never commit these: this repo
+# publishes its own root, so a committed resume is a public file.
+tests/fixtures/private/

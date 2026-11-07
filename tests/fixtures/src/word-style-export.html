@@ -1,0 +1,68 @@
+<!doctype html>
+<!--
+  Source for tests/fixtures/word-style-export.pdf — a MADE-UP resume that
+  reproduces the layout of a real Word-exported PDF that the parser garbled.
+  Regenerate with: npm run make-fixture-pdfs
+
+  What it reproduces, and why each part matters:
+  - Bullets and a trailing space drawn from the Symbol font. PDF.js reports
+    them as Private Use code points (U+F0B7, U+F020), exactly as it does for
+    Word's default bullet. Plain "•" text would not exercise that path.
+  - "Title - Organization, City, ST | Dates" job headers on one line.
+  - A bullet whose second line ("industry analysts and researchers .") sits
+    directly above a header containing ", Austin" — the shape that pulled a
+    wrapped line in as the next job's title.
+  - "Degree, Minor, School | Date" education on one line, with a scholarship
+    and "Selected Coursework:" beneath it.
+  - A skills label containing commas, and certifications separated by "|"
+    that wrap onto a second line.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: 8.5in 11in; margin: 0.5in; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.25; color: #000; margin: 0; }
+  .name { font-size: 16pt; font-weight: bold; }
+  .h { font-weight: bold; margin-top: 8pt; }
+  .b { padding-left: 14pt; text-indent: -14pt; }
+  .sym { font-family: Symbol; }
+</style>
+</head>
+<body>
+<div class="name">JORDAN REYES</div>
+<div>jordan.reyes@example.com | (555) 010-4477 | linkedin.com/in/jordan-reyes-example | github.com/jreyes-example</div>
+
+<div class="h">SUMMARY</div>
+<div>Information Systems graduate with experience turning institutional and operational data into clear reporting for decision makers.<br>Comfortable leading small analytics projects end to end, from data cleaning through dashboards and written recommendations.</div>
+
+<div class="h">EDUCATION</div>
+<div>B.S. in Information Systems, Minor in Statistics, University of North Texas | May 2026</div>
+<div>GPA : 3.8 / 4.0</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Regents Merit Scholarship Recipient <span class="sym">&#xF020;</span></div>
+<div class="b"><span class="sym">&#xF0B7;</span> Selected Coursework: Database Systems, Data Mining, Operating Systems <span class="sym">&#xF020;</span></div>
+
+<div class="h">WORK EXPERIENCE</div>
+<div>Data Analyst Intern - Office of Institutional Research, University of North Texas | Jan 2026 – May 2026 <span class="sym">&#xF020;</span></div>
+<div class="b"><span class="sym">&#xF0B7;</span> Cleaned and reconciled 12 years of enrollment records for a university retention study, producing cohort<br>summaries used in the provost's annual planning review.</div>
+<div>Student Assistant - Career Center, University of North Texas | Aug 2025 – Dec 2025</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Coordinated scheduling for 40+ employer information sessions and tracked attendance for 900 students.</div>
+<div>Research Intern - Southwest Energy Lab (SEL), Houston, TX | May 2025 - Jul 2025</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Modeled hourly grid demand for 3 service regions using gradient-boosted regression, cutting forecast error by 14%.</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Presented the forecasting results at the lab's summer symposium to an audience of regional utility partners and<br>industry analysts and researchers .</div>
+<div>Operations Intern II - Center for Workforce Programs, Austin Community College | May 2024 - Aug 2024</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Drafted a proposal for a data literacy certificate program and presented it to the dean's advisory council.</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Built an intake tracker in Excel that replaced three paper forms for 200+ program applicants.</div>
+
+<div class="h">PROJECTS</div>
+<div>Campus Energy Dashboard - 1st Place | Team Project | Mar 2026</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Built a Tableau dashboard of 5 years of building meter data that identified 3 buildings driving 40% of use.</div>
+<div>Library Demand Forecast | Solo Project | Nov 2025</div>
+<div class="b"><span class="sym">&#xF0B7;</span> Forecast weekly study-room demand with Prophet and published the model notes for library staff.</div>
+
+<div class="h">SKILLS</div>
+<div>Programming, Databases &amp; Tools: Python, SQL, R, PostgreSQL, Git/GitHub, Tableau, Excel</div>
+<div>Analytics: Regression, Clustering, A/B Testing, Forecasting</div>
+<div>Certifications: Coursera: Google Data Analytics | Microsoft: Power BI Data Analyst (PL-300) | Tableau: Desktop Specialist |<br>AWS Cloud Practitioner (In Progress)</div>
+</body>
+</html>
