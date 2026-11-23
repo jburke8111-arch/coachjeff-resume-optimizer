@@ -1,0 +1,28 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Employer and location with the dates on one row, title on the next.",
+  "expect": {
+    "name": "ANIRUDH SHAH",
+    "experience": [
+      {
+        "title": "AI & Data Science Intern",
+        "org": "Springer Capital LLC",
+        "location": "Chicago, USA",
+        "start": "May 2025",
+        "end": "December 2025",
+        "bulletCount": 5
+      },
+      {
+        "title": "Data Analyst",
+        "org": "Quest Global Technologies Ltd.",
+        "location": "India",
+        "start": "July 2021",
+        "end": "December 2023",
+        "bulletCount": 5
+      }
+    ]
+  }
+}

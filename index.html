@@ -66,6 +66,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="google-site-verification" content="UvSx3JNmC06bBb-PposrVoCBYkXVRzZFklco-yvN1oA" />
+<!-- To enable usage tracking, replace SITE_CODE with the Resume Optimizer's GoatCounter site code and uncomment this tag.
+<script id="resume-analytics" data-goatcounter="https://SITE_CODE.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+-->
 <title>Free Resume Optimizer — No Login | Coach Jeff</title>
 <meta name="description" content="Optimize your resume against any job description in seconds. Free ATS resume checker for new graduates — no login, no signup. Built by Coach Jeff, Experience Career System™." />
 <meta name="author" content="Jeff Burke — Experience Career System" />
@@ -165,7 +168,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.22-industry";
+const BUILD_VERSION = "v12.3.23-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -1365,6 +1368,12 @@ function _splitOrgLocation(line) {
   }
   return { org: s, location: "" };
 }
+// A role that is just a level word, with no field attached ("Intern", "Student
+// Assistant"). Used to break a tie when both halves of a "X | Y" header read as
+// job titles.
+function _isBareRoleWord(text) {
+  return /^(?:(?:summer|student|graduate|undergraduate|research|teaching)\s+)?(?:intern|assistant|associate|trainee|apprentice|volunteer|fellow|tutor)$/i.test(String(text || "").trim());
+}
 function _looksLikeJobTitle(line) {
   const s = String(line || "").trim();
   if (!s || s.length > 120) return false;
@@ -1471,6 +1480,16 @@ function _parseExperienceEntries(lines) {
           org = left;
           title = right;
         } else if (leftIsTitle && !rightIsTitle) {
+          title = left;
+          org = right;
+        } else if (leftIsTitle && rightIsTitle && _isBareRoleWord(right) && !_isBareRoleWord(left)) {
+          // Both sides trip the title test, but only because the employer's own
+          // name contains a role word ("HYDROTEC Engineering | Intern" -- the
+          // "engineer" in Engineering). A lone level word like "Intern" is the
+          // title; the longer side is the employer.
+          org = left;
+          title = right;
+        } else if (leftIsTitle && rightIsTitle && _isBareRoleWord(left) && !_isBareRoleWord(right)) {
           title = left;
           org = right;
         } else {
@@ -1600,13 +1619,59 @@ function _parseExperienceEntries(lines) {
     };
   }
 
+  // Header rows above a date that sits on its own line. Looks back at most two
+  // unmarked rows (employer + title, in either order, or just a title) and, if
+  // they read like a header, returns a start whose chunk is rebuilt into the
+  // shape makeEntryFromChunk already understands: "Title | dates" followed by
+  // the employer/location row. Returns null when nothing above looks like a
+  // header, which leaves the line to the existing handling.
+  const _contentVerbRe = /^(published|presented|co-authored|authored|developed|designed|built|created|led|lead|managed|conducted|analyzed|implemented|introduced|achieved|ran|supported|tutored|mentored|coordinated|organized|delivered|improved|reduced|increased|deployed|researched|awarded|received|won|earned|volunteered|facilitated|launched|contributed|engineered|optimized|automated|resolved|migrated|cut|forecast|audited|assisted|maintained|performed|provided|prepared)\b/i;
+  function standaloneDateHeader(idx, d) {
+    const unmarkedRow = (k) => k >= 0 && clean[k] && !isMarkedBullet(rawLines[k]) &&
+      !isHardSectionHeading(clean[k]) && !extractDateRangeFromLine(clean[k]) &&
+      !/^[a-z]+[\s,.;:]/.test(clean[k]) && !_contentVerbRe.test(clean[k]) &&
+      !/[.;:]$/.test(clean[k]) && clean[k].length <= 90;
+    const headerLike = (k) => unmarkedRow(k) &&
+      (clean[k].includes("|") || _looksLikeJobTitle(clean[k]) || _looksLikeOrgLocation(clean[k]));
+    // A bare employer name ("Rutgers IT Help Desk") has no org keyword, state or
+    // pipe to recognise it by. Directly above a job-title row it is the employer.
+    const bareEmployer = (k) => unmarkedRow(k) && /^[A-Z0-9]/.test(clean[k]) &&
+      clean[k].length <= 60 && clean[k].split(/\s+/).length <= 8;
+
+    const r2 = idx - 1, r1 = idx - 2;
+    if (!headerLike(r2)) return null;
+    const rangeText = d.start + " - " + d.end;
+    let first, second = "", startIdx = r2;
+    const twoRows = headerLike(r1) || (_looksLikeJobTitle(clean[r2]) && bareEmployer(r1));
+    if (twoRows) {
+      const r1IsTitle = _looksLikeJobTitle(clean[r1]) && !_looksLikeJobTitle(clean[r2]);
+      first = (r1IsTitle ? clean[r1] : clean[r2]) + " | " + rangeText;
+      second = r1IsTitle ? clean[r2] : clean[r1];
+      startIdx = r1;
+    } else {
+      first = clean[r2] + " | " + rangeText;
+    }
+    return { start: startIdx, dateIdx: idx, synth: { first, second } };
+  }
+
   // Primary strategy: split the experience section by lines containing date ranges.
   // This matches common student resumes: Title + dates, Organization/location, bullets.
   const starts = [];
   clean.forEach((line, idx) => {
     if (isHardSectionHeading(line)) return;
     const d = extractDateRangeFromLine(line);
-    if (!d || !d.before || d.before.length <= 2) return;
+    if (!d) return;
+    // v12.3.23: a date range on its own line (nothing before it) used to be
+    // skipped, so a job laid out as employer / title / dates never started a
+    // new entry: its header rows were absorbed into the PREVIOUS job's bullets
+    // (or, when no job had a dated header, the whole section fell through to
+    // the dateless fallback, which only recovers the first company-first job).
+    if (!d.before) {
+      const hdr = standaloneDateHeader(idx, d);
+      if (hdr && (!starts.length || starts[starts.length - 1].start !== hdr.start)) starts.push(hdr);
+      return;
+    }
+    if (d.before.length <= 2) return;
 
     // v12.3.1: when the date is on a standalone Location | Date row, include
     // the preceding unmarked Employer | Title row in the entry chunk. This is
@@ -1633,6 +1698,19 @@ function _parseExperienceEntries(lines) {
       (prev.includes("|") || _looksLikeJobTitle(prev) || _looksLikeOrgLocation(prev));
     if (idx > 0 && datePrefixLooksLocation && prevLooksHeader) start = idx - 1;
 
+    // v12.3.23: "Employer -- City, ST" on its own row ABOVE a "Title | dates" row.
+    // The date row is a full header here (its prefix is a job title, not a
+    // location), so nothing pulled the employer row in and the entry lost its
+    // employer and location. Rebuild the pair into Title | dates + employer row.
+    if (idx > 0 && !datePrefixLooksLocation && start === idx && !d.before.includes("\t") &&
+        _looksLikeJobTitle(datePrefix) && prev && !prevMarked && !/^[a-z]+[\s,.;:]/.test(prev) &&
+        !extractDateRangeFromLine(prev) && !_looksLikeJobTitle(prev) && !_contentVerbRe.test(prev) &&
+        !/[.;:]$/.test(prev) && prev.length <= 90 && _looksLikeOrgLocation(prev)) {
+      const synthItem = { start: idx - 1, dateIdx: idx, synth: { first: datePrefix + " | " + d.start + " - " + d.end, second: prev } };
+      if (!starts.length || starts[starts.length - 1].start !== synthItem.start) starts.push(synthItem);
+      return;
+    }
+
     // De-duplicate when two date lines would point at the same header.
     if (!starts.length || starts[starts.length - 1].start !== start) starts.push({ start, dateIdx: idx });
   });
@@ -1643,7 +1721,13 @@ function _parseExperienceEntries(lines) {
       const start = item.start;
       const end = starts[i + 1] ? starts[i + 1].start : clean.length;
       const chunkPairs = [];
-      for (let k = start; k < end; k++) {
+      let from = start;
+      if (item.synth) {
+        chunkPairs.push([item.synth.first, false]);
+        if (item.synth.second) chunkPairs.push([item.synth.second, false]);
+        from = item.dateIdx + 1;
+      }
+      for (let k = from; k < end; k++) {
         if (isHardSectionHeading(clean[k])) continue;
         chunkPairs.push([clean[k], isMarkedBullet(rawLines[k])]);
       }
@@ -2098,6 +2182,27 @@ function _sortEntriesByRecency(entries) {
     .map(x => x.e);
 }
 
+// Turns mammoth's HTML for a Word file into line-structured resume text.
+// extractRawText joins everything inside a paragraph with no separator, so a
+// Word line break (<w:br/>) fused two rows into one ("Weston, FLProduct
+// Business Analyst Intern"), table cells ran together, and a list bullet lost
+// its glyph, which left every Word bullet looking unmarked to the parser.
+// Here a line break stays a line break, each table cell ends in a tab, and a
+// list item gets an explicit bullet marker.
+function docxHtmlToText(html) {
+  const entities = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+  return String(html || "")
+    .replace(/<li\b[^>]*>/gi, "\n\u2022 ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|h[1-6]|li|tr|table|ul|ol|div)>/gi, "\n\n")
+    .replace(/<\/t[dh]>/gi, "\t")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (m, dec, hex, name) =>
+      dec ? String.fromCodePoint(+dec) : hex ? String.fromCodePoint(parseInt(hex, 16)) : (entities[name.toLowerCase()] !== undefined ? entities[name.toLowerCase()] : m))
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 function mapImportedResumeToBuilder(rawText) {
   const sections = _splitResume(rawText);
   const contact = _parseContact(sections.header || []);
@@ -2364,10 +2469,13 @@ async function extractTextFromImportedFile(file) {
   if (name.endsWith(".docx")) {
     await ensureResumeImportLibs();
     const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
+    // convertToHtml keeps line breaks, table cells and list bullets that
+    // extractRawText drops; docxHtmlToText flattens it back to resume text.
+    let docxText = docxHtmlToText((await mammoth.convertToHtml({ arrayBuffer })).value);
+    if (!docxText) docxText = ((await mammoth.extractRawText({ arrayBuffer })).value || "").trim();
     const links = await extractDocxHyperlinks(arrayBuffer);
     const linkSummary = summarizeImportedLinks(links);
-    return { resumeText: (result.value || "").trim(), fileName: file.name || "", transfer: false, links: linkSummary };
+    return { resumeText: docxText, fileName: file.name || "", transfer: false, links: linkSummary };
   }
   if (name.endsWith(".pdf")) {
     const pdfResult = await extractPdfTextFromFile(file);
@@ -4775,6 +4883,22 @@ function atsCompatibilityScore(data, resumeStrength) {
 
 // ===== LIB END =====
 
+// v12.3.23: usage counts via GoatCounter custom events. COUNTS ONLY: the event
+// name is a fixed string, so no resume text, name, contact detail or score is
+// ever passed in. If the analytics script is still loading, send on load.
+function trackEvent(name, title) {
+  const send = () => {
+    try {
+      window.goatcounter?.count?.({ path: name, title, referrer: "", event: true });
+    } catch (e) { /* analytics must never affect the tool */ }
+  };
+  if (typeof window.goatcounter?.count === "function") {
+    send();
+  } else {
+    document.getElementById("resume-analytics")?.addEventListener("load", send, { once: true });
+  }
+}
+
 function App() {
   const [data, setData] = useState(STARTER);
   const [importText, setImportText] = useState("");
@@ -4891,7 +5015,8 @@ function App() {
   const handleResumeImportFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    setImportBlocked(false);
+    setImportBlocked(true);
+    setImportText("");
     setImportPreview(null);
     const fileName = file.name || "";
     setCurrentResumeName(fileName);
@@ -4957,6 +5082,7 @@ function App() {
 
   const applyImport = () => {
     if (!String(data.field || "").trim()) { alert("Select your Target Field / Industry before starting. This helps Coach Jeff carry the right career direction through the full workflow."); return; }
+    if (!importText.trim()) { alert("Paste or upload the existing resume text first."); return; }
     const mapped = importPreview || mapImportedResumeToBuilder(importText);
     if (!mapped) return;
     if (!currentResumeName && importText.trim()) setCurrentResumeName("Pasted resume");
@@ -5131,6 +5257,7 @@ function App() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      trackCompleted();
     } catch (err) {
       alert("Sorry — the Word download hit an error. You can still use Print / PDF.\n\n" + err.message);
     } finally { setBusy(false); }
@@ -5701,6 +5828,7 @@ function App() {
       a.href = url; a.download = (data.name || "Resume").replace(/\s+/g, "_") + "_Resume.docx";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      trackCompleted();
     } catch (err) {
       // Fallback: if JSZip can't load, use the reliable .doc export so download never fully fails.
       exportDocx();
@@ -5716,6 +5844,7 @@ function App() {
     w.document.close();
     w.focus();
     setTimeout(() => { w.print(); }, 350);
+    trackCompleted();
   };
   const reset = () => {
     if (confirm("Clear all fields, imported file, mapping preview, Coach Review, and saved draft?")) {
@@ -5873,6 +6002,24 @@ function App() {
   const recruiterReadability = useMemo(() => analyzeRecruiterReadability(data, resumeStrength), [data, resumeStrength]);
   const sectionFeedback = useMemo(() => sectionRecruiterFeedback(data), [data]);
   const atsScore = useMemo(() => atsCompatibilityScore(data, resumeStrength), [data, resumeStrength]);
+  // v12.3.23: usage counts. "Scored" = the first time in a page load that a score
+  // is computed for a resume with real experience bullets (an import, typing, or
+  // a restored draft; the blank starter never counts). "Completed" = the first
+  // download or print after a score in that page load. Each fires once per page
+  // load, so the counts measure completion among scored sessions.
+  const scoredTrackedRef = useRef(false);
+  const completedTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || scoredTrackedRef.current || data === STARTER) return;
+    if (!(data.experience || []).some((e) => (e.bullets || []).some(Boolean))) return;
+    scoredTrackedRef.current = true;
+    trackEvent("resume-scored", "Resume scored");
+  }, [resumeStrength, data, loaded]);
+  const trackCompleted = () => {
+    if (!scoredTrackedRef.current || completedTrackedRef.current) return;
+    completedTrackedRef.current = true;
+    trackEvent("resume-completed", "Resume downloaded or printed");
+  };
   // v12.2.0: capture the ATS score the first time the workspace opens, as the
   // "before" baseline for the ATS Inspection re-check. Reset when leaving.
   useEffect(() => {
@@ -8296,10 +8443,11 @@ root.render(<App />);
 <p><strong>Changes.</strong> These tools are a work in progress and may change or be discontinued at any time. Continued use means you accept the current terms.</p>
 <p><strong>Contact.</strong> Questions? Reach Jeff Burke at <a href="mailto:jburke8111@gmail.com">jburke8111@gmail.com</a>.</p></div>
     <div id="cj-privacy"><h3>Privacy Policy</h3>
-<p class="cj-meta">Last updated: August 21, 2026</p>
-<p>These tools are built to work without accounts, logins, or tracking. Here&rsquo;s exactly what that means.</p>
+<p class="cj-meta">Last updated: November 22, 2026</p>
+<p>These tools are built to work without accounts or logins and to minimize the personal information sent off your device. Here&rsquo;s exactly what that means.</p>
 <p><strong>What runs in your browser.</strong> When you paste or type your resume, a job posting, or personal details, that information is processed locally in your own web browser to generate your results. It is not transmitted to or stored on our servers, and we cannot see it. If you close or refresh the page, anything saved on your device for convenience can be cleared through your browser.</p>
-<p><strong>What we don&rsquo;t collect.</strong> We don&rsquo;t require an account, we don&rsquo;t ask for a login, and we don&rsquo;t run advertising or third-party analytics trackers. We don&rsquo;t sell, rent, or share your personal information &mdash; because in the normal use of these tools, we never receive it.</p>
+<p><strong>What we don&rsquo;t collect.</strong> We don&rsquo;t require an account or login, and we don&rsquo;t use advertising trackers or sell, rent, or share your personal information for advertising purposes. Because your resume is processed in your browser, we never receive it.</p>
+<p><strong>Basic usage counts.</strong> When enabled, GoatCounter provides cookieless usage counts for page visits, scoring, and downloads or printing. The scoring and completion events send fixed labels. Your resume, its text, your score, your name, and your contact details are never sent.</p>
 <p><strong>Third-party services.</strong> To analyze a job posting you link to, the tool may fetch that public web page through a third-party proxy service. Only the posting&rsquo;s URL is sent for that purpose; your resume is never sent.</p>
 <p><strong>Your choices.</strong> Because your information stays on your device, you&rsquo;re in control of it. Clearing your browser&rsquo;s site data removes anything the tool saved locally.</p>
 <p><strong>Contact.</strong> Questions about privacy? Reach Jeff Burke at <a href="mailto:jburke8111@gmail.com">jburke8111@gmail.com</a> or through the feedback form on the homepage.</p></div>

@@ -1,0 +1,52 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Six jobs under PROFESSIONAL EXPERIENCE; each has a Tools Used line that is not a bullet. The separate EXPERIENTIAL LEARNING section is not counted as experience here (a decision to confirm). Two dates are malformed (Jun2023) so they are not labeled.",
+  "expect": {
+    "name": "NEHA SHARMA",
+    "experience": [
+      {
+        "title": "Intern, Investment Banking",
+        "org": "KRS Capital Partners",
+        "start": "Sep 2025",
+        "end": "Nov 2025",
+        "bulletCount": 2
+      },
+      {
+        "title": "Analyst Intern, Due Diligence & Investment Banking",
+        "org": "Oak Group of NY",
+        "start": "Jul 2025",
+        "end": "Oct 2025",
+        "bulletCount": 3
+      },
+      {
+        "title": "Intern, Mergers and Acquisition",
+        "org": "Crown Ridge Group",
+        "start": "Jun 2025",
+        "end": "Aug 2025",
+        "bulletCount": 1
+      },
+      {
+        "title": "Finance Intern, Advocacy Group",
+        "org": "Alliance for Civic Engagement",
+        "start": "Jun 2025",
+        "end": "Aug 2025",
+        "bulletCount": 1
+      },
+      {
+        "title": "Analyst Intern, FP&A",
+        "org": "The Retirement Plan Company LLC",
+        "bulletCount": 2
+      },
+      {
+        "title": "Finance Assistant, FP&A",
+        "org": "Ek Audio (DJ Manufacturing)",
+        "start": "Jul 2020",
+        "end": "May 2023",
+        "bulletCount": 3
+      }
+    ]
+  }
+}

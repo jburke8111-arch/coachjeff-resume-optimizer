@@ -1,0 +1,68 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file. Employer and city on their own row above a Title | dates row; two jobs at the same employer.",
+  "expect": {
+    "name": "JASMINE HOLLOWAY",
+    "experience": [
+      {
+        "title": "Product Business Analyst Intern",
+        "org": "Ultimate Kronos Group (UKG)",
+        "location": "Weston, FL",
+        "start": "May 2022",
+        "end": "Aug 2022",
+        "bulletCount": 4
+      },
+      {
+        "title": "Technology Risk Consultant Intern",
+        "org": "Ernst & Young (EY)",
+        "location": "Miami, FL",
+        "start": "Jun 2023",
+        "end": "Jul 2023",
+        "bulletCount": 4
+      },
+      {
+        "title": "Technology Administrative Assistant (Part-Time)",
+        "org": "Office of the State Attorney",
+        "location": "Tallahassee, FL",
+        "start": "Aug 2022",
+        "end": "Dec 2023",
+        "bulletCount": 4
+      },
+      {
+        "title": "IT Systems Assistant (Part-Time)",
+        "org": "Legends",
+        "location": "Tallahassee, FL",
+        "start": "Aug 2023",
+        "end": "Dec 2023",
+        "bulletCount": 3
+      },
+      {
+        "title": "IT Systems Assistant",
+        "org": "Legends",
+        "location": "Tallahassee, FL",
+        "start": "Jan 2024",
+        "end": "Jun 2024",
+        "bulletCount": 4
+      },
+      {
+        "title": "Technician",
+        "org": "Dr. DeviceRx",
+        "location": "South Florida",
+        "start": "Jun 2024",
+        "end": "Jun 2025",
+        "bulletCount": 4
+      },
+      {
+        "title": "Operations & Sales Coordinator (Barre Studio / Pilates Co)",
+        "org": "SFL Wellness LLC",
+        "location": "South Florida",
+        "start": "Jun 2025",
+        "end": "Present",
+        "bulletCount": 4
+      }
+    ]
+  }
+}

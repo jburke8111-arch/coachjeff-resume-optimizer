@@ -12,9 +12,10 @@
 // bullet COUNTS, not bullet text similarity. Add fuzzier scoring only if this
 // proves too blunt to show a delta.
 //
-// Inputs can be .txt (pasted text) or .pdf. A PDF goes through the app's own
-// extractPdfTextFromFile(), so the PDF.js line reconstruction — the step most
-// likely to garble a real upload — is measured, not skipped.
+// Inputs can be .txt (pasted text), .pdf or .docx. A PDF goes through the app's
+// own extractPdfTextFromFile(), so the PDF.js line reconstruction — the step most
+// likely to garble a real upload — is measured, not skipped. A DOCX goes through
+// the same Mammoth conversion and raw-text fallback as the app (tools/docx-node.js).
 
 const fs = require("fs");
 const path = require("path");
@@ -22,7 +23,7 @@ const { loadLib } = require("./extract-lib.js");
 
 const FIXTURE_DIR = path.join(__dirname, "..", "tests", "fixtures");
 const PRIVATE_DIR = path.join(FIXTURE_DIR, "private");
-const INPUT_KINDS = ["pdf", "txt"];
+const INPUT_KINDS = ["pdf", "docx", "txt"];
 
 // Whitespace and unicode dashes/quotes vary by source document; they are not
 // what we are measuring, so normalise them away before comparing.
@@ -180,7 +181,9 @@ async function run(opts = {}) {
     try {
       const text = f.kind === "pdf"
         ? await lib.extractPdfTextFromFile(require("./pdf-node.js").fileFromPath(f.inputPath)).then(r => (r && typeof r === "object" ? r.text : r))
-        : fs.readFileSync(f.inputPath, "utf8");
+        : f.kind === "docx"
+          ? await require("./docx-node.js").extractDocxText(f.inputPath, lib)
+          : fs.readFileSync(f.inputPath, "utf8");
       actual = lib.mapImportedResumeToBuilder(text);
     } catch (err) {
       error = err.message;
@@ -212,7 +215,7 @@ async function run(opts = {}) {
 }
 
 function formatResult(res) {
-  const lines = [(res.clean ? "  PASS  " : "  FAIL  ") + res.name + (res.kind === "pdf" ? " (pdf)" : "") +
+  const lines = [(res.clean ? "  PASS  " : "  FAIL  ") + res.name + (res.kind !== "txt" ? " (" + res.kind + ")" : "") +
     (res.error ? "  [threw: " + res.error + "]" : "")];
   for (const f of res.failures) {
     lines.push("          " + f.field + ": expected " + JSON.stringify(f.expected) + ", got " + JSON.stringify(f.actual));

@@ -1,0 +1,10 @@
+Tomas Reyes
+Austin, TX | tomas.r@example.com | (512) 555-0102
+
+EXPERIENCE
+Meridian Engineering | Intern  Apr 2023 - Jun 2023
+- Cleaned sensor logs with Python
+- Wrote 15 automated checks
+
+Lakeview Systems | Student Assistant  Aug 2022 - Dec 2022
+- Updated 90 asset records

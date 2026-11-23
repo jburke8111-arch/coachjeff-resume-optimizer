@@ -1,0 +1,26 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file. Title and dates on one row (tab-separated), employer and location on the row below, jobs listed newest-last.",
+  "expect": {
+    "name": "KAMRAN ALI HASHMI",
+    "experience": [
+      {
+        "title": "Associate, Client Operations",
+        "org": "S&P Global Market Intelligence",
+        "start": "Jan 2023",
+        "end": "Jul 2024",
+        "bulletCount": 4
+      },
+      {
+        "title": "Graduate Teaching Assistant",
+        "org": "The University of Texas at Arlington",
+        "start": "Sep 2024",
+        "end": "Present",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

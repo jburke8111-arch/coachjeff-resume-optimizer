@@ -1,0 +1,29 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Three jobs under PROFESSIONAL EXPERIENCE with the employer and location on one row and the title and dates on the next. Only the first has a clean date range; the others use Spring 2025 and May - Aug 2024, so their dates are not labeled.",
+  "expect": {
+    "name": "Rick Albright",
+    "experience": [
+      {
+        "title": "Insurance Agent",
+        "org": "Synergy Financial Partners",
+        "start": "Feb 2025",
+        "end": "July 2025",
+        "bulletCount": 2
+      },
+      {
+        "title": "Real Estate Private Equity Virtual Intern",
+        "org": "Project Destined",
+        "bulletCount": 4
+      },
+      {
+        "title": "Office Intern",
+        "org": "State Government Internship Program",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

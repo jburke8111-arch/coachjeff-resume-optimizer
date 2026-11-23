@@ -1,0 +1,26 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Employer | Title with dates on the same row. HYDROTEC Engineering contains a role word, which swapped employer and title before v12.3.23.",
+  "expect": {
+    "name": "Arun Sivaraman",
+    "experience": [
+      {
+        "title": "Intern",
+        "org": "BridgeSolutions",
+        "start": "Jun 2021",
+        "end": "Aug 2021",
+        "bulletCount": 3
+      },
+      {
+        "title": "Intern",
+        "org": "HYDROTEC Engineering",
+        "start": "Apr 2023",
+        "end": "Jun 2023",
+        "bulletCount": 3
+      }
+    ]
+  }
+}

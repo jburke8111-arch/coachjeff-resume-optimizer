@@ -1,0 +1,31 @@
+{
+  "failureMode": "pdf-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Title | employer, city and dates; the last job has two date ranges so its dates are not labeled. The first job's final bullet wraps onto two lines.",
+  "expect": {
+    "name": "Sean Cooper",
+    "experience": [
+      {
+        "title": "Project Collaborator",
+        "org": "TechSmith Corporation",
+        "start": "Jan. 2024",
+        "end": "April 2024",
+        "bulletCount": 6
+      },
+      {
+        "title": "Associate Intern",
+        "org": "BETA CAE SYSTEMS USA",
+        "start": "June 2022",
+        "end": "Oct. 2022",
+        "bulletCount": 5
+      },
+      {
+        "title": "Foam Shooter and Trimmer",
+        "org": "PFI",
+        "bulletCount": 4
+      }
+    ]
+  }
+}

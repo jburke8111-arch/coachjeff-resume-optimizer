@@ -1,0 +1,59 @@
+{
+  "failureMode": "table-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file with a table. Title on its own row, employer, city and dates on the next. Six jobs, one a volunteer role.",
+  "expect": {
+    "name": "Andre Whitaker",
+    "experience": [
+      {
+        "title": "Line Cook",
+        "org": "Hilton Garden Inn",
+        "location": "Glendale, CA",
+        "start": "Dec 2024",
+        "end": "Present",
+        "bulletCount": 2
+      },
+      {
+        "title": "Humanitarian Events Coordinator (Volunteer)",
+        "org": "HOPEworldwide",
+        "start": "May 2021",
+        "end": "Present",
+        "bulletCount": 3
+      },
+      {
+        "title": "Customer Service Representative",
+        "org": "Pinewood Regional Medical Center",
+        "location": "Moultrie, GA",
+        "start": "May 2023",
+        "end": "Oct 2024",
+        "bulletCount": 4
+      },
+      {
+        "title": "Lead Cook / Night Supervisor",
+        "org": "Fellowship Square",
+        "location": "Tucson, AZ",
+        "start": "Jul 2021",
+        "end": "May 2022",
+        "bulletCount": 2
+      },
+      {
+        "title": "Associate Warehouse Manager",
+        "org": "Mars Chocolate",
+        "location": "Albany, GA",
+        "start": "Aug 2018",
+        "end": "May 2021",
+        "bulletCount": 2
+      },
+      {
+        "title": "Hazardous Material Specialist",
+        "org": "United States Navy",
+        "location": "San Diego, CA",
+        "start": "Aug 2003",
+        "end": "Mar 2018",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

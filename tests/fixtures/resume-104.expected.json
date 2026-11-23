@@ -1,0 +1,33 @@
+{
+  "failureMode": "table-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file with a table and MM/YYYY dates (07/2025 - Present). The Meijer job has three sub-headed bullet groups, 9 bullets in total. Only dates and bullet counts are labeled.",
+  "expect": {
+    "name": "Morgan Ellison",
+    "experience": [
+      {
+        "title": "Customer Service Associate",
+        "org": "Walmart",
+        "start": "07/2025",
+        "end": "Present",
+        "bulletCount": 3
+      },
+      {
+        "title": "Archivist",
+        "org": "Ohio Craft Museum",
+        "start": "09/2024",
+        "end": "05/2025",
+        "bulletCount": 3
+      },
+      {
+        "title": "Customer Service Associate",
+        "org": "Meijer",
+        "start": "08/2020",
+        "end": "01/2025",
+        "bulletCount": 9
+      }
+    ]
+  }
+}

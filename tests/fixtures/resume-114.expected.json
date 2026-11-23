@@ -1,0 +1,19 @@
+{
+  "failureMode": "pdf-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. One job whose title and employer share a row (Title at Employer) with the dates on the right.",
+  "expect": {
+    "name": "Jaylen Carlisle",
+    "experience": [
+      {
+        "title": "Graphic Design Intern",
+        "org": "TLT - Tomorrow’s Leaders Today",
+        "start": "September 2024",
+        "end": "November 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file with text boxes. Title and dates on one row, employer and city on the row below.",
+  "expect": {
+    "name": "RAMYA SRI KONDAREDDY",
+    "experience": [
+      {
+        "org": "EXL Service",
+        "location": "Bangalore, Karnataka",
+        "start": "Feb 2022",
+        "end": "Oct 2023",
+        "bulletCount": 5
+      },
+      {
+        "title": "Accounts Executive",
+        "org": "Venkatapuram & Co",
+        "location": "Brodipet, Guntur",
+        "start": "July 2020",
+        "end": "July 2021",
+        "bulletCount": 7
+      },
+      {
+        "title": "Article Associate",
+        "org": "Suresh & Co",
+        "location": "Hyderabad, Telangana",
+        "start": "Dec 2016",
+        "end": "Dec 2019",
+        "bulletCount": 8
+      }
+    ]
+  }
+}

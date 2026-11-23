@@ -1,0 +1,33 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Title and dates on one row, employer and location on the next (no separator before the location).",
+  "expect": {
+    "name": "ROHAN MEHTA",
+    "experience": [
+      {
+        "title": "Data Analyst - Intern",
+        "org": "Infinite Computer Solutions (IT Services)",
+        "start": "Jun. 2025",
+        "end": "Aug. 2025",
+        "bulletCount": 5
+      },
+      {
+        "title": "Business Analyst - Intern",
+        "org": "ARVO(E-commerce)",
+        "start": "Jan. 2024",
+        "end": "Jun. 2024",
+        "bulletCount": 3
+      },
+      {
+        "title": "Data Analyst - Intern",
+        "org": "ZENO(Real Estate)",
+        "start": "Jun. 2023",
+        "end": "Aug. 2023",
+        "bulletCount": 3
+      }
+    ]
+  }
+}

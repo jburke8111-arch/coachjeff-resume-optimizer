@@ -1,0 +1,24 @@
+{
+  "failureMode": "multi-column",
+  "layout": "multi-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF with a left sidebar of section labels (Education, Work Experience, Awards) that gets merged into the text rows. Four jobs under Work Experience; dates use Aug' 2024 style so only titles are labeled.",
+  "expect": {
+    "name": "Hamid Mir",
+    "experience": [
+      {
+        "title": "GRADUATE RESEARCH ASSISTANT-GRA"
+      },
+      {
+        "title": "GRADUATE TEACHING ASSISTANT-GTA"
+      },
+      {
+        "title": "FREELANCE CIVIL ENGINEER"
+      },
+      {
+        "title": "ENTRY-LEVEL CIVIL ENGINEER"
+      }
+    ]
+  }
+}

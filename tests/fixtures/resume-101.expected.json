@@ -1,0 +1,10 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file. Jobs and one project share a single PROJECTS AND EXPERIENCE heading, so only the name is labeled until it is decided whether those three jobs count as experience.",
+  "expect": {
+    "name": "Adrian Quintero"
+  }
+}

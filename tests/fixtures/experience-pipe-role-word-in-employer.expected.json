@@ -1,0 +1,25 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Org | Title headers where the employer's own name contains a role word (\"Engineering\" trips the engineer test), so both halves read as job titles. Found on resume-116, where the employer and title came out swapped. A lone level word such as Intern or Student Assistant is the title.",
+  "expect": {
+    "name": "Tomas Reyes",
+    "experience": [
+      {
+        "title": "Intern",
+        "org": "Meridian Engineering",
+        "start": "Apr 2023",
+        "end": "Jun 2023",
+        "bulletCount": 2
+      },
+      {
+        "title": "Student Assistant",
+        "org": "Lakeview Systems",
+        "start": "Aug 2022",
+        "end": "Dec 2022",
+        "bulletCount": 1
+      }
+    ]
+  }
+}
