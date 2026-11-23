@@ -1,0 +1,27 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "Word file. Title or employer and the function run together on one row with the dates tabbed to the right, so only dates and bullet counts are labeled.",
+  "expect": {
+    "name": "Lakshmi Priya Ramanathan",
+    "experience": [
+      {
+        "start": "Aug 2025",
+        "end": "Dec 2025",
+        "bulletCount": 3
+      },
+      {
+        "start": "Jan 2018",
+        "end": "Jan 2024",
+        "bulletCount": 14
+      },
+      {
+        "start": "Jan 2016",
+        "end": "Jan 2018",
+        "bulletCount": 5
+      }
+    ]
+  }
+}

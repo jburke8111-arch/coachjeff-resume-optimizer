@@ -1,0 +1,7 @@
+Riley Park
+Dallas, TX | riley.park@example.com
+
+EXPERIENCE
+iOS Developer Intern
+Cupertino, CA | May 2024 - Aug 2024
+• Built a SwiftUI settings screen used in the beta release

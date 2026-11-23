@@ -1,0 +1,27 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Same resume and expected answers as experience-company-first-multi, but delivered as a Word file with real list-style bullets, so it goes through mammoth.extractRawText the way a user upload does. Word list bullets arrive as plain, unmarked lines (the bullet glyph is not in the extracted text), which is the DOCX-specific condition this fixture covers.",
+  "expect": {
+    "name": "Derek Osei",
+    "experience": [
+      {
+        "title": "Supply Chain Analyst",
+        "org": "Cardinal Health",
+        "location": "Dublin, OH",
+        "start": "January 2025",
+        "end": "Present",
+        "bulletCount": 2
+      },
+      {
+        "title": "Inventory Associate",
+        "org": "Kroger",
+        "location": "Columbus, OH",
+        "start": "May 2023",
+        "end": "December 2024",
+        "bulletCount": 1
+      }
+    ]
+  }
+}

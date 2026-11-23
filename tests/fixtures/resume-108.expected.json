@@ -1,0 +1,19 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. One job with the employer and dates on one row and the title and location on the next.",
+  "expect": {
+    "name": "Harini Venkatesan",
+    "experience": [
+      {
+        "title": "Team Lead, Product Manager Intern",
+        "org": "Harbor Healthcare",
+        "start": "Jun. 2024",
+        "end": "Sep. 2024",
+        "bulletCount": 5
+      }
+    ]
+  }
+}

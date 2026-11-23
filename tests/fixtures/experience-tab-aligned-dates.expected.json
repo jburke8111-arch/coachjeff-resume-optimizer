@@ -1,0 +1,19 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Tab-aligned right-hand dates and location — what a right-aligned Word/LaTeX resume collapses to on extraction.",
+  "expect": {
+    "name": "Hannah Cho",
+    "experience": [
+      {
+        "title": "Data Analyst Intern",
+        "org": "Riverbend Health",
+        "location": "Portland, OR",
+        "start": "June 2024",
+        "end": "August 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

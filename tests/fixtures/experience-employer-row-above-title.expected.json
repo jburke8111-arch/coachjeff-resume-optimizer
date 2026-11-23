@@ -1,0 +1,27 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Employer and city on their own row ABOVE a \"Title | dates\" row (the layout Word resumes use, and what resume-103 exposed once Word line breaks were kept). The date row is a full header, so the employer row above it used to be left out and both jobs lost employer and location.",
+  "expect": {
+    "name": "Nadia Fernandez",
+    "experience": [
+      {
+        "title": "Operations Analyst Intern",
+        "org": "Harbor Logistics Group",
+        "location": "Tampa, FL",
+        "start": "June 2025",
+        "end": "August 2025",
+        "bulletCount": 2
+      },
+      {
+        "title": "Member Services Assistant",
+        "org": "Bayside Credit Union",
+        "location": "Clearwater, FL",
+        "start": "September 2024",
+        "end": "May 2025",
+        "bulletCount": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "failureMode": "project-titles",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Pipe-delimited project title. The delimiter is not stripped, so the title exports as 'Campus Transit Tracker |'.",
+  "expect": {
+    "name": "Dana Osei",
+    "projects": [
+      {
+        "name": "Campus Transit Tracker",
+        "date": "May 2024",
+        "bulletCount": 2
+      }
+    ]
+  }
+}

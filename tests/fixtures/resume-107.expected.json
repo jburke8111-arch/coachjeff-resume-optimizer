@@ -1,0 +1,36 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Employer and city share a row above the title and dates.",
+  "expect": {
+    "name": "Mary Bayo-Oyede",
+    "experience": [
+      {
+        "title": "Business & Systems Analyst Co-Op",
+        "org": "Community Options",
+        "location": "Denton, TX",
+        "start": "August 2025",
+        "end": "Present",
+        "bulletCount": 4
+      },
+      {
+        "title": "Business Operations Analyst Intern",
+        "org": "The Mint Creative",
+        "location": "Dallas, TX",
+        "start": "May 2025",
+        "end": "August 2025",
+        "bulletCount": 4
+      },
+      {
+        "title": "Reporting & Process Analyst Intern",
+        "org": "KTLS Group",
+        "location": "Calgary, CA",
+        "start": "Dec 2022",
+        "end": "May 2023",
+        "bulletCount": 4
+      }
+    ]
+  }
+}

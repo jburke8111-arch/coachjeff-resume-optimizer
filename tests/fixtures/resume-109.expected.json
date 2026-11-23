@@ -1,0 +1,18 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Title and dates on one row, employer and location below it with no separator, so the employer is not labeled.",
+  "expect": {
+    "name": "Ravi Malhotra",
+    "experience": [
+      {
+        "title": "Business Intelligence & Data Analyst",
+        "start": "Aug 2025",
+        "end": "Present",
+        "bulletCount": 5
+      }
+    ]
+  }
+}

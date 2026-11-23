@@ -1,0 +1,17 @@
+{
+  "failureMode": "education-one-line",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Degree, school, and a city that repeats the school's last word, on one line. Before: degree and school were identical; the city also stayed glued to the school because a guard meant for comma-less text vetoed it.",
+  "expect": {
+    "name": "Casey Nguyen",
+    "education": [
+      {
+        "degree": "Bachelor of Science in Biology",
+        "school": "University of Houston",
+        "location": "Houston, TX",
+        "grad": "May 2025"
+      }
+    ]
+  }
+}

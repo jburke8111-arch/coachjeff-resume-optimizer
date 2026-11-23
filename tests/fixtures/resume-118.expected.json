@@ -1,0 +1,24 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Four entries whose headers mix title, employer, place and year in one line, with year-only dates, so only the entry count and bullet counts are labeled. One bullet wraps onto two lines.",
+  "expect": {
+    "name": "IMRAN ANSARI",
+    "experience": [
+      {
+        "bulletCount": 2
+      },
+      {
+        "bulletCount": 2
+      },
+      {
+        "bulletCount": 2
+      },
+      {
+        "bulletCount": 2
+      }
+    ]
+  }
+}

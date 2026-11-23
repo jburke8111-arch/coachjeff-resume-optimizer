@@ -1,0 +1,33 @@
+{
+  "failureMode": "pdf-layout",
+  "layout": "single-column",
+  "source": "dummy resume from Jeff (Sept 28), answers drafted from the resume text",
+  "reviewed": false,
+  "notes": "PDF. Company-first header with the date on the employer row and year-only date ranges (2024 - 2025). Three jobs; bullet counts are marked bullets only.",
+  "expect": {
+    "name": "LEILA OFORI",
+    "experience": [
+      {
+        "title": "IT Intern",
+        "org": "Eastmont City Schools",
+        "start": "June 2025",
+        "end": "August 2025",
+        "bulletCount": 7
+      },
+      {
+        "title": "Shift Supervisor / Cashier",
+        "org": "CVS",
+        "start": "2024",
+        "end": "2025",
+        "bulletCount": 3
+      },
+      {
+        "title": "Personal Shopper",
+        "org": "Walmart",
+        "start": "2022",
+        "end": "2023",
+        "bulletCount": 3
+      }
+    ]
+  }
+}

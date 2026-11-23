@@ -1,0 +1,7 @@
+Ivy Chandra
+Raleigh, NC | ivy.chandra@example.com
+
+PROJECTS
+Rainfall 2024 Prediction Model
+- Trained a gradient-boosted model on 30 years of NOAA data
+- Achieved 0.89 R-squared on held-out seasons

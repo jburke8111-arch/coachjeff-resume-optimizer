@@ -1,0 +1,22 @@
+{
+  "failureMode": "education-honors",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "An honor on its own line under the degree has no education field to land in and was dropped; it moves to Awards. A degree line that mentions an honor ('magna cum laude') stays the degree and is not copied into Awards. 'Relevant Courses:' is stripped because the export adds its own label.",
+  "expect": {
+    "name": "Avery Brooks",
+    "education": [
+      {
+        "school": "Texas A&M University",
+        "degree": "B.A. in History, magna cum laude",
+        "grad": "May 2024",
+        "coursework": "Historiography, Public History, Archival Methods"
+      }
+    ],
+    "awards": [
+      {
+        "name": "Dean's List (6 semesters)"
+      }
+    ]
+  }
+}

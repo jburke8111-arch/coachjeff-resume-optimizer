@@ -1,0 +1,18 @@
+Ana Beltran
+Newark, NJ | ana.b@example.com | (201) 555-0100
+
+EDUCATION
+Rutgers University, Newark, NJ
+B.S. in Information Technology
+Expected May 2026 | GPA: 3.45
+
+EXPERIENCE
+Prudential Financial | Newark, NJ | June 2025 - August 2025
+Technology Analyst Intern
+- Migrated 14 legacy reports to Power BI
+- Cut refresh time 40%
+
+Rutgers IT Help Desk
+Student Technician
+September 2024 - May 2025
+- Resolved 60+ tickets weekly

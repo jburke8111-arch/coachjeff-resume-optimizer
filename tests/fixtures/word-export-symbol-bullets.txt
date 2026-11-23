@@ -1,0 +1,37 @@
+JORDAN REYES
+jordan.reyes@example.com | (555) 010-4477 | linkedin.com/in/jordan-reyes-example | github.com/jreyes-example
+SUMMARY
+Information Systems graduate with experience turning institutional and operational data into clear reporting for
+decision makers.
+Comfortable leading small analytics projects end to end, from data cleaning through dashboards and written
+recommendations.
+EDUCATION
+B.S. in Information Systems, Minor in Statistics, University of North Texas | May 2026
+GPA : 3.8 / 4.0
+ Regents Merit Scholarship Recipient 
+ Selected Coursework: Database Systems, Data Mining, Operating Systems 
+WORK EXPERIENCE
+Data Analyst Intern - Office of Institutional Research, University of North Texas | Jan 2026 – May 2026 
+ Cleaned and reconciled 12 years of enrollment records for a university retention study, producing cohort
+summaries used in the provost's annual planning review.
+Student Assistant - Career Center, University of North Texas | Aug 2025 – Dec 2025
+ Coordinated scheduling for 40+ employer information sessions and tracked attendance for 900 students.
+Research Intern - Southwest Energy Lab (SEL), Houston, TX | May 2025 - Jul 2025
+ Modeled hourly grid demand for 3 service regions using gradient-boosted regression, cutting forecast error by
+14%.
+ Presented the forecasting results at the lab's summer symposium to an audience of regional utility partners and
+industry analysts and researchers .
+Operations Intern II - Center for Workforce Programs, Austin Community College | May 2024 - Aug 2024
+ Drafted a proposal for a data literacy certificate program and presented it to the dean's advisory council.
+ Built an intake tracker in Excel that replaced three paper forms for 200+ program applicants.
+PROJECTS
+Campus Energy Dashboard - 1st Place | Team Project | Mar 2026
+ Built a Tableau dashboard of 5 years of building meter data that identified 3 buildings driving 40% of use.
+Library Demand Forecast | Solo Project | Nov 2025
+ Forecast weekly study-room demand with Prophet and published the model notes for library staff.
+SKILLS
+Programming, Databases & Tools: Python, SQL, R, PostgreSQL, Git/GitHub, Tableau, Excel
+Analytics: Regression, Clustering, A/B Testing, Forecasting
+Certifications: Coursera: Google Data Analytics | Microsoft: Power BI Data Analyst (PL-300) | Tableau: Desktop
+Specialist |
+AWS Cloud Practitioner (In Progress)

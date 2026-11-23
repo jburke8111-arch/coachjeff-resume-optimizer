@@ -1,0 +1,35 @@
+{
+  "failureMode": "docx-import",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Same resume and expected answers as experience-multi-entry-mixed, but delivered as a Word file with real list-style bullets, so it goes through mammoth.extractRawText the way a user upload does. Word list bullets arrive as plain, unmarked lines (the bullet glyph is not in the extracted text), which is the DOCX-specific condition this fixture covers.",
+  "expect": {
+    "name": "Ana Beltran",
+    "education": [
+      {
+        "school": "Rutgers University",
+        "location": "Newark, NJ",
+        "degree": "B.S. in Information Technology",
+        "grad": "Expected May 2026",
+        "gpa": "3.45"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Technology Analyst Intern",
+        "org": "Prudential Financial",
+        "location": "Newark, NJ",
+        "start": "June 2025",
+        "end": "August 2025",
+        "bulletCount": 2
+      },
+      {
+        "title": "Student Technician",
+        "org": "Rutgers IT Help Desk",
+        "start": "September 2024",
+        "end": "May 2025",
+        "bulletCount": 1
+      }
+    ]
+  }
+}

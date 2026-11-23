@@ -1,0 +1,16 @@
+{
+  "failureMode": "experience-layout",
+  "layout": "single-column",
+  "source": "synthetic",
+  "notes": "Two jobs in one section using DIFFERENT layouts: the first has a pipe header carrying employer, location and dates with the title beneath; the second has a bare employer line with its dates on their own row. Found by held-out testing, not by the original sample. The second job is lost entirely because chunking only starts a new entry at a header line that carries a date.",
+  "expect": {
+    "name": "Ana Beltran",
+    "education": [
+      { "school": "Rutgers University", "location": "Newark, NJ", "degree": "B.S. in Information Technology", "grad": "Expected May 2026", "gpa": "3.45" }
+    ],
+    "experience": [
+      { "title": "Technology Analyst Intern", "org": "Prudential Financial", "location": "Newark, NJ", "start": "June 2025", "end": "August 2025", "bulletCount": 2 },
+      { "title": "Student Technician", "org": "Rutgers IT Help Desk", "start": "September 2024", "end": "May 2025", "bulletCount": 1 }
+    ]
+  }
+}

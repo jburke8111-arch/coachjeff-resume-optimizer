@@ -1,0 +1,11 @@
+Sam Lee
+Dallas, TX | sam.lee@example.com
+
+EXPERIENCE
+Software Engineer Intern - Google, Mountain View, CA | Jun 2025 - Aug 2025
+• Shipped a settings feature used by 2M users
+Northwind Health - Data Analyst Intern | Jan 2025 - May 2025
+• Automated a weekly census report, saving 5 hours a week
+Acme Corp - Chicago, IL | Jun 2024 - Aug 2024
+Operations Intern
+• Rebuilt the dispatch checklist, cutting errors 22%

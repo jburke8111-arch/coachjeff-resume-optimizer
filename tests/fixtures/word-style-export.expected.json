@@ -1,0 +1,42 @@
+{
+  "failureMode": "pdf-word-layout",
+  "layout": "single-column",
+  "source": "synthetic PDF, built from tests/fixtures/src/word-style-export.html",
+  "notes": "A real PDF, read through the app's own PDF.js extraction. Made-up content laid out like a real Word export that garbled: one-line 'Title - Organization, City, ST | Dates' headers, a wrapped bullet ending in 'researchers' directly above a header containing ', Austin', one-line 'Degree, Minor, School | Date' education with a scholarship and 'Selected Coursework:' beneath it, a skills label containing commas, and '|'-separated certifications that wrap mid-item. (Edge maps the Symbol bullet to U+00B7, so the Word Private Use bullet is covered by word-export-symbol-bullets.txt instead.)",
+  "expect": {
+    "name": "JORDAN REYES",
+    "contact": { "email": "jordan.reyes@example.com" },
+    "education": [
+      {
+        "degree": "B.S. in Information Systems, Minor in Statistics",
+        "school": "University of North Texas",
+        "grad": "May 2026",
+        "gpa": "3.8 / 4.0",
+        "coursework": "Database Systems, Data Mining, Operating Systems"
+      }
+    ],
+    "awards": [
+      { "name": "Regents Merit Scholarship Recipient" }
+    ],
+    "experience": [
+      { "title": "Data Analyst Intern", "org": "Office of Institutional Research, University of North Texas", "location": "", "start": "Jan 2026", "end": "May 2026", "bulletCount": 1 },
+      { "title": "Student Assistant", "org": "Career Center, University of North Texas", "location": "", "start": "Aug 2025", "end": "Dec 2025", "bulletCount": 1 },
+      { "title": "Research Intern", "org": "Southwest Energy Lab (SEL)", "location": "Houston, TX", "start": "May 2025", "end": "Jul 2025", "bulletCount": 2 },
+      { "title": "Operations Intern II", "org": "Center for Workforce Programs, Austin Community College", "location": "", "start": "May 2024", "end": "Aug 2024", "bulletCount": 2 }
+    ],
+    "projects": [
+      { "name": "Campus Energy Dashboard - 1st Place | Team Project", "date": "Mar 2026", "bulletCount": 1 },
+      { "name": "Library Demand Forecast | Solo Project", "date": "Nov 2025", "bulletCount": 1 }
+    ],
+    "skills": {
+      "technical": "Python, SQL, R, PostgreSQL, Git/GitHub, Tableau, Excel",
+      "dataVisualization": "Regression, Clustering, A/B Testing, Forecasting",
+      "tools": "Coursera: Google Data Analytics, Microsoft: Power BI Data Analyst (PL-300), Tableau: Desktop Specialist, AWS Cloud Practitioner (In Progress)",
+      "labels": {
+        "technical": "Programming, Databases & Tools",
+        "dataVisualization": "Analytics",
+        "tools": "Certifications"
+      }
+    }
+  }
+}

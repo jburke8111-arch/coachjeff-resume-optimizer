@@ -1,0 +1,7 @@
+Luis Ferrer
+Miami, FL | luis.ferrer@example.com
+
+PROJECTS
+Storefront Analytics Dashboard | Spring 2024
+- Built a Tableau dashboard tracking 12 store locations
+- Cut weekly reporting time from 3 hours to 20 minutes
