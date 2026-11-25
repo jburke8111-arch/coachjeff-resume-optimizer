@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.22: CAREER-STAGE AND CONSISTENCY FIXES (from a side-by-side check against the manual evaluation on an experienced career changer). (1) Career stage: experience is now measured in dated months, and graduation timing comes from degree entries only, so a job ending this year or a bootcamp certificate no longer marks a 4+ year professional as a "current student". 3+ years of dated experience (without a degree in progress or finished in the last year) is experience-dominant: Section Order advises Experience ahead of Education, and the closing line no longer says "most students". (2) Consistency: a resume over 2 pages gets "cut to 2 pages, then fix the text size" (raising font and margins first would lengthen it); the game plan skips "Rewrite your summary" when the summary scores 85+ with no specific weakness; "Visual density" and the risk flag say "long bullets" instead of "metric overload" when bullets have few numbers; Credibility moves to Review when bullets claim an improvement with no number; recruiter confidence now reflects page count and low quantification. (3) Proper names: "Fullstack Academy" and other school/company names are no longer flagged as hyphenation typos or used to infer a software-engineering track; track detection no longer fires on common words (model, agile, stakeholder). (4) Evidence-based tips only: the weak-opener tip quotes the opener actually found; the verb-tense check requires a real verb context ("and", comma, "which", "that") so nouns like "processes" no longer trip it, its plan item needs 2+ bullets and cites the real verbs; the Before/After swap no longer offers "Handled" (itself a weak opener) and shows a "tighten this" prompt when no verb fits; GRC/compliance-focused Cybersecurity resumes no longer get the GitHub nudge. -->
 <!-- v12.3.21: SNAPSHOT PRIORITIES. "Top Opportunities" and "Today's Top Priority" on the Resume Snapshot now lead with the biggest problems actually found (near-identical bullets, measured layout, Education placement, unsupported skills, non-standard headers) via buildTopFixes(), ahead of the older presence-based items. The project-metrics note now says what is missing (a measured result) instead of the generic "add more measurable project outcomes". -->
 <!-- v12.3.20: SCORE GAP vs. MANUAL EVALUATION. The scorecard rewarded what a resume has and could not see layout or content problems, so it ran 20+ points above the manual audit. (1) LAYOUT CHECK: for PDF uploads, body / heading / name / contact font sizes, the four margins, words per page and page count are measured from the file and compared with the BEST standards (new data.importedLayout, analyzeLayout). (2) CONTENT CHECKS: near-duplicate bullets under different entries, skills listed but not shown in any bullet, and certification names that read like training (analyzeContentIntegrity). Both appear in the on-screen Coach Review and the Word report, add risk flags, and lower the matching scorecard category only when a problem is found. (3) Summary and Positioning now uses the summary-quality score. (4) Recruiter confidence ceiling steps down 3 points per open flag (it was fixed at 94). (5) Resume Health shows the scorecard overall, so the page and the report give one headline number. (6) Coach Jeff's First Impression is built from the findings instead of fixed text. (7) Recommended order for technology and data fields is Experience before Projects, matching the advice text; "rebuilt resume" wording removed from messages about the uploaded file. -->
 <!-- v12.3.19: POST-DEPLOY CLEANUP (Andrin live test). (1) "Sections detected" in the page header, the Import Quality tile and the ATS checklist now counts sections that actually hold content (7 for Andrin) instead of every key in the order list (which read 14 after v12.3.18 added four sections, and 10 for every resume before that). (2) The Section Order advice, previously only in the Word report, now also shows in the on-screen Coach Review above Section Headers. (3) The header quick win reads "Fix N section headers" because a split is not a rename. (4) The metric-credibility fix no longer suggests "in benchmark tests", which only suits software projects. -->
@@ -159,7 +160,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.21-industry";
+const BUILD_VERSION = "v12.3.22-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -1063,12 +1064,38 @@ function splitDegreeMinor(degree) {
   // No minor: still strip a stray trailing period so the degree line is clean.
   return { degree: s.replace(/\.\s*$/, "").trim(), minor: "" };
 }
+// v12.3.22: split a multi-school Education section into one entry per school.
+// Earlier builds returned a single entry, so a resume listing a bootcamp, a
+// master's, and a bachelor's kept only one, and a certificate's date could be
+// attached to the wrong degree.
 function _parseEducation(lines) {
+  const clean = _dropSectionNoise ? _dropSectionNoise(lines) : (lines || []);
+  const INST = /(university|college|institute|school|academy|polytechnic|seminary|\bSUNY\b|\bCUNY\b)/i;
+  const DEG = /(\bb\.?s\.?\b|\bb\.?a\.?\b|\bm\.?s\.?\b|\bm\.?b\.?a\b|bachelor|master|associate|doctor|ph\.?d|degree|certificate|diploma)/i;
+  const isInst = l => INST.test(l) && !DEG.test(l);
+  const isDeg = l => DEG.test(l) && !INST.test(l);
+  const instIdx = clean.map((l, i) => isInst(l) ? i : -1).filter(i => i > -1);
+  const degIdx = clean.map((l, i) => isDeg(l) ? i : -1).filter(i => i > -1);
+  // Use school lines as entry starts, unless degrees are written before schools.
+  const anchors = (degIdx.length && instIdx.length && degIdx[0] < instIdx[0]) ? degIdx : instIdx;
+  if (anchors.length >= 2 && anchors.length <= 6) {
+    const out = [];
+    anchors.forEach((start, k) => {
+      const from = k === 0 ? 0 : start;
+      const to = k + 1 < anchors.length ? anchors[k + 1] : clean.length;
+      const chunk = clean.slice(from, to);
+      if (chunk.join("").trim()) out.push(..._parseEducationOne(chunk));
+    });
+    if (out.length >= 2) return out;
+  }
+  return _parseEducationOne(clean);
+}
+function _parseEducationOne(lines) {
   const clean = _dropSectionNoise ? _dropSectionNoise(lines) : (lines || []);
   const text = clean.join(" | ");
   if (!text.trim()) return [emptyEdu()];
 
-  let schoolLine = clean.find(l => /(university|college|institute|school)/i.test(l)) || "";
+  let schoolLine = clean.find(l => /(university|college|institute|school|academy|\bSUNY\b|\bCUNY\b)/i.test(l)) || "";
   // v12.3.17: "School | City, ST   Dec 2025" on one line — drop the trailing
   // graduation date so the location can be peeled off the end of the school.
   schoolLine = schoolLine.replace(/[\s|,–-]*(?:(?:expected|anticipated)\s*:?\s*)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*)?20\d{2}\s*$/i, "").trim();
@@ -1084,7 +1111,7 @@ function _parseEducation(lines) {
   // must peel a trailing "City, ST" off the END without swallowing the trailing
   // word of a multi-word institution name. A greedy two-word city used to eat
   // "International" and delete it from the school name.
-  const INSTITUTION_RE = /(university|college|institute|school|academy|polytechnic|seminary)/i;
+  const INSTITUTION_RE = /(university|college|institute|school|academy|polytechnic|seminary|\bSUNY\b|\bCUNY\b)/i;
   // Words that commonly trail an institution name and must not become a city's
   // first token.
   const INST_TAIL = /^(International|University|College|Institute|School|State|Tech|Technology|Technical|Global|Online|America|American|Health|Sciences|Business|Law|Arts|Engineering)$/i;
@@ -1123,13 +1150,18 @@ function _parseEducation(lines) {
     else if (dupTail(loc)) loc = null;
   }
 
-  let rawLoc = loc ? (loc.city + ", " + loc.st) : "";
+  // v12.3.22: "School – Remote" / "School | Online" keeps the school name clean.
+  if (!loc) {
+    const rm = schoolLine.match(/^(.*?)[\s|,\u2013\u2014-]+(Remote|Online)\s*$/i);
+    if (rm && INSTITUTION_RE.test(rm[1])) { schoolLine = rm[1].trim(); loc = { city: rm[2], st: "", school: rm[1].trim(), remote: true }; }
+  }
+  let rawLoc = loc ? (loc.remote ? loc.city : (loc.city + ", " + loc.st)) : "";
   let location = rawLoc;
   if (location && typeof abbreviateState === "function") location = abbreviateState(location);
 
-  let school = (loc ? loc.school : schoolLine).replace(/[|,]\s*$/, "").trim();
+  let school = (loc ? loc.school : schoolLine).replace(/[|,]\s*$/, "").replace(/[\s\u2013\u2014-]+$/, "").trim();
 
-  const degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science)/i.test(l)) || "";
+  const degreeLine = clean.find(l => /(b\.?s\.?|bachelor|master|associate|degree|minor|applied mathematics|computer science|certificate|diploma)/i.test(l) && !/^\s*(relevant\s+)?coursework/i.test(l)) || "";
   const gradLine = clean.find(l => /(expected|anticipated|graduat|20\d{2})/i.test(l) && !/gpa/i.test(l)) || "";
   const gpaLine = clean.find(l => /gpa/i.test(l)) || "";
   const courseworkLine = clean.find(l => /coursework|courses/i.test(l)) || "";
@@ -2571,6 +2603,14 @@ function repeatedLeadingVerbs(bullets) {
 //      version numbers, and plain years were counted as quantification.
 //   2) false negatives — real metrics phrased as ratios/multipliers ("2.68×",
 //      "430x speedup") or named metrics weren't always credited.
+// v12.3.22: share of experience bullets that carry a number. Used to word
+// density feedback: long bullets on a resume with few numbers are "long",
+// not "too many metrics".
+function quantifiedShare(data) {
+  const b = (data.experience || []).flatMap(e => (e && e.bullets) || []).filter(x => String(x || "").trim());
+  if (!b.length) return 0;
+  return b.filter(x => isQuantifiedBullet(x)).length / b.length;
+}
 function isQuantifiedBullet(raw) {
   const b = String(raw || "").trim();
   if (!b) return false;
@@ -2644,7 +2684,10 @@ function analyzeVerbTense(data) {
     const pastLead = PAST_LEAD.test(t);
     // Look for a present-tense "-s" verb AFTER the first word.
     const afterLead = t.replace(/^\S+\s*/, "");
-    const slip = PRESENT_S.exec(afterLead);
+    // v12.3.22: the -s word must follow "and", a comma, "which", or "that" to
+    // count as a verb. "document existing processes" is a noun, not a slip.
+    const _m = new RegExp("(?:,\\s*|\\band\\s+|\\bwhich\\s+|\\bthat\\s+)" + PRESENT_S.source, "i").exec(afterLead);
+    const slip = _m ? { 0: _m[1] } : null;
     if (pastLead && slip) {
       flagged.push({ text: t, verb: slip[0].toLowerCase() });
     }
@@ -2663,7 +2706,7 @@ function analyzeVerbTense(data) {
     const sample = uniqVerbs.map(v => "\u201C" + v + "\u201D").join(", ");
     notes.push(count + " experience bullet" + (count === 1 ? "" : "s") +
       " mix" + (count === 1 ? "es" : "") + " past and present tense (e.g. " + sample +
-      "). Because these describe completed work, convert them to simple past (\u201Ccuts\u201D \u2192 \u201Ccut\u201D).");
+      "). Because these describe completed work, convert them to simple past.");
   }
 
   // ---- Verb inflation pass (manual eval §8) ----
@@ -2712,7 +2755,7 @@ function analyzeVerbTense(data) {
       ") on work that reads as solo. Reserve these for genuine leadership or ground-up design; \u201CBuilt/Designed/Developed\u201D reads as more credible on individual work.");
   }
 
-  return { count, total, score, flagged: flagged.slice(0, 5), notes, inflatedCount, inflated: inflated.slice(0, 5) };
+  return { count, total, score, flagged: flagged.slice(0, 5), verbs: [...new Set(flagged.map(f => f.verb))], notes, inflatedCount, inflated: inflated.slice(0, 5) };
 }
 
 // ---- Run-on / comma-chained bullet detection (Coach Jeff eval Section 7) ----
@@ -2941,12 +2984,17 @@ function analyzeMechanics(data, rawImportText) {
     ["decisionmaking", "decision-making"],
     ["problemsolving", "problem-solving"]
   ];
+  // v12.3.22: proper names are not typos. "Fullstack Academy" is a school's
+  // official name, so strip brand and organization names before checking.
+  const _compoundText = text
+    .replace(/\b(Fullstack Academy|Frontend Masters|Opensource Connections)\b/gi, " ")
+    .replace(/\b[A-Z][A-Za-z]*\s+(Academy|Bootcamp|Institute|University|College|School|Labs?|Inc\.?|LLC|Corp\.?|Technologies)\b/g, " ");
   COMPOUND.forEach(([bad, good]) => {
     // Match the run-together form as a whole word, case-insensitive. "backend"
     // and "frontend" are widely accepted, so only flag them softly (still a
     // house-style nudge, not a hard error) by grouping them under the same fix.
     const re = new RegExp("\\b" + bad + "\\b", "i");
-    if (re.test(text)) add(
+    if (re.test(_compoundText)) add(
       "Hyphenation",
       "\u201C" + bad + "\u201D reads as a typo to a careful reviewer \u2014 use \u201C" + good + "\u201D.",
       bad + " \u2192 " + good
@@ -3338,10 +3386,17 @@ function buildRiskFlags(data, ctx) {
     (metricDensity && metricDensity.count) || 0
   );
   if (overloadCount) {
-    flags.push({
+    // v12.3.22: name the actual problem. Run-on bullets with few numbers are
+    // "long bullets", not "metric overload".
+    const _mHeavy = ((metricDensity && metricDensity.count) || 0) || quantifiedShare(data) >= 0.4;
+    flags.push(_mHeavy ? {
       title: "Metric overload",
       note: overloadCount + " bullet" + (overloadCount === 1 ? "" : "s") +
         " pack multiple results into one line, which tires the eye and buries your strongest number. Lead each bullet with one headline metric and move or drop the rest."
+    } : {
+      title: "Long bullets",
+      note: overloadCount + " bullet" + (overloadCount === 1 ? " runs" : "s run") +
+        " long or chain several items together, which slows a fast scan. Split them, or keep the one point that matters most for the role."
     });
   }
   // v12.3.20: layout and content-check flags.
@@ -3387,14 +3442,22 @@ function buildFiveMajorAreasReview(data, ctx) {
     ? scorecard.categories.find(c => c.key === "Formatting & Polish") : null;
   const formatScore = formattingCategory ? formattingCategory.score : 85;
   const overloadCount = Math.max((runOn && runOn.count) || 0, (metricDensity && metricDensity.count) || 0);
+  // v12.3.22: say which density problem it is. Long comma-chained bullets are
+  // not "too many metrics" when the bullets have almost no numbers.
+  const _metricHeavy = ((metricDensity && metricDensity.count) || 0) || quantifiedShare(data) >= 0.4;
+  // Vague outcome claims: "improving compliance rates" with no number.
+  const _vague = (data.experience || []).flatMap(e => e.bullets || []).map(b => String(b || ""))
+    .filter(b => /\b(improv|increas|enhanc|reduc|boost|rais|grow|grew)\w*\s+(\w+\s+){0,3}(rates?|satisfaction|engagement|efficiency|productivity|accuracy|compliance|performance|quality|revenue|sales)\b/i.test(b) && !/\d/.test(b));
   const sectionIssueCount = (sectionQuality && sectionQuality.count) || 0;
   const confidence = (recruiterReview && recruiterReview.confidence) || 0;
 
   return [
     {
       title: "Resume credibility",
-      status: metricCred && metricCred.count ? "Needs attention" : "Strong",
-      note: metricCred && metricCred.count
+      status: metricCred && metricCred.count ? "Needs attention" : (_vague.length ? "Review" : "Strong"),
+      note: (!(metricCred && metricCred.count) && _vague.length)
+        ? (_vague.length + " bullet" + (_vague.length === 1 ? " claims" : "s claim") + " an improvement with no number or evidence (for example, \u201C" + (_vague[0].replace(/^[•\-\u2013\u2014\s]+/, "").length > 90 ? _vague[0].replace(/^[•\-\u2013\u2014\s]+/, "").slice(0, 87) + "\u2026" : _vague[0].replace(/^[•\-\u2013\u2014\s]+/, "")) + "\u201D). A recruiter will ask \u201Cby how much?\u201D Add the real figure, or describe what you did without claiming a result.")
+        : metricCred && metricCred.count
         ? (metricCred.count + " metric claim" + (metricCred.count === 1 ? " may" : "s may") + " feel difficult to verify. Keep the numbers, but be ready to explain the measurement method and soften absolute claims that cannot be defended.")
         : "The accomplishments and metrics generally read as believable. Continue using only numbers you can explain clearly in an interview."
     },
@@ -3416,7 +3479,9 @@ function buildFiveMajorAreasReview(data, ctx) {
       title: "Visual density",
       status: overloadCount ? "Review" : "Balanced",
       note: overloadCount
-        ? (overloadCount + " bullet" + (overloadCount === 1 ? " is" : "s are") + " carrying too many results or metrics. Lead with one headline result and preserve enough white space for a fast scan.")
+        ? (_metricHeavy
+          ? (overloadCount + " bullet" + (overloadCount === 1 ? " is" : "s are") + " carrying too many results or metrics. Lead with one headline result and preserve enough white space for a fast scan.")
+          : (overloadCount + " bullet" + (overloadCount === 1 ? " runs" : "s run") + " long or chain" + (overloadCount === 1 ? "s" : "") + " several items together. Split them, or keep the one point that matters most for the role."))
         : "The resume presents substantial information without obvious metric overload. Preserve clear spacing between sections and entries."
     },
     {
@@ -3608,6 +3673,46 @@ function analyzeSkillChangeExplanations(data, lastSkillImportNote) {
 // wrongly left with Education third-from-bottom. This single helper is the one
 // source of truth for smartRecommendedOrder, the scorecard, and the coaching
 // advice, so all three always agree.
+// ---- Career stage from dated experience (v12.3.22) ----
+// Total months of paid experience, summed from each entry's start/end dates.
+// "Present"/"Current" counts to today. Used so a candidate with years of work
+// history is never treated as a current student just because a recent year
+// (a bootcamp certificate, a job end date) appears somewhere on the page.
+function _monthIndex(str, isEnd) {
+  const t = String(str || "").trim().toLowerCase();
+  if (!t) return null;
+  const now = new Date();
+  if (/present|current|now|ongoing/.test(t)) return now.getFullYear() * 12 + now.getMonth();
+  const y = t.match(/\b(19|20)\d{2}\b/);
+  if (!y) return null;
+  const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const m = t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+  const mi = m ? months.indexOf(m[1]) : (isEnd ? 11 : 0);
+  return parseInt(y[0], 10) * 12 + mi;
+}
+function experienceMonths(data) {
+  let total = 0;
+  (data.experience || []).forEach(e => {
+    if (!e) return;
+    let a = _monthIndex(e.start, false), b = _monthIndex(e.end, true);
+    if (a === null && b === null) {
+      // Fall back to a date range written into the title/org line.
+      const txt = [e.title, e.org, e.location].join(" ");
+      const r = txt.match(/((?:[a-z]{3,9}\.?\s+)?(?:19|20)\d{2})\s*[-\u2013\u2014to]+\s*((?:[a-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current)/i);
+      if (r) { a = _monthIndex(r[1], false); b = _monthIndex(r[2], true); }
+    }
+    if (a !== null && b === null) b = a;
+    if (a !== null && b !== null && b >= a) total += (b - a + 1);
+  });
+  return total;
+}
+// Certificates, bootcamps, and academies are credentials, not degrees in progress.
+function _isDegreeEntry(e) {
+  const t = [e.degree, e.school].join(" ");
+  return !/\b(certificate|certification|bootcamp|boot camp|academy|course|program)\b/i.test(t) ||
+    /\b(bachelor|master|associate|b\.?s\.?|b\.?a\.?|m\.?s\.?|m\.?b\.?a|ph\.?d|doctor)\b/i.test(String(e.degree || ""));
+}
+
 function educationPlacementSignal(data) {
   const eduEntries = (data.education || []).filter(e => e && (e.degree || e.school));
   const expEntries = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
@@ -3626,19 +3731,27 @@ function educationPlacementSignal(data) {
 
   // Timing: recent or upcoming graduation. A future graduation year (still in
   // school) is the strongest possible new-grad signal.
-  const allText = collectResumeText(data);
-  const gradYears = (allText.match(/\b20\d{2}\b/g) || []).map(Number);
+  // v12.3.22: graduation timing comes from DEGREE entries' dates only. Earlier
+  // builds took the latest year anywhere on the page, so a job ending in the
+  // current year or a bootcamp certificate marked an experienced candidate as a
+  // "current student".
+  const degreeEntries = eduEntries.filter(_isDegreeEntry);
+  const eduYearText = degreeEntries.map(e => String(e.grad || "")).join(" ");
+  const gradYears = (eduYearText.match(/\b20\d{2}\b/g) || []).map(Number);
   const maxYear = gradYears.length ? Math.max(...gradYears) : null;
   const nowYear = new Date().getFullYear();
   const recentOrUpcomingGrad = maxYear !== null && maxYear >= (nowYear - 1);
   const currentStudent = maxYear !== null && maxYear >= nowYear; // graduation still ahead
   // "Expected/Anticipated" grad text is an explicit current-student marker even
   // if the year parse is ambiguous.
-  const expectedGrad = eduEntries.some(e => /\b(expected|anticipated|in\s+progress|present)\b/i.test(String(e.grad || "")));
+  const expectedGrad = degreeEntries.some(e => /\b(expected|anticipated|in\s+progress|present)\b/i.test(String(e.grad || "")));
 
   // Thin paid experience: 0-1 real employment entries. Research/projects are
   // strength, but they don't outweigh a fresh degree for placement purposes.
-  const thinExperience = expEntries.length <= 1;
+  // v12.3.22: experience is measured in dated months, not just entry count.
+  const expMonths = experienceMonths(data);
+  const expYears = Math.round(expMonths / 12 * 10) / 10;
+  const thinExperience = expEntries.length <= 1 && expMonths < 24;
 
   const newGrad = (recentOrUpcomingGrad || expectedGrad || thinExperience) && eduEntries.length > 0;
   const strongGpa = bestGpa !== null && bestGpa >= 3.5;
@@ -3650,13 +3763,24 @@ function educationPlacementSignal(data) {
   // (3+ employment entries) is experience-dominant, so we do NOT force
   // Education to the top for them even if graduation was fairly recent — that
   // stays a user judgment call, surfaced via the caveat rather than the default.
-  const experienceDominant = !currentStudent && !expectedGrad && expEntries.length >= 3;
-  const educationFirst = newGrad && eduEntries.length > 0 && !experienceDominant;
+  // v12.3.22: 3+ years of dated paid experience is experience-dominant
+  // unless a real degree is still in progress or was finished within the last
+  // year (a recent grad whose long job ran alongside school still leads with
+  // the degree).
+  const experienceDominant = (!currentStudent && !expectedGrad && expEntries.length >= 3) ||
+    (expMonths >= 36 && !expectedGrad && !currentStudent && !recentOrUpcomingGrad);
+  const newGradFinal = newGrad && !experienceDominant;
+  const educationFirst = newGradFinal && eduEntries.length > 0;
+  // Career stage drives section order, closing lines, and Education advice.
+  const careerStage = experienceDominant ? (expMonths >= 36 ? "experienced" : "early-career")
+    : (currentStudent || expectedGrad) ? "student"
+    : newGradFinal ? "new-grad" : "early-career";
 
   return {
     eduEntries, expEntries, bestGpa, strongGpa,
     recentOrUpcomingGrad, currentStudent, expectedGrad,
-    thinExperience, newGrad, educationFirst, maxYear
+    thinExperience, newGrad: newGradFinal, educationFirst, maxYear,
+    expMonths, expYears, careerStage
   };
 }
 
@@ -3771,6 +3895,27 @@ function analyzeSectionOrderAdvice(data) {
     };
   }
 
+  // v12.3.22: experienced candidates (3+ years of dated work) lead with
+  // Experience. Education goes after it.
+  if (sig.careerStage === "experienced" && idxEdu > -1 && idxExp > -1) {
+    const yrs = sig.expYears >= 1 ? ("about " + Math.round(sig.expYears) + " years") : "several years";
+    if (idxEdu < idxExp) {
+      return {
+        applies: true,
+        headline: "Keep Experience ahead of Education.",
+        body: "With " + yrs + " of dated work experience, your experience is your leading credential, so recruiters should see it before your degrees. Recommended order: Summary \u2192 Skills \u2192 Experience \u2192 Education, then Projects and Certifications." + rebuiltNote.replace("Education sits below those sections", "Education sits above Experience"),
+        caveat: "Judgment call: if a degree was finished within the last year and your work so far is unrelated to the target role, leading with Education can still make sense.",
+        recommendedTop: ["summary", "skills", "experience", "education"]
+      };
+    }
+    return {
+      applies: true,
+      headline: "Your section order fits your experience.",
+      body: "With " + yrs + " of dated work experience, leading with Experience and placing Education after it is the right call. Keep it that way as you tailor for each role.",
+      caveat: "",
+      recommendedTop: []
+    };
+  }
   return { applies: false };
 }
 
@@ -3903,12 +4048,19 @@ function buildTopFixes(data) {
     out.push({ label: "Rewrite the two near-identical bullets", detail: "Two bullets under " + d.whereA + " and " + d.whereB + " read almost the same. Rewrite each in its own terms and check that every word fits that employer." });
   }
   const lay = analyzeLayout(data);
-  if (lay.measured && lay.issues >= 2) {
+  const _pageF = lay.measured ? lay.findings.find(f => f.item === "Page count") : null;
+  if (_pageF) {
+    // v12.3.22: cut length FIRST. Raising text to 11 pt and margins to 0.75 in on
+    // the current content would push a long resume even longer.
+    out.push({ label: "Cut to 2 pages, then fix the text size", minutes: "30–45 min", detail: "Your resume runs " + _pageF.yours + " pages. Trim first: keep the bullets that matter most for your target role (about 5 to 7 per recent role, fewer for older or shorter ones). Then raise body text to 11 pt and set margins to 0.75 in. Doing it in the other order would make the resume even longer." });
+  } else if (lay.measured && lay.issues >= 2) {
     out.push({ label: "Fix the text size and margins", detail: "Your page is hard to read: " + lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + " is " + f.yours + " (standard " + f.standard + ")").join("; ") + "." });
   }
   const soa = analyzeSectionOrderAdvice(data);
   if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) {
-    out.push({ label: "Move Education up", detail: "Move Education up so it sits right under your Professional Summary. Your degree is your leading credential." });
+    out.push(soa.recommendedTop[2] === "experience"
+      ? { label: "Move Experience above Education", detail: "Move Experience above Education. With your years of work, experience is your leading credential." }
+      : { label: "Move Education up", detail: "Move Education up so it sits right under your Professional Summary. Your degree is your leading credential." });
   }
   if (ci.unsupported.length >= 3) {
     out.push({ label: "Back up your listed skills", detail: "Show these skills in a bullet or remove them: " + ci.unsupported.slice(0, 6).join(", ") + ". No bullet shows you using them." });
@@ -3932,9 +4084,11 @@ function buildFirstImpression(data) {
   if (String(data.summary || "").trim().length > 80) good.push("your summary tells a recruiter what you are aiming for");
   const todo = [];
   const lay = analyzeLayout(data);
-  if (lay.measured && lay.issues >= 2) todo.push("the page is hard to read (" + lay.findings.slice(0, 2).map(f => f.item.toLowerCase() + " " + f.yours).join(", ") + ")");
+  const _pgF = lay.measured ? lay.findings.find(f => f.item === "Page count") : null;
+  if (_pgF) todo.push("at " + _pgF.yours + " pages it runs long, so cut to 2 pages before raising the text size");
+  else if (lay.measured && lay.issues >= 2) todo.push("the page is hard to read (" + lay.findings.slice(0, 2).map(f => f.item.toLowerCase() + " " + f.yours).join(", ") + ")");
   const soa = analyzeSectionOrderAdvice(data);
-  if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) todo.push("Education should move up, right under your summary");
+  if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) todo.push(soa.recommendedTop[2] === "experience" ? "Experience should move above Education" : "Education should move up, right under your summary");
   const ci = analyzeContentIntegrity(data);
   if (ci.duplicates.length) todo.push("two bullets under different employers read almost the same");
   if (ci.unsupported.length >= 3) todo.push(ci.unsupported.length + " listed skills are not shown in any bullet");
@@ -4214,13 +4368,18 @@ function buildEvaluationContext(data, resumeStrength) {
 
   // Focus-dilution heuristic: count distinct "identity" signals in the resume
   // text. If the resume spreads across several unrelated tracks, note it.
-  const text = collectResumeText(data).toLowerCase();
+  // v12.3.22: strip school/company names (e.g. "Fullstack Academy") and use
+  // tighter signals, so common words like "model", "agile", or "stakeholder"
+  // don't invent tracks the candidate isn't on.
+  const text = collectResumeText(data)
+    .replace(/\b[A-Z][A-Za-z]*\s+(Academy|Bootcamp|Institute|University|College|School|Labs?|Inc\.?|LLC|Corp\.?|Technologies)\b/g, " ")
+    .toLowerCase();
   const identities = [
-    { name: "software / backend engineering", re: /\b(backend|api|microservice|distributed systems|full[- ]?stack)\b/ },
-    { name: "data / ML engineering", re: /\b(machine learning|ml|deep learning|model|pipeline|data engineer)\b/ },
+    { name: "software / backend engineering", re: /\b(backend|back-end|rest api|microservices?|distributed systems|full[- ]?stack developer|software engineer)\b/ },
+    { name: "data / ML engineering", re: /\b(machine learning|deep learning|ml model|pytorch|tensorflow|data engineer(ing)?)\b/ },
     { name: "data analysis / BI", re: /\b(tableau|power bi|dashboard|analytics|reporting|sql)\b/ },
     { name: "cloud / DevOps", re: /\b(aws|azure|kubernetes|docker|ci\/cd|terraform|mlops)\b/ },
-    { name: "product / project management", re: /\b(product manager|scrum|roadmap|stakeholder|agile)\b/ }
+    { name: "product / project management", re: /\b(product manager|product owner|scrum master|product roadmap|backlog grooming|project manager)\b/ }
   ];
   const present = identities.filter(i => i.re.test(text)).map(i => i.name);
 
@@ -5865,6 +6024,11 @@ function App() {
       if (_integrity.duplicates.length) { openRiskFlags++; confidence -= 4; }
       if (_integrity.unsupported.length >= 3) { openRiskFlags++; confidence -= 3; }
       if ((analyzeSectionHeaders(data).mustFix || 0) >= 2) { openRiskFlags++; confidence -= 2; }
+      // v12.3.22: length and evidence weigh on a real recruiter's first minute.
+      if (_layout.measured && _layout.findings.some(f => f.item === "Page count")) { openRiskFlags++; confidence -= 6; }
+      const _allExpB = _expEntries.flatMap(e => (e.bullets || []).filter(Boolean));
+      const _q = _allExpB.filter(b => isQuantifiedBullet(b)).length;
+      if (_allExpB.length >= 6 && _q / _allExpB.length < 0.25) { openRiskFlags++; confidence -= 5; }
     } catch (e) { /* analyzers are best-effort; never block the review */ }
 
     // Hard ceiling while credibility flags remain: a resume with open, recruiter-
@@ -6123,13 +6287,24 @@ function App() {
     const plan = [];
     const addPlan = (title, minutes, why) => { if (plan.length < 4 && !plan.some(p => p.title === title)) plan.push({ title, minutes, why }); };
 
+    // v12.3.22: the plan must agree with the scorecard. A summary scored 85+
+    // with no specific weakness is not a top-three task, and a resume over two
+    // pages gets "cut to two pages" first.
+    const _sumCat = scorecard && Array.isArray(scorecard.categories) ? scorecard.categories.find(c => c.key === "Summary & Positioning") : null;
+    const _summaryStrong = hasSummary && _sumCat && _sumCat.score >= 85 && !(summaryQuality && summaryQuality.count);
+    const _layPlan = analyzeLayout(data);
+    const _pagesF = _layPlan.measured ? _layPlan.findings.find(f => f.item === "Page count") : null;
+    if (_pagesF) {
+      addPlan("Cut to 2 pages", 20, "Your resume runs " + _pagesF.yours + " pages. Keep the bullets that matter most for your target role, then raise the text to 11 pt.");
+    }
     if (!hasSummary) {
       addPlan("Write a Professional Summary", 15, "Give the recruiter your target role and strongest evidence in the first two lines they read.");
-    } else {
+    } else if (!_summaryStrong) {
       addPlan("Rewrite your Professional Summary", 15, "Lead with your target role and one or two proof points so your direction is obvious at a glance.");
     }
-    if (verbTense.count) {
-      addPlan("Fix verb-tense consistency", 10, "Several bullets mix past and present tense (e.g. \u201Ccuts\u201D vs \u201Ccut\u201D). Converting completed work to simple past is a fast, high-value fix a careful reviewer notices immediately.");
+    if (verbTense.count >= 2) {
+      const _tv = (verbTense.verbs || []).slice(0, 2).map(v => "\u201C" + v + "\u201D").join(", ");
+      addPlan("Fix verb-tense consistency", 10, verbTense.count + " bullets switch to present tense" + (_tv ? " (" + _tv + ")" : "") + " partway through. Converting completed work to simple past is a fast fix a careful reviewer notices.");
     }
     if (hasExperience && expBullets && expQuant < Math.ceil(expBullets / 2)) {
       addPlan("Strengthen your first two experience bullets", 20, "The top bullets get read most. Add numbers, scope, or outcomes so they land as results, not duties.");
@@ -6222,7 +6397,9 @@ function App() {
     const addImp = (stars, title, why, effort, impact) => {
       if (!improvements.some(x => x.title === title)) improvements.push({ stars, title, why, effort, impact });
     };
-    if (!hasSummary || conf < 88 || (summaryQuality && summaryQuality.count)) {
+    const _sumCat2 = scorecard && Array.isArray(scorecard.categories) ? scorecard.categories.find(c => c.key === "Summary & Positioning") : null;
+    const _summaryStrong2 = hasSummary && _sumCat2 && _sumCat2.score >= 85 && !(summaryQuality && summaryQuality.count);
+    if (!hasSummary || (!_summaryStrong2 && conf < 88) || (summaryQuality && summaryQuality.count)) {
       // If we read a specific weakness in the summary text, lead with it so the
       // recommendation is concrete (manual eval §13), not a generic "rewrite."
       const specificWhy = (summaryQuality && summaryQuality.findings && summaryQuality.findings.length)
@@ -6246,7 +6423,9 @@ function App() {
     }
     if (runOn.count) {
       addImp(3, "Tighten run-on bullets",
-        runOn.notes[0] || "A few bullets chain several outcomes with commas. Lead with the strongest result and trim the rest.",
+        quantifiedShare(data) >= 0.4
+          ? (runOn.notes[0] || "A few bullets chain several outcomes with commas. Lead with the strongest result and trim the rest.")
+          : (runOn.count + " bullet" + (runOn.count === 1 ? " chains" : "s chain") + " several items together with commas. Split them, or keep the one point that matters most for the role."),
         "10 min", "Medium");
     }
     // Mechanics: typos, brand casing, punctuation, mid-name capitalization.
@@ -6381,6 +6560,7 @@ function App() {
 
     // Choose a strong verb that fits the content, without changing meaning or inflating the claim.
     const pickVerb = (text) => {
+      if (/\bticket|\brequest|\bincident|\bdefect/i.test(text)) return "Completed";
       if (/train|mentor|onboard|coach|taught|instruct/i.test(text)) return "Trained";
       if (/schedul|coordinat|calendar|appointment|logistic/i.test(text)) return "Coordinated";
       if (/record|document|complianc|audit|file|paperwork/i.test(text)) return "Managed";
@@ -6389,8 +6569,9 @@ function App() {
       if (/inventor|stock|supply|material/i.test(text)) return "Oversaw";
       if (/plan|event|program|initiativ/i.test(text)) return "Organized";
       if (/build|built|creat|develop|design/i.test(text)) return "Built";
-      // Neutral, meaning-safe default — never fabricate "Led" for generic content.
-      return "Handled";
+      // v12.3.22: no default. "Handled" is itself a weak opener, so when no verb
+      // fits the content we show a "tighten this" prompt instead of a swap.
+      return null;
     };
 
     // Try to produce a REAL, substantive rewrite from a line, inventing nothing.
@@ -6403,7 +6584,9 @@ function App() {
       if (WEAK_OPENERS.test(b)) {
         const rest = b.replace(WEAK_OPENERS, "").replace(/^\s*(the|a|an|for|in|with|to)\s+/i, "").trim();
         if (rest.length < 6) return null;
-        const better = pickVerb(rest) + " " + lc1(rest);
+        const _verb = pickVerb(rest);
+        if (!_verb) return null;
+        const better = _verb + " " + lc1(rest);
         // Only count it if the wording actually changed (not just casing).
         if (better.toLowerCase() !== cap(b).toLowerCase()) return { weak: cap(b), better };
       }
@@ -6544,7 +6727,11 @@ function App() {
     if (!examplesPersonalized) { for (const f of illustrativeFallback) addCard(f); }
 
     // ---- Quick wins (<10 min) ----
-    const workSample = fieldWorkSampleProfile(data.field);
+    let workSample = fieldWorkSampleProfile(data.field);
+    // v12.3.22: GRC, compliance, and audit roles inside Cybersecurity don't
+    // expect a GitHub. Treat them as credential-driven.
+    const _grcHits = (collectResumeText(data).match(/\b(grc|governance|compliance|audit(ing|or)?|risk (management|assessment|identification)|policy|policies|hipaa|iso 27001|nist|soc 2)\b/gi) || []).length;
+    if (workSample === "code" && /cyber/i.test(String(data.field || "")) && _grcHits >= 4) workSample = "credential";
     const quickWins = [];
     const c = data.contact || {};
     // Detect a code/portfolio link ANYWHERE the resume might carry it: the contact block,
@@ -6569,11 +6756,15 @@ function App() {
     if (expBullets && expQuant < expBullets) quickWins.push("Add one number to a bullet you already have (scope, %, count, or time saved).");
     // v12.3.17: only offer these two when they apply to THIS resume — they used
     // to print for everyone, including resumes with no weak opener at all.
-    const hasWeakOpener = [...(data.experience || []), ...(data.projects || []), ...(data.activities || [])]
+    // v12.3.22: quote the opener actually found, not a generic example.
+    const _weakM = [...(data.experience || []), ...(data.projects || []), ...(data.activities || [])]
       .flatMap(e => (e && e.bullets) || [])
-      .some(b => /^\s*(responsible for|was responsible for|worked on|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|duties included|tasked with)\b/i.test(String(b || "")));
+      .map(b => String(b || "").replace(/^[•\-\u2013\u2014\s]+/, "").match(/^(responsible for|was responsible for|worked on|worked with|helped|assisted|participated|involved in|was involved in|in charge of|handled|dealt with|duties included|tasked with)\b/i))
+      .find(Boolean);
+    const hasWeakOpener = !!_weakM;
+    const _weakText = _weakM ? _weakM[1].charAt(0).toUpperCase() + _weakM[1].slice(1).toLowerCase() : "";
     if (sectionHeaders && sectionHeaders.mustFix) quickWins.push("Fix " + sectionHeaders.mustFix + " section header" + (sectionHeaders.mustFix === 1 ? "" : "s") + " so " + (sectionHeaders.mustFix === 1 ? "it uses the standard ATS name" : "they use the standard ATS names") + " (see Section Headers).");
-    if (hasWeakOpener) quickWins.push("Swap one weak opener (“Responsible for…”) for a strong action verb.");
+    if (hasWeakOpener) quickWins.push("Swap one weak opener (\u201C" + _weakText + "\u2026\u201D) for a strong action verb.");
     if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length) quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
     // Mechanics quick wins — each specific error is its own fast fix.
@@ -6608,7 +6799,9 @@ function App() {
     }
     bigger.push({ label: "Earn a targeted certification" + (workSample === "credential" ? " or license" : ""),
       why: workSample === "credential"
-        ? "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost."
+        ? (/cyber/i.test(String(data.field || ""))
+          ? "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost. Finish any you have in progress first."
+          : "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost.")
         : "A credential in your target field is fast, verifiable proof of commitment." });
     // Only suggest adding leadership if the resume doesn't already show it.
     if (!leadershipCount) bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
@@ -6619,14 +6812,17 @@ function App() {
     const biggerFinal = bigger.slice(0, 5);
 
     // ---- If we worked together ----
-    const topThree = planForToday.map(p => p.title.replace(/^(Rewrite|Write|Strengthen|Improve|Add|Reorganize|Reframe|Polish)\s+/i, m => m.toLowerCase()));
-    const together = "If we were working together, I'd start with " +
+    const topThree = planForToday.map(p => p.title.charAt(0).toLowerCase() + p.title.slice(1));
+    const together = "If we were working together, I'd start in this order: " +
       (topThree.length ? topThree.slice(0, 3).join(", then ") : "your summary, your first experience bullets, and your strongest project") +
       ". Those changes alone would likely raise recruiter confidence more than rewriting the whole resume — because they make the strengths you already have easy to see fast.";
 
     // ---- Motivation ----
+    // v12.3.22: match the closing line to the candidate's career stage.
+    const _stage = educationPlacementSignal(data).careerStage;
+    const _peer = (_stage === "student" || _stage === "new-grad") ? "most students at this stage" : "many candidates at your level";
     const motivation = (conf >= 85)
-      ? "You're in good shape — closer than most students at this stage. These last edits are about precision, not effort. Make your best evidence unmissable and let the resume do the work for you."
+      ? "You're in good shape — closer than " + _peer + ". These last edits are about precision, not effort. Make your best evidence unmissable and let the resume do the work for you."
       : "You're much closer than you think. Most of these improvements aren't about creating new experience — they're about making the strengths you already have easier for a recruiter to recognize. Small, focused edits, big difference.";
 
     return {
@@ -6927,7 +7123,7 @@ function App() {
               <p style={{ fontSize: 12.5, color: "#3a3d3f", lineHeight: 1.45, marginTop: 5 }}>{todaysRecommendation.detail}</p>
             </div>
             <div style={{ minWidth: 145, padding: 12, borderRadius: 0, background: "#e9e9ea", border: "1px solid #d6d6d8", fontSize: 11.5, color: "#6d7073", fontWeight: 800 }}>
-              <div>Estimated time: 5–10 min</div>
+              <div>Estimated time: {todaysRecommendation.minutes || "5–10 min"}</div>
               <div>Impact: High</div>
             </div>
           </div>
