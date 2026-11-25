@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.23: SNAPSHOT AND RATING CONSISTENCY. (1) The Resume Snapshot's "Recruiter confidence" line was hard-coded to "High"; it now shows the Recruiter Review's actual percentage and decision (e.g. "77% — Borderline"), so the two screens agree. (2) Star ratings and impact labels now line up: verb tense gets 5 stars / High only when 2+ bullets slip (1 bullet = 3 stars / Medium), and Formatting polish with 2+ issues reads Medium to match its 3 stars. (3) Certifications listed inside the Skills section (e.g. "CompTIA Security+ (in progress)") now count in the Snapshot's Certifications total and completeness check, and the "Earn a targeted certification" tip names the ones already listed instead of suggesting the candidate start from zero. -->
 <!-- v12.3.22: CAREER-STAGE AND CONSISTENCY FIXES (from a side-by-side check against the manual evaluation on an experienced career changer). (1) Career stage: experience is now measured in dated months, and graduation timing comes from degree entries only, so a job ending this year or a bootcamp certificate no longer marks a 4+ year professional as a "current student". 3+ years of dated experience (without a degree in progress or finished in the last year) is experience-dominant: Section Order advises Experience ahead of Education, and the closing line no longer says "most students". (2) Consistency: a resume over 2 pages gets "cut to 2 pages, then fix the text size" (raising font and margins first would lengthen it); the game plan skips "Rewrite your summary" when the summary scores 85+ with no specific weakness; "Visual density" and the risk flag say "long bullets" instead of "metric overload" when bullets have few numbers; Credibility moves to Review when bullets claim an improvement with no number; recruiter confidence now reflects page count and low quantification. (3) Proper names: "Fullstack Academy" and other school/company names are no longer flagged as hyphenation typos or used to infer a software-engineering track; track detection no longer fires on common words (model, agile, stakeholder). (4) Evidence-based tips only: the weak-opener tip quotes the opener actually found; the verb-tense check requires a real verb context ("and", comma, "which", "that") so nouns like "processes" no longer trip it, its plan item needs 2+ bullets and cites the real verbs; the Before/After swap no longer offers "Handled" (itself a weak opener) and shows a "tighten this" prompt when no verb fits; GRC/compliance-focused Cybersecurity resumes no longer get the GitHub nudge. -->
 <!-- v12.3.21: SNAPSHOT PRIORITIES. "Top Opportunities" and "Today's Top Priority" on the Resume Snapshot now lead with the biggest problems actually found (near-identical bullets, measured layout, Education placement, unsupported skills, non-standard headers) via buildTopFixes(), ahead of the older presence-based items. The project-metrics note now says what is missing (a measured result) instead of the generic "add more measurable project outcomes". -->
 <!-- v12.3.20: SCORE GAP vs. MANUAL EVALUATION. The scorecard rewarded what a resume has and could not see layout or content problems, so it ran 20+ points above the manual audit. (1) LAYOUT CHECK: for PDF uploads, body / heading / name / contact font sizes, the four margins, words per page and page count are measured from the file and compared with the BEST standards (new data.importedLayout, analyzeLayout). (2) CONTENT CHECKS: near-duplicate bullets under different entries, skills listed but not shown in any bullet, and certification names that read like training (analyzeContentIntegrity). Both appear in the on-screen Coach Review and the Word report, add risk flags, and lower the matching scorecard category only when a problem is found. (3) Summary and Positioning now uses the summary-quality score. (4) Recruiter confidence ceiling steps down 3 points per open flag (it was fixed at 94). (5) Resume Health shows the scorecard overall, so the page and the report give one headline number. (6) Coach Jeff's First Impression is built from the findings instead of fixed text. (7) Recommended order for technology and data fields is Experience before Projects, matching the advice text; "rebuilt resume" wording removed from messages about the uploaded file. -->
@@ -160,7 +161,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.22-industry";
+const BUILD_VERSION = "v12.3.23-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -2610,6 +2611,21 @@ function quantifiedShare(data) {
   const b = (data.experience || []).flatMap(e => (e && e.bullets) || []).filter(x => String(x || "").trim());
   if (!b.length) return 0;
   return b.filter(x => isQuantifiedBullet(x)).length / b.length;
+}
+// v12.3.23: certifications listed inside the Skills section (e.g.
+// "Certifications: CompTIA Security+ (in progress)"). Counted alongside a
+// Certifications section so the Snapshot doesn't report zero.
+function certsInSkills(data) {
+  const sk = data.skills || {};
+  const txt = [sk.technical, sk.dataVisualization, sk.tools, sk.domain].filter(Boolean).join(" ; ");
+  const re = /\b(CompTIA\s+[A-Za-z]+\+?|Security\+|Network\+|CISSP|CISA|CISM|CRISC|CCSP|CEH|CCNA|CCNP|PMP|CAPM|ITIL[^,;]*|AWS Certified[^,;]*|Azure [A-Z][a-z]+ Associate|Google [A-Z][^,;]*Certificate|(?:Lean\s+)?Six Sigma[^,;]*|SHRM-[A-Z]{2,4}|PHR|SPHR|CPA|CFA|CMA|Certified [A-Z][^,;]*)/g;
+  const seen = new Set(), out = [];
+  (txt.match(re) || []).forEach(m => {
+    const name = m.replace(/[\s.]+$/, "").trim();
+    const k = name.toLowerCase().replace(/\s+/g, " ");
+    if (!seen.has(k)) { seen.add(k); out.push(name); }
+  });
+  return out;
 }
 function isQuantifiedBullet(raw) {
   const b = String(raw || "").trim();
@@ -5880,7 +5896,8 @@ function App() {
   const projectCount = (data.projects || []).filter(p => p.name || (p.bullets || []).some(Boolean)).length;
   const experienceCount = (data.experience || []).filter(e => e.title || e.org || (e.bullets || []).some(Boolean)).length;
   const leadershipCount = leadershipEvidenceCount(data);
-  const certCount = (data.certifications || []).filter(c => c.name).length;
+  // v12.3.23: include certifications listed in the Skills section.
+  const certCount = (data.certifications || []).filter(c => c.name).length || certsInSkills(data).length;
   const hasSummary = String(data.summary || "").trim().length > 80;
   const hasSkills = skillCount > 0;
   const hasProjects = projectCount > 0;
@@ -6410,9 +6427,9 @@ function App() {
         "15 min", "High");
     }
     if (verbTense.count) {
-      addImp(5, "Fix verb-tense consistency",
+      addImp(verbTense.count >= 2 ? 5 : 3, "Fix verb-tense consistency",
         verbTense.notes[0] || "Convert completed work to simple past tense so every bullet reads consistently.",
-        "10 min", "High");
+        "10 min", verbTense.count >= 2 ? "High" : "Medium");
     }
     if (verbTense.inflatedCount) {
       const inflNote = (verbTense.notes || []).find(n => /leadership verb|reads as solo/i.test(n)) ||
@@ -6486,7 +6503,7 @@ function App() {
     if (orderCheck && orderCheck.mismatch) fmtIssues.push("section order could be improved for a " + (data.field || "your") + " resume — use Apply Smart Order in the workshop");
     if (fmtIssues.length) {
       const why = "I spotted specific things a recruiter would notice: " + fmtIssues.slice(0, 3).join("; ") + ".";
-      addImp(fmtIssues.length >= 2 ? 3 : 2, "Formatting polish", why, "10 min", fmtIssues.length >= 3 ? "Medium" : "Low-Medium");
+      addImp(fmtIssues.length >= 2 ? 3 : 2, "Formatting polish", why, "10 min", fmtIssues.length >= 2 ? "Medium" : "Low-Medium");
     } else if (conf < 92) {
       addImp(2, "Final formatting pass",
         "Your formatting already reads cleanly — no specific issues stood out. Do one last read-through for alignment, consistent dates, and spacing so nothing distracts from strong content.",
@@ -6800,7 +6817,9 @@ function App() {
     bigger.push({ label: "Earn a targeted certification" + (workSample === "credential" ? " or license" : ""),
       why: workSample === "credential"
         ? (/cyber/i.test(String(data.field || ""))
-          ? "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost. Finish any you have in progress first."
+          ? (certsInSkills(data).length
+            ? "You list " + certsInSkills(data).slice(0, 2).join(" and ") + ". Finishing " + (/in progress/i.test(JSON.stringify(data.skills || {})) ? "the ones in progress" : "and showing them in a Certifications section") + " is your fastest credibility boost; for GRC roles, CISA or CRISC can follow."
+            : "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost.")
           : "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost.")
         : "A credential in your target field is fast, verifiable proof of commitment." });
     // Only suggest adding leadership if the resume doesn't already show it.
@@ -7072,7 +7091,7 @@ function App() {
               <div style={{ height: 8, background: "#d6d6d8", borderRadius: 0, overflow: "hidden", marginTop: 8 }}>
                 <div style={{ height: "100%", width: Math.min(100, healthScore) + "%", background: "#5980a6" }}></div>
               </div>
-              <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: High</div>
+              <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: {recruiterReview && recruiterReview.confidence != null ? (recruiterReview.confidence + "%" + (recruiterReview.outcome ? " \u2014 " + String(recruiterReview.outcome).replace(/[\u{1F7E2}\u{1F7E1}\u{1F7E0}\u{1F534}]\s*/gu, "").trim() : "")) : "\u2014"}</div>
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
