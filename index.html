@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.24: MANUAL-EVAL PARITY. Content Checks now adds three findings the manual evaluation catches: (4) "Too many bullets for some roles" (about 5 to 7 for a recent role of a year or more; 2 to 4 for a role under a year or one that ended 5+ years ago), also named in the "Cut to 2 pages" top priority; (5) "Repeated phrasing" for stock 3-word phrases reused across bullets (e.g. "ensuring adherence to", "resolving issues efficiently"); (6) "Education details" for degree entries missing a graduation date or written subject-first ("... Master's Degree") instead of degree-first as on the diploma. Certificates and bootcamps are exempt. Also adds a one-line note under the Snapshot's Recruiter confidence explaining how it differs from Resume Health. -->
 <!-- v12.3.23: SNAPSHOT AND RATING CONSISTENCY. (1) The Resume Snapshot's "Recruiter confidence" line was hard-coded to "High"; it now shows the Recruiter Review's actual percentage and decision (e.g. "77% — Borderline"), so the two screens agree. (2) Star ratings and impact labels now line up: verb tense gets 5 stars / High only when 2+ bullets slip (1 bullet = 3 stars / Medium), and Formatting polish with 2+ issues reads Medium to match its 3 stars. (3) Certifications listed inside the Skills section (e.g. "CompTIA Security+ (in progress)") now count in the Snapshot's Certifications total and completeness check, and the "Earn a targeted certification" tip names the ones already listed instead of suggesting the candidate start from zero. -->
 <!-- v12.3.22: CAREER-STAGE AND CONSISTENCY FIXES (from a side-by-side check against the manual evaluation on an experienced career changer). (1) Career stage: experience is now measured in dated months, and graduation timing comes from degree entries only, so a job ending this year or a bootcamp certificate no longer marks a 4+ year professional as a "current student". 3+ years of dated experience (without a degree in progress or finished in the last year) is experience-dominant: Section Order advises Experience ahead of Education, and the closing line no longer says "most students". (2) Consistency: a resume over 2 pages gets "cut to 2 pages, then fix the text size" (raising font and margins first would lengthen it); the game plan skips "Rewrite your summary" when the summary scores 85+ with no specific weakness; "Visual density" and the risk flag say "long bullets" instead of "metric overload" when bullets have few numbers; Credibility moves to Review when bullets claim an improvement with no number; recruiter confidence now reflects page count and low quantification. (3) Proper names: "Fullstack Academy" and other school/company names are no longer flagged as hyphenation typos or used to infer a software-engineering track; track detection no longer fires on common words (model, agile, stakeholder). (4) Evidence-based tips only: the weak-opener tip quotes the opener actually found; the verb-tense check requires a real verb context ("and", comma, "which", "that") so nouns like "processes" no longer trip it, its plan item needs 2+ bullets and cites the real verbs; the Before/After swap no longer offers "Handled" (itself a weak opener) and shows a "tighten this" prompt when no verb fits; GRC/compliance-focused Cybersecurity resumes no longer get the GitHub nudge. -->
 <!-- v12.3.21: SNAPSHOT PRIORITIES. "Top Opportunities" and "Today's Top Priority" on the Resume Snapshot now lead with the biggest problems actually found (near-identical bullets, measured layout, Education placement, unsupported skills, non-standard headers) via buildTopFixes(), ahead of the older presence-based items. The project-metrics note now says what is missing (a measured result) instead of the generic "add more measurable project outcomes". -->
@@ -161,7 +162,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.23-industry";
+const BUILD_VERSION = "v12.3.24-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -4048,7 +4049,76 @@ function analyzeContentIntegrity(data) {
     detail: unsupported.slice(0, 8).join(", ") + (unsupported.length > 8 ? ", and " + (unsupported.length - 8) + " more" : "") + " appear in your Skills section, but no bullet shows you using them. Add a bullet (coursework and projects count) for each one you keep, or remove the ones you could not discuss in an interview." });
   if (certFlags.length) findings.push({ label: "Certification or training?",
     detail: certFlags.join("; ") + " \u2014 the name reads like a training program. Confirm the exact credential name and issuer; if it was training or a virtual experience, label the section \u201CCertifications and Training.\u201D" });
-  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, findings, count: findings.length };
+  // v12.3.24 (4): bullets per role. About 5 to 7 for a recent role of a year or
+  // more; 2 to 4 for a short role (under a year) or one that ended 5+ years ago.
+  const _now = new Date(); const _nowM = _now.getFullYear() * 12 + _now.getMonth();
+  const longRoles = [];
+  (data.experience || []).forEach(e => {
+    if (!e) return;
+    const n = (e.bullets || []).filter(b => String(b || "").trim()).length;
+    const a = _monthIndex(e.start, false), z = _monthIndex(e.end, true);
+    const months = (a !== null && z !== null && z >= a) ? (z - a + 1) : null;
+    const old = z !== null && (_nowM - z) >= 60;
+    const short = months !== null && months < 12;
+    const max = (short || old) ? 4 : 7;
+    if (n > max) longRoles.push({ where: [e.title, e.org].filter(Boolean).join(", ") || "a role", n, max, short, old, months });
+  });
+  if (longRoles.length) findings.push({ label: "Too many bullets for some roles",
+    detail: longRoles.slice(0, 3).map(r => (r.where.length > 60 ? r.where.slice(0, 57) + "\u2026" : r.where) + " has " + r.n + " bullets (aim for " + (r.max === 4 ? "2 to 4" : "5 to 7") + (r.short ? ", since it lasted under a year" : r.old ? ", since it ended 5+ years ago" : "") + ")").join("; ") + ". Keep the bullets that best match your target role and cut the rest. This is usually the fastest way to bring a resume back to 2 pages." });
+
+  // v12.3.24 (5): stock phrases repeated across bullets (3-word phrases with
+  // at least two content words), e.g. "ensuring adherence to" or "resolving
+  // issues efficiently". Near-duplicate bullets are handled above.
+  const SW = new Set(["a","an","the","and","or","of","to","in","on","for","with","by","at","as","from","into","their","them","its","our","my","is","are","was","were","be","that","this","these","those","which","who","while","all","any","each"]);
+  // Bullets already reported as near-duplicates are left out, so the same pair
+  // isn't flagged twice.
+  const _dupTexts = new Set(duplicates.flatMap(d => [d.a, d.b]));
+  const allB = entries.flatMap(e => (e.bullets || []).map(b => String(b || "").trim()).filter(Boolean)).filter(b => !_dupTexts.has(b));
+  const gramMap = new Map();
+  allB.forEach((b, bi) => {
+    const w = b.toLowerCase().replace(/[^a-z0-9'\s-]/g, " ").split(/\s+/).filter(Boolean);
+    const seenHere = new Set();
+    for (let i = 0; i + 3 <= w.length; i++) {
+      const g = w.slice(i, i + 3);
+      if (g.some(x => /\d/.test(x))) continue;
+      if (g.filter(x => !SW.has(x) && x.length >= 4).length < 2) continue;
+      if (SW.has(g[0]) || SW.has(g[2])) continue;
+      const k = g.join(" ");
+      if (seenHere.has(k)) continue;
+      seenHere.add(k);
+      if (!gramMap.has(k)) gramMap.set(k, new Set());
+      gramMap.get(k).add(bi);
+    }
+  });
+  const repeatedPhrases = [];
+  Array.from(gramMap.entries()).filter(([k, set]) => set.size >= 2)
+    .sort((x, y) => y[1].size - x[1].size)
+    .forEach(([k]) => { const w2 = k.split(" "); if (!repeatedPhrases.some(p => p.includes(w2.slice(0, 2).join(" ")) || p.includes(w2.slice(1).join(" ")))) repeatedPhrases.push(k); });
+  if (repeatedPhrases.length) findings.push({ label: "Repeated phrasing",
+    detail: repeatedPhrases.slice(0, 3).map(p => "\u201C" + p + "\u201D").join(", ") + (repeatedPhrases.length === 1 ? " appears" : " each appear") + " in more than one bullet. Reword so each bullet says something new, or merge the bullets." });
+
+  // v12.3.24 (6): education details. Degree entries (not certificates) should
+  // show a graduation date and the degree name as written on the diploma,
+  // degree first (e.g. "M.S., Computer Information Systems").
+  const eduIssues = [];
+  (data.education || []).filter(e => e && (e.degree || e.school)).forEach(e => {
+    const isDeg = typeof _isDegreeEntry === "function" ? _isDegreeEntry(e) : true;
+    if (!isDeg) return;
+    const nm = String(e.school || "").replace(/[\s\u2013\u2014-]+$/, "");
+    const parts = [];
+    if (!String(e.grad || "").match(/\b(19|20)\d{2}\b|expected|anticipated/i)) parts.push("no graduation date");
+    const d = String(e.degree || "").trim();
+    const m = d.match(/^(.+?)\s+(master'?s|bachelor'?s|associate'?s)\s+degree\b/i);
+    if (m) {
+      const lvl = m[2].toLowerCase().startsWith("master") ? "M.S. or M.A." : m[2].toLowerCase().startsWith("bachelor") ? "B.S. or B.A." : "A.S. or A.A.";
+      parts.push("write the degree first, as on your diploma (for example, " + lvl + ", " + m[1].trim() + "), instead of \u201C" + d + "\u201D");
+    }
+    if (parts.length) eduIssues.push(nm + ": " + parts.join(", and "));
+  });
+  if (eduIssues.length) findings.push({ label: "Education details",
+    detail: eduIssues.slice(0, 4).join("; ") + ". Add each degree's graduation year (or month and year) unless you're intentionally leaving it off, and use the official degree name." });
+
+  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, longRoles, repeatedPhrases, eduIssues, findings, count: findings.length };
 }
 
 // ---- Top fixes (v12.3.21) ----
@@ -4068,7 +4138,8 @@ function buildTopFixes(data) {
   if (_pageF) {
     // v12.3.22: cut length FIRST. Raising text to 11 pt and margins to 0.75 in on
     // the current content would push a long resume even longer.
-    out.push({ label: "Cut to 2 pages, then fix the text size", minutes: "30–45 min", detail: "Your resume runs " + _pageF.yours + " pages. Trim first: keep the bullets that matter most for your target role (about 5 to 7 per recent role, fewer for older or shorter ones). Then raise body text to 11 pt and set margins to 0.75 in. Doing it in the other order would make the resume even longer." });
+    const _lr = (ci.longRoles || []).slice(0, 2).map(r => (r.where.split(",")[0]) + " (" + r.n + " bullets)").join(" and ");
+    out.push({ label: "Cut to 2 pages, then fix the text size", minutes: "30–45 min", detail: "Your resume runs " + _pageF.yours + " pages. Trim first: keep the bullets that matter most for your target role (about 5 to 7 per recent role, fewer for older or shorter ones)" + (_lr ? "; start with " + _lr : "") + ". Then raise body text to 11 pt and set margins to 0.75 in. Doing it in the other order would make the resume even longer." });
   } else if (lay.measured && lay.issues >= 2) {
     out.push({ label: "Fix the text size and margins", detail: "Your page is hard to read: " + lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + " is " + f.yours + " (standard " + f.standard + ")").join("; ") + "." });
   }
@@ -7092,6 +7163,7 @@ function App() {
                 <div style={{ height: "100%", width: Math.min(100, healthScore) + "%", background: "#5980a6" }}></div>
               </div>
               <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: {recruiterReview && recruiterReview.confidence != null ? (recruiterReview.confidence + "%" + (recruiterReview.outcome ? " \u2014 " + String(recruiterReview.outcome).replace(/[\u{1F7E2}\u{1F7E1}\u{1F7E0}\u{1F534}]\s*/gu, "").trim() : "")) : "\u2014"}</div>
+              <div style={{ marginTop: 4, fontSize: 10.5, color: "#8a8d90", lineHeight: 1.35 }}>Resume Health rates overall resume quality. Recruiter confidence estimates the interview decision after a quick read.</div>
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 16, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left", minHeight: 150 }}>
