@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.25: NEW TARGET FIELD "GRC / Compliance / IT Audit". Section order leads with Experience (Summary, Skills, Experience, Certifications, Education, Projects; Education still moves up for a new or current graduate). Its keyword bank covers GRC terms (risk assessment, internal controls, control testing, audit evidence, policy review, NIST, ISO 27001, SOC 2, HIPAA, PCI DSS, SOX, vendor/third-party risk, risk register). It is treated as credential-driven: no GitHub nudge, LinkedIn and certifications (Security+, CISA, CRISC) instead. Grouped with the technical fields for Job Match adjacency, next to Cybersecurity. -->
 <!-- v12.3.24: MANUAL-EVAL PARITY. Content Checks now adds three findings the manual evaluation catches: (4) "Too many bullets for some roles" (about 5 to 7 for a recent role of a year or more; 2 to 4 for a role under a year or one that ended 5+ years ago), also named in the "Cut to 2 pages" top priority; (5) "Repeated phrasing" for stock 3-word phrases reused across bullets (e.g. "ensuring adherence to", "resolving issues efficiently"); (6) "Education details" for degree entries missing a graduation date or written subject-first ("... Master's Degree") instead of degree-first as on the diploma. Certificates and bootcamps are exempt. Also adds a one-line note under the Snapshot's Recruiter confidence explaining how it differs from Resume Health. -->
 <!-- v12.3.23: SNAPSHOT AND RATING CONSISTENCY. (1) The Resume Snapshot's "Recruiter confidence" line was hard-coded to "High"; it now shows the Recruiter Review's actual percentage and decision (e.g. "77% — Borderline"), so the two screens agree. (2) Star ratings and impact labels now line up: verb tense gets 5 stars / High only when 2+ bullets slip (1 bullet = 3 stars / Medium), and Formatting polish with 2+ issues reads Medium to match its 3 stars. (3) Certifications listed inside the Skills section (e.g. "CompTIA Security+ (in progress)") now count in the Snapshot's Certifications total and completeness check, and the "Earn a targeted certification" tip names the ones already listed instead of suggesting the candidate start from zero. -->
 <!-- v12.3.22: CAREER-STAGE AND CONSISTENCY FIXES (from a side-by-side check against the manual evaluation on an experienced career changer). (1) Career stage: experience is now measured in dated months, and graduation timing comes from degree entries only, so a job ending this year or a bootcamp certificate no longer marks a 4+ year professional as a "current student". 3+ years of dated experience (without a degree in progress or finished in the last year) is experience-dominant: Section Order advises Experience ahead of Education, and the closing line no longer says "most students". (2) Consistency: a resume over 2 pages gets "cut to 2 pages, then fix the text size" (raising font and margins first would lengthen it); the game plan skips "Rewrite your summary" when the summary scores 85+ with no specific weakness; "Visual density" and the risk flag say "long bullets" instead of "metric overload" when bullets have few numbers; Credibility moves to Review when bullets claim an improvement with no number; recruiter confidence now reflects page count and low quantification. (3) Proper names: "Fullstack Academy" and other school/company names are no longer flagged as hyphenation typos or used to infer a software-engineering track; track detection no longer fires on common words (model, agile, stakeholder). (4) Evidence-based tips only: the weak-opener tip quotes the opener actually found; the verb-tense check requires a real verb context ("and", comma, "which", "that") so nouns like "processes" no longer trip it, its plan item needs 2+ bullets and cites the real verbs; the Before/After swap no longer offers "Handled" (itself a weak opener) and shows a "tighten this" prompt when no verb fits; GRC/compliance-focused Cybersecurity resumes no longer get the GitHub nudge. -->
@@ -162,7 +163,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.24-industry";
+const BUILD_VERSION = "v12.3.25-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -186,6 +187,7 @@ const FIELD_PRESETS = {
   "IT Specialist": ["summary", "skills", "certifications", "experience", "projects", "education", "activities", "awards", "volunteer", "publications"],
   "Project Management": ["summary", "experience", "projects", "certifications", "skills", "education", "activities", "awards", "volunteer", "publications"],
   "Cybersecurity": ["summary", "skills", "certifications", "projects", "experience", "education", "activities", "awards", "volunteer", "publications"],
+  "GRC / Compliance / IT Audit": ["summary", "skills", "experience", "certifications", "education", "projects", "activities", "awards", "volunteer", "publications"],
   "Cloud / DevOps": ["summary", "skills", "projects", "certifications", "experience", "education", "activities", "awards", "volunteer", "publications"],
   "Quality Assurance / QA Testing": ["summary", "skills", "projects", "experience", "education", "certifications", "activities", "awards", "volunteer", "publications"],
   "Product Management": ["summary", "experience", "projects", "skills", "education", "certifications", "activities", "awards", "volunteer", "publications"],
@@ -204,6 +206,8 @@ const FIELD_PRESETS = {
 // Used to tailor Quick Wins and Bigger Projects so, e.g., an HR resume isn't told to add a GitHub.
 function fieldWorkSampleProfile(fieldRaw) {
   const f = String(fieldRaw || "").toLowerCase();
+  // v12.3.25: GRC, compliance, and IT audit are credential-driven, not code.
+  if (/\bgrc\b|compliance|it audit/.test(f)) return "credential";
   if (/(cs|comput|software|engineer(ing)?|data|analyt|ai|machine learning|ml|hpc|cloud|devops|cyber|qa|quality assurance|it support|help desk|it specialist|technical support)/.test(f)
       && !/non-software/.test(f)) return "code";
   if (/(creative|design|media|market|content|writ|communicat|journalis|ux|ui|brand)/.test(f)) return "portfolio";
@@ -228,6 +232,7 @@ const SKILL_BANK = {
   "IT Specialist": ["IT Support", "Active Directory", "Microsoft 365", "Windows", "Networking", "Cybersecurity Basics", "Hardware Support", "Software Support", "ServiceNow", "Troubleshooting", "System Administration", "Endpoint Management", "Documentation", "Customer Service"],
   "Project Management": ["Project Coordination", "Project Planning", "Agile", "Scrum", "Jira", "Asana", "Trello", "Stakeholder Communication", "Risk Management", "Timeline Management", "Budget Tracking", "Process Improvement", "Meeting Facilitation", "Documentation", "Change Management"],
   "Cybersecurity": ["Security Analysis", "SIEM", "Splunk", "Incident Response", "Vulnerability Management", "Risk Assessment", "NIST", "Linux", "Networking", "Python", "IAM", "Security Awareness", "Log Analysis", "Threat Detection"],
+  "GRC / Compliance / IT Audit": ["GRC", "Governance", "Risk Assessment", "Risk Management", "Compliance", "Internal Controls", "Control Testing", "Audit", "Audit Evidence", "Policy Development", "Policy Review", "NIST", "ISO 27001", "SOC 2", "HIPAA", "PCI DSS", "SOX", "Vendor Risk", "Third-Party Risk", "Risk Register", "Security Awareness", "Documentation", "Excel"],
   "Cloud / DevOps": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Linux", "CI/CD", "Git", "GitHub", "Terraform", "Scripting", "Monitoring", "Cloud Computing", "Automation", "Networking"],
   "Quality Assurance / QA Testing": ["Manual Testing", "Test Cases", "Regression Testing", "Jira", "Bug Tracking", "QA Documentation", "Selenium", "API Testing", "Postman", "Agile", "User Acceptance Testing", "Attention to Detail"],
   "Product Management": ["Product Strategy", "Roadmaps", "User Research", "Requirements Gathering", "Agile", "Jira", "Stakeholder Management", "Market Research", "Analytics", "Prioritization", "A/B Testing", "Product Launch", "Cross-Functional Collaboration"],
@@ -2354,7 +2359,7 @@ function analyzeBuilderOptimization(data) {
     // for a CS grad IS. This prevents false "wrong role" warnings on adjacent tech
     // roles while still catching true domain mismatches.
     const FIELD_CLUSTERS = [
-      ["Technology / CS / Engineering", "Data / Analytics / AI/ML", "AI / Machine Learning / HPC", "Cloud / DevOps", "Cybersecurity", "Quality Assurance / QA Testing", "Help Desk / IT Support", "Technical Support Specialist", "IT Specialist", "Product Management"],
+      ["Technology / CS / Engineering", "Data / Analytics / AI/ML", "AI / Machine Learning / HPC", "Cloud / DevOps", "Cybersecurity", "GRC / Compliance / IT Audit", "Quality Assurance / QA Testing", "Help Desk / IT Support", "Technical Support Specialist", "IT Specialist", "Product Management"],
       ["Business / Finance / Marketing", "Accounting", "Finance", "Project Management", "Supply Chain / Operations", "Human Resources"],
       ["Healthcare / Nursing", "Public Health", "Healthcare Administration"],
       ["Creative / Design / Media"],
@@ -6887,7 +6892,7 @@ function App() {
     }
     bigger.push({ label: "Earn a targeted certification" + (workSample === "credential" ? " or license" : ""),
       why: workSample === "credential"
-        ? (/cyber/i.test(String(data.field || ""))
+        ? (/cyber|grc|compliance|audit/i.test(String(data.field || ""))
           ? (certsInSkills(data).length
             ? "You list " + certsInSkills(data).slice(0, 2).join(" and ") + ". Finishing " + (/in progress/i.test(JSON.stringify(data.skills || {})) ? "the ones in progress" : "and showing them in a Certifications section") + " is your fastest credibility boost; for GRC roles, CISA or CRISC can follow."
             : "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost.")
