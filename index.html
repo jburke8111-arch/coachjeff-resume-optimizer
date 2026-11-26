@@ -4,6 +4,8 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.34: MECHANICS, LAYOUT AND SCORES (second pass against the manual evaluation). (1) WRITING MECHANICS adds date ranges that mix a hyphen and an en dash, a phone number written "(818)-422-1528", and uneven spacing around "|". (2) New analyzeVerbChoice(): repeated opening verbs ("Analyzed (2)"), double verbs ("Tracked and maintained"), and filler openers ("Utilized", "Participate in", "Responsible for"); shown as a Coach Review improvement and counted in the Verb / Tense score. (3) LAYOUT CHECK: section headings now need 13 pt (12 pt passed before); left and right margins are reported separately and flagged when uneven (only the smaller one was shown); top and bottom are reported separately, and unused space at the bottom of a one-page resume is pointed out as room for a summary. (4) SCORECARD: no summary scores 25 (was 55; manual 1 of 5); a section structure that needs reordering scores 45 (was 72); verb choice and the entry format now lower their categories; the overall is weighted like the manual evaluation (content 30%, formatting 18%, skills 15%, ATS 15%, verbs 10%, summary 7%, order 5%) instead of a plain average; readiness bands match the manual 1-5 scale (Market-Ready 80+, Near-Ready 60-79). Rhea Malhotra's resume now scores 62 (manual 3.2 of 5, about 64). (5) The certification suggestion names a credential for the selected field (Finance: Bloomberg Market Concepts or a credit analysis certificate) instead of always citing SHRM for HR. (6) File names with draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)") get the rename quick win. -->
+<!-- v12.3.33: ALIGNMENT WITH THE MANUAL EVALUATION (Rhea Malhotra, Finance). (1) SECTION STRUCTURE: "RELEVANT COURSEWORK (...)" headings are recognized and folded into Education (they were missed, so the courses sat in Education as stray lines and the header check counted 4 of 5 headers). New analyzeStructureAdvice(): for a new or current graduate it recommends Summary, Education, Internships, Skills, Experience, Leadership & Activities when the uploaded resume has a coursework section, internships mixed with other jobs under one Experience header, or Skills at the bottom; the Section Order card no longer says "already leads with your strongest asset" in that case. The Section Headers table now says to fold Coursework into Education and to split an Experience header that holds internships and other jobs. Top Opportunities, First Impression and the Game Plan now lead with the summary, the section order and the entry format, in the manual evaluation's priority order. (2) ENTRY FORMAT: "Employer - Title" headers (spaced dash, no pipe) are split into employer and title at import, and a new "Job titles and locations" Content Check flags entries that lead with the employer and entries with no city and state. Activity roles no longer keep a trailing "|". Leftover "Overall GPA:" and "Expected Graduation:" labels are removed from education lines. (3) SKILLS EVIDENCE: a skill counts as shown when its key words appear together in one bullet ("Financial Statement Analysis" from "spread borrower financial statements"); wrapped skill rows are re-joined ("Forecasting & Budgeting" was split into "Forecasting &" and "Budgeting"); course names in Skills, Microsoft Office listed next to Excel, and terms the bullets show but Skills never names (e.g. Financial Spreading, Copilot) are reported separately; tools not shown get a skills-test note. Finance keyword bank adds Financial Statement Analysis, Credit Analysis, Financial Spreading, Ratio Analysis, Reconciliation and Valuation. (4) BEFORE -> AFTER: examples come from the most relevant roles first (internships and field matches up, part-time retail down, ties to the most recent), one per job before a second; retail bullets are never pushed for volume or audience, and wording such as "financial transactions" in a retail role is flagged as overstated. (5) PROJECTS: in credential-driven fields with relevant work (finance, accounting, HR, healthcare and similar) a missing Projects section no longer lowers recruiter confidence, the timeline step reads "Proof of the work", and the Game Plan no longer says "Add one strong project". The Recruiter Review names the most relevant role as the strongest evidence instead of the Skills list, and no longer calls a non-technical target an "entry-level technical role". -->
 <!-- v12.3.32: TARGET FIELD MENU. (1) "Business / Finance / Marketing" is retired; Finance already has its own field, and the combined keyword bank scored finance resumes against marketing terms (CRM, SEO, Salesforce) and, because the name contained "market", gave them portfolio advice. It is replaced by two fields: "Business Administration / Management" (credential profile: LinkedIn and certifications; keywords for operations, reporting, process improvement, project coordination, team leadership) and "Marketing / Sales" (portfolio profile; digital marketing, SEO, CRM, Salesforce, HubSpot, lead generation, campaign analysis). Both join the business cluster for Job Match adjacency. (2) Saved drafts using the retired name are moved to "Business Administration / Management". (3) The Target Field menu (upload screen and builder) is now alphabetical, with "General / Other" last. -->
 <!-- v12.3.31: REQUIREMENTS CHECK + WORD LAYOUT CHECK. (1) Job Match now pulls hard requirements from the posting (years of experience, degree level, named certifications in one-of groups, security clearance), labels each Required or Preferred from the posting headings and wording ("preferred", "a plus", "must", "minimum"), and compares each with the resume (Shown, Close, In progress, Equivalent experience accepted, Not shown). Years use dated experience with overlapping jobs counted once. An Experience gap warning appears when a required year count exceeds the resume by more than a year, since Job Match counts keywords, not years. Shown in Job Match, the tailoring guidance, and the Review Report. (2) Word uploads now feed the Layout Check (previously PDF only): body/heading/name/contact sizes resolved through run, style and document defaults; page margins; page and total word count (page count is not read from the file because the stored count goes stale); plus Word-only flags for tables, text boxes, multiple columns, contact info only in the page header, 3+ blank spacer lines, dates pushed right with spaces or stacked tabs, more than 2 fonts, and images. -->
 <!-- v12.3.30: COPIED POSTING TEXT. Job Match flags runs of 6+ words that appear word for word in both the posting and the resume (Summary, Skills, Experience, Projects; Education and Certifications are skipped because matching degree wording is normal). Each run needs 4+ content words, so ordinary phrasing does not trigger it. Shown as a "Possible copied posting text" card in Job Match, in the tailoring guidance, and in the Review Report under Job Match Evidence Check. Advice: keep it only if true, and say it in your own words. -->
@@ -170,7 +172,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.32";
+const BUILD_VERSION = "v12.3.34";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -257,7 +259,7 @@ const SKILL_BANK = {
   "Product Management": ["Product Strategy", "Roadmaps", "User Research", "Requirements Gathering", "Agile", "Jira", "Stakeholder Management", "Market Research", "Analytics", "Prioritization", "A/B Testing", "Product Launch", "Cross-Functional Collaboration"],
   "Supply Chain / Operations": ["Operations", "Inventory Management", "Supply Chain", "Logistics", "Excel", "Forecasting", "Process Improvement", "Vendor Coordination", "ERP", "Data Analysis", "Quality Control", "Scheduling", "Lean"],
   "Accounting": ["Accounting", "Accounts Payable", "Accounts Receivable", "Reconciliation", "Excel", "QuickBooks", "SAP", "Journal Entries", "General Ledger", "Financial Reporting", "GAAP", "Data Entry", "Attention to Detail"],
-  "Finance": ["Financial Analysis", "Excel", "Financial Modeling", "Forecasting", "Budgeting", "Power BI", "Tableau", "Market Research", "Risk Analysis", "Reporting", "Data Analysis", "Presentation Skills"],
+  "Finance": ["Financial Analysis", "Excel", "Financial Modeling", "Forecasting", "Budgeting", "Power BI", "Tableau", "Market Research", "Risk Analysis", "Reporting", "Data Analysis", "Presentation Skills", "Financial Statement Analysis", "Credit Analysis", "Financial Spreading", "Ratio Analysis", "Reconciliation", "Valuation"],
   "Public Health": ["Public Health", "Data Analysis", "Program Evaluation", "Community Outreach", "Epidemiology", "Health Education", "Policy Research", "Excel", "R", "SPSS", "Survey Design", "Grant Support", "Stakeholder Communication"],
   "Healthcare Administration": ["Healthcare Administration", "Patient Scheduling", "EHR", "Epic", "HIPAA", "Care Coordination", "Insurance Verification", "Medical Terminology", "Quality Improvement", "Patient Experience", "Data Entry", "Operations", "Team Collaboration"],
   "General / Other": ["Communication", "Customer Service", "Microsoft Excel", "Microsoft Office", "Data Entry", "Project Coordination", "Problem Solving", "Team Collaboration", "Research", "Writing", "Presentation Skills", "Time Management", "CRM", "Process Improvement"]
@@ -551,6 +553,11 @@ function _headingKey(line) {
   if (/^(?:relevant|related|additional|other|professional|core)(?:\s+[a-z0-9&/+.-]+){1,5}\s+experience$/i.test(s)) return "experience";
   if (/^(projects|academic\s+projects|technical\s+projects|relevant\s+projects|project\s+experience|selected\s+projects|capstone|capstone\s+project|portfolio\s+projects|course\s+projects|class\s+projects|research\s+projects|personal\s+projects|data\s+projects|software\s+projects|engineering\s+projects|project\s+portfolio)$/i.test(s)) return "projects";
   if (/^(education|academic\s+background|educational\s+background|degrees|academic\s+history|university\s+education|college\s+education)$/i.test(s)) return "education";
+  // v12.3.33: "RELEVANT COURSEWORK (expected completion: December 2026)" is its
+  // own heading on many student resumes. It used to go unrecognized, so its
+  // courses stayed inside Education as stray lines and the Section Header check
+  // never saw it. It now maps to "coursework" and is folded into Education.
+  if (/^(?:(?:relevant|related|selected|key|academic)\s+)?(?:coursework|course\s*work|courses)$/i.test(s.replace(/\s*\([^)]*\)\s*$/, "").trim())) return "coursework";
   if (/^(leadership|leadership\s+experience|leadership\s+and\s+volunteering|leadership\s+&\s+volunteering|leadership\s+and\s+volunteer\s+experience|leadership\s+\/\s+volunteer\s+experience|leadership\s+&\s+volunteer\s+experience|leadership\s+&\s+activities|activities|campus\s+involvement|campus\s+leadership|student\s+organizations|organizations|extracurricular\s+activities|involvement|clubs)$/i.test(s)) return "activities";
   if (/^(certifications|certificates|licenses|licensure|professional\s+certifications|training|trainings|additional\s+training)$/i.test(s)) return "certifications";
   if (/^(awards|honors|awards\s+&\s+honors|awards\s+and\s+honors|awards\s+&\s+recognition|awards\s+and\s+recognition|awards\s+&\s+activities|awards\s+and\s+activities|honors\s+&\s+activities|honors\s+and\s+activities|awards\s+&\s+achievements|awards\s+and\s+achievements|honors\s+&\s+awards|honors\s+and\s+awards|recognition|achievements|accomplishments|scholarships)$/i.test(s)) return "awards";
@@ -705,6 +712,13 @@ function _splitResume(rawText) {
     }
   }
 
+  // v12.3.33: fold a stand-alone coursework section into Education as one
+  // "Relevant Coursework:" line (wrapped course names are re-joined).
+  if (sections.coursework) {
+    const cw = sections.coursework.join(" ").replace(/\s*\|\s*/g, ", ").replace(/\s*,\s*/g, ", ").replace(/\s+/g, " ").replace(/^[,\s]+|[,\s]+$/g, "").trim();
+    if (cw) sections.education = (sections.education || []).concat(["Relevant Coursework: " + cw]);
+    delete sections.coursework;
+  }
   sections._debugHeadings = debugHeadings;
   sections._normalizedPreview = lines.slice(0, 25);
   return sections;
@@ -917,6 +931,23 @@ function _parseSkills(lines) {
     if (/\b(?:the|a|an|to|of|for|with|using|and then|which|that|is|are|was|were|computed|achieved|designed|built|developed|conducted|analyzed)\b/i.test(r) && !/,/.test(r)) return false;
     return /,/.test(r) || r.split(/\s+/).length <= 4;
   };
+  // v12.3.33: re-join a labelled skills row that wrapped onto a second line
+  // ("Financial: ..., Forecasting &" / "Budgeting, Ratio Analysis"). The wrap
+  // used to split "Forecasting & Budgeting" into "Forecasting &" and "Budgeting".
+  {
+    const _hasLbl = (l) => { const x = stripLeadMarker(l); const m = x.match(GENERIC_LABEL); return !!(m && looksLikeLabel(m[1])); };
+    const joined = [];
+    (lines || []).forEach(raw => {
+      const cur = String(raw || "").trim();
+      if (!cur) return;
+      const prev = joined.length ? joined[joined.length - 1] : null;
+      const isMarked = /^\s*[-–—•*·▪◦‣]/.test(cur);
+      if (prev !== null && !isMarked && _hasLbl(prev) && !_hasLbl(cur) && (/(?:[,&\/]|\band|\bor)\s*$/i.test(prev) || /,/.test(cur))) {
+        joined[joined.length - 1] = prev.replace(/\s+$/, "") + " " + cur;
+      } else joined.push(cur);
+    });
+    lines = joined;
+  }
   const splitItems = (text) => String(text || "").split(/[,;|••]/).map(x => stripLeadMarker(x)).filter(Boolean);
   const cleanUnique = arr => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
 
@@ -1044,6 +1075,10 @@ function cleanEducationEntries(entries) {
     let degree = String(ed.degree || "").trim();
     let school = String(ed.school || "").trim();
     let coursework = String(ed.coursework || "").trim();
+    // v12.3.33: labels left behind when GPA / graduation date are pulled out
+    // ("... Minor in Business Analytics Overall GPA: 3.7", "... Northridge Expected Graduation:").
+    if (ed.gpa) degree = degree.replace(/\s*\|?\s*(?:overall\s+|cumulative\s+|major\s+)?gpa\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?\s*$/i, "").trim();
+    school = school.replace(/\s*\|?\s*(?:expected\s+|anticipated\s+)?(?:graduation|graduating|grad\.?)(?:\s+date)?\s*:?\s*$/i, "").trim();
 
     if (grad) {
       degree = degree.replace(new RegExp("\\s*" + grad.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i"), "").trim();
@@ -1339,12 +1374,15 @@ function _parseExperienceEntries(lines) {
     const dateLineIdx = firstDate ? 0 : (secondDate ? 1 : -1);
 
     let headerText = firstDate ? firstDate.before : first;
-    let title = headerText;
     let org = "";
     let location = "";
     let bulletStart = 1;
+    let headerOrder = "";
 
     headerText = String(headerText || "").replace(/\|\s*$/, "").trim();
+    // v12.3.33: set the title AFTER the trailing pipe is stripped, so
+    // "Co-President |" no longer keeps its pipe.
+    let title = headerText;
 
     // Parse a pipe header. If one side clearly looks like a job title, use that
     // signal to determine whether the source is "Org | Title" or "Title | Org".
@@ -1366,6 +1404,7 @@ function _parseExperienceEntries(lines) {
         if (rightIsTitle && !leftIsTitle) {
           org = left;
           title = right;
+          headerOrder = "employer-first";
         } else if (leftIsTitle && !rightIsTitle) {
           title = left;
           org = right;
@@ -1377,6 +1416,21 @@ function _parseExperienceEntries(lines) {
           org = rest[rest.length - 1] || "";
           if (rest.length > 1) title = [left].concat(rest.slice(0, -1)).join(" — ");
         }
+      }
+    }
+
+    // v12.3.33: "Employer - Title" / "Title – Employer" on one line (a spaced
+    // dash, no pipe). Previously the whole line became the title and the
+    // employer was lost, so the entry-format check could not see it.
+    if (!org && !headerText.includes("|")) {
+      const dm = headerText.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
+      if (dm) {
+        const L = dm[1].trim(), R = dm[2].trim();
+        const ROLE = /\b(member|president|co-president|vice[\s-]?president|treasurer|secretary|chair|co-chair|officer|captain|founder|co-founder|lead|volunteer|director|mentor|tutor|delegate|ambassador)\b/i;
+        const isRole = (x) => x.split(/\s+/).length <= 6 && (_looksLikeJobTitle(x) || ROLE.test(x));
+        const rRole = isRole(R), lRole = isRole(L);
+        if (rRole && !lRole) { org = L; title = R; headerOrder = "employer-first"; }
+        else if (lRole && !rRole) { title = L; org = R; headerOrder = "title-first"; }
       }
     }
 
@@ -1448,7 +1502,8 @@ function _parseExperienceEntries(lines) {
       location: location.trim(),
       start: date ? date.start : "",
       end: date ? date.end : "",
-      bullets: bullets.length ? bullets : [""]
+      bullets: bullets.length ? bullets : [""],
+      headerOrder
     };
   }
 
@@ -3284,6 +3339,39 @@ function resumeScanText(data, rawImportText) {
 // brand-casing ("Linkedin"/"Github"), and mid-name "Of" capitalization
 // ("University Of"). Conservative patterns — each targets a real, common error
 // rather than guessing, so false positives stay low.
+// ---- Verb choice (v12.3.33, manual eval \u00A78) ----
+// Repeated opening verbs, double verbs ("Tracked and maintained") and filler
+// verbs ("Utilized", "Participate in"). Tense switches stay in analyzeVerbTense.
+function analyzeVerbChoice(data) {
+  const clean = s => String(s || "").replace(/^[\s\u2022\u25CF\-\u2013\u2014*\u00B7]+/, "").trim();
+  const bullets = []
+    .concat(...((data && data.experience) || []).map(e => e.bullets || []))
+    .concat(...((data && data.activities) || []).map(a => a.bullets || []))
+    .concat(...((data && data.projects) || []).map(p => p.bullets || []))
+    .map(clean).filter(b => b.length > 12);
+  const counts = {}, display = {};
+  const doubles = [], filler = [];
+  bullets.forEach(b => {
+    const words = b.split(/\s+/);
+    const v1 = words[0] || "";
+    if (!/^[A-Z][a-z]+$/.test(v1)) return;
+    const verbs = [v1];
+    const dm = b.match(/^([A-Z][a-z]+)\s+and\s+([a-z]+ed)\b/);
+    if (dm && /(ed|e)$/.test(dm[1])) { doubles.push(dm[1] + " and " + dm[2]); verbs.push(dm[2]); }
+    verbs.forEach(v => { const k = v.toLowerCase(); counts[k] = (counts[k] || 0) + 1; display[k] = display[k] || v; });
+    if (/^(utiliz(e|ed|es|ing))\b/i.test(v1)) filler.push(v1);
+    else if (/^(participate[sd]?|participating)\s+in\b/i.test(b)) filler.push(words.slice(0, 2).join(" "));
+    else if (/^responsible\s+for\b/i.test(b)) filler.push("Responsible for");
+  });
+  const repeated = Object.keys(counts).filter(k => counts[k] >= 2 && /(ed|e|s)$/.test(k)).map(k => display[k] + " (" + counts[k] + ")");
+  const findings = [];
+  if (repeated.length) findings.push("Several bullets open with the same verb: " + repeated.slice(0, 4).join(", ") + ". Use a different, specific verb for each bullet, especially within the same job.");
+  if (doubles.length) findings.push((doubles.length === 1 ? "One bullet opens" : doubles.length + " bullets open") + " with two verbs (" + doubles.slice(0, 2).map(d => "\u201C" + d + "\u201D").join(", ") + "). One strong verb is cleaner.");
+  if (filler.length) findings.push(Array.from(new Set(filler)).slice(0, 2).map(f => "\u201C" + f + "\u201D").join(" and ") + (filler.length === 1 ? " is a filler opener" : " are filler openers") + ". \u201CUsed\u201D or a more specific verb is stronger" + (filler.some(f => /^particip/i.test(f)) ? ", and \u201CParticipate in\u201D reads as passive in a leadership section" : "") + ".");
+  const score = Math.max(40, 100 - findings.length * 12);
+  return { findings, count: findings.length, repeated, doubles, filler, score, notes: findings.length ? [findings.join(" ")] : [] };
+}
+
 function analyzeMechanics(data, rawImportText) {
   const text = resumeScanText(data, rawImportText);
   const findings = [];
@@ -3462,6 +3550,35 @@ function analyzeMechanics(data, rawImportText) {
     add("Generic target",
       "Your summary says “" + genericTarget[0] + "” without naming the role. Name the job you're applying for (for example, “seeking a GRC Analyst role”) and change it for each application.",
       genericTarget[0]);
+  }
+
+  // v12.3.33: (l) date ranges that mix a hyphen and an en dash,
+  // (m) "(818)-422-1528" phone format, (n) uneven spacing around "|".
+  {
+    const _raw = String(rawImportText || text || "");
+    const _MON = "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+\\d{4}";
+    const _drRe = new RegExp("\\b((?:" + _MON + ")|(?:19|20)\\d{2})(\\s*)([-\\u2013\\u2014])(\\s*)((?:" + _MON + ")|(?:19|20)\\d{2}|present|current)\\b", "gi");
+    const _seen = { hy: null, en: null };
+    let _m;
+    while ((_m = _drRe.exec(_raw)) !== null) {
+      if (_m[3] === "-" && !_seen.hy) _seen.hy = _m[0];
+      if (_m[3] !== "-" && !_seen.en) _seen.en = _m[0];
+    }
+    if (_seen.hy && _seen.en) {
+      add("Date format",
+        "Your date ranges mix a hyphen (\u201C" + _seen.hy + "\u201D) and an en dash (\u201C" + _seen.en + "\u201D). Use the en dash (\u2013) with a space on each side in every date range.",
+        _seen.hy + " \u2192 " + _seen.hy.replace(/\s*-\s*/, " \u2013 "));
+    }
+    const _ph = _raw.match(/\(\d{3}\)[-.]\d{3}[-.]\d{4}/);
+    if (_ph) {
+      const _fixed = _ph[0].replace(/^(\(\d{3}\))[-.](\d{3})[-.](\d{4})$/, "$1 $2-$3");
+      add("Phone format", "Your phone number has an extra mark after the area code (\u201C" + _ph[0] + "\u201D). Write it as \u201C" + _fixed + "\u201D.", _ph[0] + " \u2192 " + _fixed);
+    }
+    const _pipeLine = _raw.split(/\n/).find(l => /\S\|\s|\s\|\S|[^\s|]\|[^\s|]/.test(l) && !/https?:\/\//i.test(l));
+    if (_pipeLine) {
+      const _pm = _pipeLine.match(/\S+\|\s?\S+|\S+\s?\|\S+/);
+      add("Spacing", "The spacing around \u201C|\u201D is uneven (\u201C" + (_pm ? _pm[0] : _pipeLine.slice(0, 40)) + "\u201D). Put one space on each side of every divider, or use commas in a list.", (_pm ? _pm[0] : "x| y") + " \u2192 " + (_pm ? _pm[0].replace(/\s*\|\s*/, " | ") : "x | y"));
+    }
   }
 
   let score = 100;
@@ -3646,7 +3763,10 @@ function analyzeFileNaming(data, importedFileName) {
   if (!name) return { note: "", ok: null };
   const base = name.replace(/\.(pdf|docx?|txt)$/i, "");
   const looksGood = /^[A-Z][a-z]+[_ ][A-Z][a-z]+.*resume/i.test(base) || /resume/i.test(base) && /_/.test(base);
-  const generic = /^(resume|cv|my ?resume|final|document|untitled|new)\b/i.test(base) || base.length < 4;
+  // v12.3.33: draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)")
+  // look unfinished to a recruiter even when the name is in the file name.
+  const draftMarks = /\(\d+\)|\.docx?\b|\bresume\s*\d+|\bcopy\b|\bfinal\b|\bv\d+\b|\bdraft\b/i.test(base);
+  const generic = /^(resume|cv|my ?resume|final|document|untitled|new)\b/i.test(base) || base.length < 4 || draftMarks;
   const first = (String(data.name || "").trim().split(/\s+/)[0] || "FirstName");
   const last = (String(data.name || "").trim().split(/\s+/).slice(-1)[0] || "LastName");
   const suggested = first + "_" + last + "_Resume_" + (String(data.field || "Role").replace(/[^A-Za-z]/g, "") || "Role") + ".pdf";
@@ -3721,15 +3841,21 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   const summaryCheck = analyzeSummaryQuality(data);
   const dupPenalty = Math.min(16, integrity.duplicates.length * 8);
   const unsupportedPenalty = Math.min(24, integrity.unsupported.length * 4);
-  const structurePenalty = Math.min(12, (headerCheck.mustFix || 0) * 3) + Math.min(6, integrity.certFlags.length * 3);
+  const structurePenalty = Math.min(12, (headerCheck.mustFix || 0) * 3) + Math.min(6, integrity.certFlags.length * 3) +
+    ((integrity.employerFirst || []).length ? 6 : 0) + ((integrity.noLocation || []).length && integrity.noLocation.length === integrity.entryCount ? 4 : 0);
   const contentScore = clamp(
     (expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60) - metricPenalty - dupPenalty
   );
   const skillsScore = clamp((typeof skills.score === "number" ? skills.score : 75) - unsupportedPenalty);
   const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75) - structurePenalty);
-  const tenseScore = clamp(verbTense ? verbTense.score : 100);
-  const orderScore = clamp((order.importedMismatch != null ? order.importedMismatch : order.mismatch) ? 72 : 92);
-  const summaryScore = clamp(hasSummary ? Math.min(90, summaryCheck && typeof summaryCheck.score === "number" ? summaryCheck.score : 90) : 55);
+  // v12.3.33: closer to the manual evaluation. Verb choice (repeats, double
+  // and filler verbs) counts with tense; a section structure that needs
+  // reordering scores 45; a missing summary scores 25 (manual: 1 of 5).
+  const verbChoice = analyzeVerbChoice(data);
+  const tenseScore = clamp(Math.min(verbTense ? verbTense.score : 100, verbChoice.score));
+  const _structure = analyzeStructureAdvice(data);
+  const orderScore = clamp(_structure.applies ? 45 : ((order.importedMismatch != null ? order.importedMismatch : order.mismatch) ? 72 : 92));
+  const summaryScore = clamp(hasSummary ? Math.min(90, summaryCheck && typeof summaryCheck.score === "number" ? summaryCheck.score : 90) : 25);
   // Mechanics (typos, casing, punctuation) belong to Formatting & Polish along
   // with run-on bullets — both are "does this read clean" signals.
   const textFormatting = Math.round(((runOn ? runOn.score : 100) * 0.5) + ((mechanics ? mechanics.score : 100) * 0.5));
@@ -3749,14 +3875,19 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   // Convert to a 0–5 dot rating for display parity with the manual eval.
   categories.forEach(c => { c.dots = Math.max(1, Math.min(5, Math.round(c.score / 20))); });
 
-  const overall = Math.round(categories.reduce((s, c) => s + c.score, 0) / categories.length);
+  // v12.3.33: weighted like the manual evaluation, where content carries the
+  // most weight (40%) and the summary and section order are single sections
+  // inside larger categories. A plain average let those two swing the total.
+  const _W = { "Content & Quantification": 0.30, "Skills Depth & Relevance": 0.15, "ATS Structure & Parsing": 0.15, "Verb / Tense Consistency": 0.10, "Section Ordering": 0.05, "Summary & Positioning": 0.07, "Formatting & Polish": 0.18 };
+  const overall = Math.round(categories.reduce((s, c) => s + c.score * (_W[c.key] || 0), 0) / categories.reduce((s, c) => s + (_W[c.key] || 0), 0));
   let tier, tierNote;
-  if (overall >= 85) {
+  // v12.3.33: bands match the manual evaluation's 1-5 scale (4.0 = 80, 3.0 = 60).
+  if (overall >= 80) {
     tier = "MARKET-READY / COMPETITIVE";
     tierNote = "Strong across the board — this resume competes well for your target roles. Remaining edits are precision, not repair.";
-  } else if (overall >= 72) {
+  } else if (overall >= 60) {
     tier = "NEAR-READY";
-    tierNote = "A strong foundation held back by a few fixable items — not structural problems. Clear the top fixes and this moves to MARKET-READY.";
+    tierNote = "A strong foundation held back by fixable items. Clear the top fixes and this moves to MARKET-READY.";
   } else {
     tier = "NEEDS-WORK";
     tierNote = "The content is worth building on, but positioning and evidence need work before applying to competitive roles.";
@@ -4284,6 +4415,24 @@ function analyzeSectionOrderAdvice(data) {
     };
   }
 
+  // v12.3.33: Education is placed well, but the rest of the uploaded order
+  // still needs work (coursework section, internships mixed with other jobs,
+  // Skills at the bottom). Say so instead of "already leads with your
+  // strongest asset".
+  if (sig.educationFirst && !educationSitsLow && idxEdu > -1 && idxEdu <= 2) {
+    const st = analyzeStructureAdvice(data);
+    if (st.applies) {
+      return {
+        applies: true,
+        headline: "Education is in the right place. The rest of the order needs work.",
+        body: "As a " + timingPhrase + ", keeping Education near the top is right. Recommended order: " + st.orderText + ". " + st.steps.join(" ") + gpaClause,
+        caveat: "Once you have a full-time role, Experience moves above Education.",
+        recommendedTop: [],
+        structure: st
+      };
+    }
+  }
+
   // Secondary: Education should lead AND already does — affirm it.
   if (sig.educationFirst && !educationSitsLow && idxEdu > -1 && idxEdu <= 2) {
     return {
@@ -4512,13 +4661,21 @@ function analyzeLayout(data) {
   let penalty = 0;
   const add = (item, yours, standard, ok, pts, fix) => { rows.push({ item, yours, standard, ok, fix: ok ? "Meets the standard" : fix }); if (!ok) penalty += pts; };
   add("Body text size", L.bodyPt + " pt", "11 pt", L.bodyPt >= 10.5, 15, "Raise body text and bullets to 11 pt");
-  if (L.headingPt) add("Section heading size", L.headingPt + " pt", "13 pt", L.headingPt >= 12, 8, "Raise section headings to 13 pt so they stand out by size");
+  if (L.headingPt) add("Section heading size", L.headingPt + " pt", "13 pt", L.headingPt >= 12.5, 8, "Raise section headings to 13 pt so they stand out by size");
   if (L.namePt) add("Name size", L.namePt + " pt", "20 pt", L.namePt >= 18 && L.namePt <= 22, 4, "Set your name to 20 pt");
   if (L.contactPt) add("Contact line size", L.contactPt + " pt", "11 pt", L.contactPt >= 10.5, 4, "Raise the contact line to 11 pt");
-  const side = Math.min(L.marginL, L.marginR);
-  add("Left and right margins", "about " + side.toFixed(2) + " in", "0.75 in", side >= 0.7, 12, "Set left and right margins to 0.75 inch");
-  const tb = Math.min(L.marginT, L.marginB);
-  add("Top and bottom margins", "about " + tb.toFixed(2) + " in", "0.75 in", tb >= 0.6, 6, "Set top and bottom margins to 0.75 inch");
+  // v12.3.33: report each side. Only the smaller one was shown, so an uneven
+  // page (0.60 in left, 0.83 in right) read as "about 0.60 in" on both sides.
+  const _mL = Number(L.marginL), _mR = Number(L.marginR);
+  const _uneven = Math.abs(_mL - _mR) >= 0.15;
+  add("Left and right margins", "left about " + _mL.toFixed(2) + " in, right about " + _mR.toFixed(2) + " in", "0.75 in each",
+    _mL >= 0.7 && _mR >= 0.7 && !_uneven, 12,
+    "Set both side margins to 0.75 inch" + (_uneven ? ". They are uneven now, which makes the page look off-center" : ""));
+  const _mT = Number(L.marginT), _mB = Number(L.marginB);
+  const _roomBelow = L.pages === 1 && _mB > 0.95;
+  add("Top and bottom margins", "top about " + _mT.toFixed(2) + " in, bottom about " + _mB.toFixed(2) + " in" + (_roomBelow ? " (unused space)" : ""), "0.75 in each",
+    _mT >= 0.6 && _mB >= 0.6, 6,
+    "Set the top and bottom margins to 0.75 inch" + (_roomBelow ? ". The empty space at the bottom is room for a Professional Summary" : ""));
   // v12.3.31: Word files have no reliable page count (see summarizeDocxLayout),
   // so they get a word-count length row instead of the two page rows.
   const isDocx = L.source === "docx";
@@ -4581,19 +4738,71 @@ function analyzeContentIntegrity(data) {
   }
   // (2) skills with no supporting bullet
   const sk = data.skills || {};
-  const listed = [sk.technical, sk.dataVisualization, sk.tools, sk.domain].map(v => String(v || "")).join(",")
+  const listedRaw = [sk.technical, sk.dataVisualization, sk.tools, sk.domain].map(v => String(v || "")).join(",")
     .split(/[,;|]/).map(x => x.trim()).filter(x => x && x.length <= 40);
+  // v12.3.33: "Forecasting & Budgeting" is two skills; check each on its own.
+  const listed = [];
+  listedRaw.forEach(x => {
+    const parts = x.split(/\s+(?:&|and)\s+/i).map(s => s.trim());
+    if (parts.length === 2 && parts.every(s => s.length >= 4 && !/\s/.test(s))) parts.forEach(s => listed.push(s));
+    else listed.push(x.replace(/\s*[&\/]\s*$/, "").trim());
+  });
   const evidence = " " + flat.map(f => f.text).concat((data.projects || []).map(p => p.name || "")).join(" ").toLowerCase() + " ";
   const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // v12.3.33: a skill also counts as shown when its key words appear together
+  // in one bullet ("Financial Statement Analysis" <- "spread borrower financial
+  // statements", "Ratio Analysis" <- "key financial ratios"). Exact wording was
+  // required before, so skills the bullets clearly showed were flagged.
+  const _GENERIC_SK = new Set(["analysis", "analyses", "analytics", "skills", "skill", "tools", "tool", "suite", "software", "microsoft", "google", "adobe", "basic", "basics", "advanced", "and", "the", "for", "with", "proficiency", "knowledge", "principles", "fundamentals"]);
+  const _NO_ING = new Set(["account", "market", "engineer"]);
+  const _stemSk = (w) => {
+    let s = w.replace(/(?:ations?|ions?)$/, "").replace(/(?:ing|ed|es|s)$/, "");
+    if (/ing$/.test(w) && _NO_ING.has(w.replace(/ing$/, ""))) return w;
+    return s.length >= 4 ? s : w;
+  };
+  const _bulletWords = flat.map(f => f.text.toLowerCase().replace(/[^a-z0-9+#\s-]/g, " ").split(/[\s-]+/).filter(Boolean));
+  const conceptShown = (skill) => {
+    const core = String(skill || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9+#\s]/g, " ").split(/\s+/).filter(w => w.length >= 3 && !_GENERIC_SK.has(w));
+    if (!core.length || core.some(w => w.length < 4)) return false;
+    const stems = core.map(_stemSk);
+    return _bulletWords.some(ws => stems.every(st => ws.some(w => w.startsWith(st))));
+  };
   const shown = (skill) => {
     const base = skill.toLowerCase();
     const variants = new Set([base, base.replace(/\s*\(.*?\)\s*/g, " ").trim(), base.replace(/^(microsoft|ms|adobe|google)\s+/, "").trim()]);
     const paren = base.match(/\(([^)]+)\)/);
     if (paren) paren[1].split(/[,/]/).forEach(p => variants.add(p.trim()));
-    return Array.from(variants).filter(v => v.length >= 1).some(v => new RegExp("(^|[^a-z0-9+#])" + esc(v) + "([^a-z0-9+#]|$)").test(evidence));
+    if (Array.from(variants).filter(v => v.length >= 1).some(v => new RegExp("(^|[^a-z0-9+#])" + esc(v) + "([^a-z0-9+#]|$)").test(evidence))) return true;
+    return conceptShown(skill);
   };
   const seen = new Set();
-  const unsupported = flat.length >= 3 ? listed.filter(x => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return !shown(x); }) : [];
+  const notShown = flat.length >= 3 ? listed.filter(x => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return !shown(x); }) : [];
+  // v12.3.33: sort what is not shown into separate, more useful findings.
+  const _normSk = s => String(s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9+# ]+/g, " ").replace(/\s+/g, " ").trim();
+  const _courses = new Set((data.education || []).flatMap(ed => String((ed && ed.coursework) || "").split(/[,;|]/)).map(_normSk).filter(Boolean));
+  const courseSkills = notShown.filter(s => _courses.has(_normSk(s)));
+  const _hasExcel = listed.some(s => /\bexcel\b/i.test(s));
+  const officeDup = _hasExcel ? notShown.filter(s => /\b(?:microsoft\s+)?office(?:\s+suite)?\b|\bms\s+office\b/i.test(s)) : [];
+  const unsupported = notShown.filter(s => !courseSkills.includes(s) && !officeDup.includes(s));
+  const _TOOLISH = /^(python|sql|r|tableau|power bi|excel|microsoft excel|sas|spss|stata|java|javascript|c\+\+|matlab|vba|looker|alteryx|quickbooks|sap|salesforce)$/i;
+  const toolsNotShown = unsupported.filter(s => _TOOLISH.test(s.trim()));
+  // Terms the bullets show but the Skills section never names.
+  const _EXTRA_TOOLS = ["Microsoft Copilot", "ChatGPT", "Bloomberg Terminal", "FactSet", "Capital IQ", "VBA", "Power Query", "QuickBooks", "SAP", "Salesforce", "Jira"];
+  const _SKIP_SUGGEST = /^(reporting|data analysis|research|communication|presentation skills|excel|budgeting|forecasting|analytics|operations|documentation|customer service|attention to detail|problem solving|time management|team collaboration)$/i;
+  const _listedWords = listed.map(s => _normSk(s).split(" "));
+  const _alreadyListed = (cand) => {
+    const cw = _normSk(cand).split(" ").filter(w => w.length >= 3 && !_GENERIC_SK.has(w));
+    return _listedWords.some(lw => cw.length && cw.every(w => lw.some(x => x === w || x.startsWith(_stemSk(w)))));
+  };
+  const missingFromSkills = (flat.length >= 3 && listed.length)
+    ? Array.from(new Set((SKILL_BANK[data.field] || []).concat(_EXTRA_TOOLS)))
+        .filter(c => !_SKIP_SUGGEST.test(c) && !_alreadyListed(c) && shown(c)).slice(0, 4)
+    : [];
+  // v12.3.33: entry format. Title first, then Employer | City, ST.
+  const _ents = (data.experience || []).filter(e => e && (e.title || e.org));
+  const _imported = Array.isArray(data.importedHeadings) && data.importedHeadings.length > 0;
+  const employerFirst = _imported ? _ents.filter(e => e.headerOrder === "employer-first") : [];
+  const noLocation = _imported ? _ents.filter(e => !String(e.location || "").trim()) : [];
   // (3) certification labels
   const certFlags = (data.certifications || []).filter(c => c && c.name).filter(c =>
     /\b(series|program|course|training|bootcamp|workshop|simulation|virtual experience|job simulation)\b/i.test(c.name) && !/\b(certif|certified|licen[cs]e)/i.test(c.name)
@@ -4601,8 +4810,25 @@ function analyzeContentIntegrity(data) {
   const findings = [];
   duplicates.slice(0, 2).forEach(d => findings.push({ label: "Two bullets read almost the same",
     detail: "Under " + d.whereA + ": \u201C" + (d.a.length > 110 ? d.a.slice(0, 107) + "\u2026" : d.a) + "\u201D and under " + d.whereB + ": \u201C" + (d.b.length > 110 ? d.b.slice(0, 107) + "\u2026" : d.b) + "\u201D. A reader may think one was copied from the other. Rewrite each in its own terms, and check that every word fits that employer." }));
+  if (employerFirst.length || (noLocation.length && noLocation.length === _ents.length)) {
+    const _rk = rankEntriesForField(data);
+    const ex = _rk.find(e => employerFirst.includes(e)) || _rk[0] || _ents[0];
+    const dates = [ex.start, ex.end].filter(Boolean).join(" \u2013 ");
+    const parts = [];
+    if (employerFirst.length) parts.push((employerFirst.length === _ents.length ? "Every entry" : employerFirst.length + " of your " + _ents.length + " entries") + " starts with the employer instead of the job title (\u201C" + ex.org + " - " + ex.title + "\u201D). Recruiters scan titles first, so lead with the title.");
+    if (noLocation.length) parts.push(noLocation.length === _ents.length ? "No entry lists a city and state." : noLocation.length + " entries have no city and state.");
+    parts.push("Use two lines for each entry: \u201C" + (ex.title || "Job Title") + (dates ? "   " + dates : "") + "\u201D, then \u201C" + (ex.org || "Employer") + " | " + (ex.location || "City, ST") + "\u201D.");
+    findings.push({ label: "Job titles and locations", detail: parts.join(" ") });
+  }
+  if (courseSkills.length) findings.push({ label: "Course names in Skills",
+    detail: courseSkills.join(", ") + (courseSkills.length === 1 ? " is a course name" : " are course names") + ", not " + (courseSkills.length === 1 ? "a skill" : "skills") + ". Leave " + (courseSkills.length === 1 ? "it" : "them") + " in Relevant Coursework under Education." });
   if (unsupported.length >= 2) findings.push({ label: "Skills listed but not shown in use",
-    detail: unsupported.slice(0, 8).join(", ") + (unsupported.length > 8 ? ", and " + (unsupported.length - 8) + " more" : "") + " appear in your Skills section, but no bullet shows you using them. Add a bullet (coursework and projects count) for each one you keep, or remove the ones you could not discuss in an interview." });
+    detail: unsupported.slice(0, 8).join(", ") + (unsupported.length > 8 ? ", and " + (unsupported.length - 8) + " more" : "") + " appear in your Skills section, but no bullet shows you using them. Add a bullet (coursework and projects count) for each one you keep, or remove the ones you could not discuss in an interview." +
+      (toolsNotShown.length ? " Some employers give a short skills test, so list " + toolsNotShown.join(", ") + " only if you can complete a basic exercise in each." : "") });
+  if (officeDup.length) findings.push({ label: "Repeated tools",
+    detail: officeDup.join(", ") + " repeats Microsoft Excel. Name the specific tools you use instead of the suite." });
+  if (missingFromSkills.length) findings.push({ label: "Shown in your bullets but missing from Skills",
+    detail: "Your bullets show " + missingFromSkills.join(", ") + ", but your Skills section does not list " + (missingFromSkills.length === 1 ? "it" : "them") + ". Add " + (missingFromSkills.length === 1 ? "it" : "them") + " so an ATS search for " + (missingFromSkills.length === 1 ? "that term" : "those terms") + " finds you." });
   if (certFlags.length) findings.push({ label: "Certification or training?",
     detail: certFlags.join("; ") + " \u2014 the name reads like a training program. Confirm the exact credential name and issuer; if it was training or a virtual experience, label the section \u201CCertifications and Training.\u201D" });
   // v12.3.24 (4): bullets per role. About 5 to 7 for a recent role of a year or
@@ -4703,7 +4929,7 @@ function analyzeContentIntegrity(data) {
   if (unmeasured.length) findings.push({ label: "Results without a number",
     detail: unmeasured.slice(0, 3).map(x => "“" + x.phrase + "” (" + x.where + ")").join("; ") + (unmeasured.length > 3 ? ", and " + (unmeasured.length - 3) + " more" : "") + ". A result with no number invites “by how much?” in an interview. Add the real number if you know it and can explain where it came from, or cut the result phrase and keep what you did. Don't estimate." });
 
-  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, longRoles, repeatedPhrases, eduIssues, unmeasured, blankMetric, findings, count: findings.length };
+  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], courseSkills, officeDup, missingFromSkills, employerFirst, noLocation, entryCount: _ents.length, certFlags, longRoles, repeatedPhrases, eduIssues, unmeasured, blankMetric, findings, count: findings.length };
 }
 
 // ---- Top fixes (v12.3.21) ----
@@ -4714,6 +4940,17 @@ function analyzeContentIntegrity(data) {
 function buildTopFixes(data) {
   const out = [];
   const ci = analyzeContentIntegrity(data);
+  // v12.3.33: match the manual evaluation's priorities. A missing summary,
+  // the section structure and the entry format come before layout polish.
+  if (String(data.summary || "").trim().length < 40) {
+    out.push({ label: "Add a Professional Summary", minutes: "15 min", detail: "Add three lines under your contact line: who you are, your strongest proof, and the role you are targeting" + (data.field ? " (" + data.field + ")" : "") + "." });
+  }
+  const _st = analyzeStructureAdvice(data);
+  if (_st.applies) out.push({ label: "Rename and reorder your sections", minutes: "15 min", detail: _st.short });
+  if ((ci.employerFirst || []).length || ((ci.noLocation || []).length && ci.noLocation.length === ci.entryCount)) {
+    const _ef = (ci.employerFirst || []).length, _nl = (ci.noLocation || []).length === ci.entryCount;
+    out.push({ label: "Put job titles first and add locations", minutes: "10 min", detail: "Start each entry with the job title and dates, and put the employer" + (_nl ? " with its city and state" : "") + " on the next line." + (_ef && _nl ? " Right now your entries lead with the employer and none lists a location." : _ef ? " Right now your entries lead with the employer." : " Right now no entry lists a location.") });
+  }
   if (ci.duplicates.length) {
     const d = ci.duplicates[0];
     out.push({ label: "Rewrite the two near-identical bullets", detail: "Two bullets under " + d.whereA + " and " + d.whereB + " read almost the same. Rewrite each in its own terms and check that every word fits that employer." });
@@ -4726,7 +4963,7 @@ function buildTopFixes(data) {
     const _lr = (ci.longRoles || []).slice(0, 2).map(r => (r.where.split(",")[0]) + " (" + r.n + " bullets)").join(" and ");
     out.push({ label: "Cut to 2 pages, then fix the text size", minutes: "30–45 min", detail: "Your resume runs " + _pageF.yours + " pages. Trim first: keep the bullets that matter most for your target role (about 5 to 7 per recent role, fewer for older or shorter ones)" + (_lr ? "; start with " + _lr : "") + ". Then raise body text to 11 pt and set margins to 0.75 in. Doing it in the other order would make the resume even longer." });
   } else if (lay.measured && lay.issues >= 2) {
-    out.push({ label: "Fix the text size and margins", detail: "Your page is hard to read: " + lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + " is " + f.yours + " (standard " + f.standard + ")").join("; ") + "." });
+    out.push({ label: "Fix the text size and margins", detail: "Your page is hard to read: " + lay.findings.slice(0, 3).map(f => f.item.toLowerCase() + ", " + f.yours + " (standard " + f.standard + ")").join("; ") + "." });
   }
   const soa = analyzeSectionOrderAdvice(data);
   if (soa.applies && soa.recommendedTop && soa.recommendedTop.length) {
@@ -4755,6 +4992,12 @@ function buildFirstImpression(data) {
   if ((data.projects || []).some(p => p.name)) good.push("you have project work to show");
   if (String(data.summary || "").trim().length > 80) good.push("your summary tells a recruiter what you are aiming for");
   const todo = [];
+  // v12.3.33: structure first, matching the Top Opportunities order.
+  if (String(data.summary || "").trim().length < 40) todo.push("there is no Professional Summary telling a recruiter what role you want");
+  const _stFI = analyzeStructureAdvice(data);
+  if (_stFI.applies) todo.push("the sections need reordering (" + _stFI.names.join(", ") + ")");
+  const _ciFI = analyzeContentIntegrity(data);
+  if ((_ciFI.employerFirst || []).length) todo.push("job titles should come before employer names");
   const lay = analyzeLayout(data);
   const _pgF = lay.measured ? lay.findings.find(f => f.item === "Page count") : null;
   if (_pgF) todo.push("at " + _pgF.yours + " pages it runs long, so cut to 2 pages before raising the text size");
@@ -4771,6 +5014,85 @@ function buildFirstImpression(data) {
   const first = good.length ? "What is working: " + list(good) + "." : "Your resume has content to build on.";
   const second = todo.length ? " What to fix first: " + list(todo.slice(0, 3)) + "." : " I did not find a major problem, so focus on tailoring the summary and skills to each posting.";
   return first + second;
+}
+
+// ---- Entry helpers (v12.3.33) ----
+// Part-time retail / service titles. Used to keep those roles from leading the
+// coaching examples and from counting as field-relevant experience.
+const _RETAIL_TITLE = /\b(sales associate|retail|cashier|server|waiter|waitress|barista|host|hostess|crew member|stock associate|store associate|team member|busser|food runner|dishwasher|lifeguard|babysitter|nanny|courtesy clerk|bagger)\b/i;
+function entryLabel(e) { return String((e && (e.org || e.title)) || "").trim(); }
+function isInternEntry(e) { return /\b(intern|internship|co-?op)\b/i.test(String((e && e.title) || "")); }
+// Experience entries ordered by how well they support the target field:
+// field keywords in the title/bullets, internships up, retail/service down.
+function rankEntriesForField(data) {
+  const terms = (SKILL_BANK[data.field] || []).map(s => s.toLowerCase());
+  return (data.experience || [])
+    .filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)))
+    .map((e, i) => {
+      const txt = [e.title, e.org].concat(e.bullets || []).join(" ").toLowerCase();
+      // Capped, so a long list of bullets doesn't outrank a newer, more
+      // targeted role; ties go to the most recent end date.
+      let r = Math.min(2, terms.filter(x => txt.includes(x)).length);
+      if (isInternEntry(e) || expSectionOf(e) === "internships") r += 2;
+      if (_RETAIL_TITLE.test(String(e.title || ""))) r -= 3;
+      const z = _monthIndex(e.end, true);
+      return { e, i, r, z: z === null ? -1 : z };
+    })
+    .sort((a, b) => b.r - a.r || b.z - a.z || a.i - b.i)
+    .map(x => x.e);
+}
+// Projects are optional when the field is credential-driven (finance, HR,
+// accounting, healthcare, etc.) and the resume already shows relevant work.
+function projectsAreOptional(data) {
+  if ((data.projects || []).some(p => p && (p.name || (p.bullets || []).some(Boolean)))) return false;
+  if (fieldWorkSampleProfile(data.field) !== "credential") return false;
+  return (data.experience || []).some(e => e && (e.title || e.org) && !_RETAIL_TITLE.test(String(e.title || "")));
+}
+// An early-career resume that mixes internships and other jobs under one
+// Experience header should give the internships their own section.
+function analyzeInternshipSplit(data) {
+  const heads = Array.isArray(data.importedHeadings) ? data.importedHeadings : [];
+  if (!heads.length || heads.some(h => h && h.mapped === "internships")) return { applies: false };
+  const exp = (data.experience || []).filter(e => e && expSectionOf(e) === "experience" && (e.title || e.org));
+  const interns = exp.filter(isInternEntry), others = exp.filter(e => !isInternEntry(e));
+  const sig = educationPlacementSignal(data);
+  const early = sig.currentStudent || sig.recentOrUpcomingGrad || sig.careerStage !== "experienced";
+  if (!interns.length || !others.length || !early) return { applies: false };
+  const uniq = a => Array.from(new Set(a.map(entryLabel).filter(Boolean)));
+  return { applies: true, interns: uniq(interns), others: uniq(others) };
+}
+// Whole-resume structure advice for a new or current graduate: what the
+// uploaded order is missing compared with Summary, Education, Internships,
+// Skills, Experience, Leadership & Activities.
+function analyzeStructureAdvice(data) {
+  const imported = Array.isArray(data.importedOrder) && data.importedOrder.length >= 3 ? data.importedOrder : null;
+  if (!imported) return { applies: false };
+  const sig = educationPlacementSignal(data);
+  if (!sig.educationFirst) return { applies: false };
+  const heads = Array.isArray(data.importedHeadings) ? data.importedHeadings : [];
+  const split = analyzeInternshipSplit(data);
+  const hasCoursework = heads.some(h => h && h.mapped === "coursework");
+  const hasSummary = imported.includes("summary") || String(data.summary || "").trim().length > 40;
+  const iSk = imported.indexOf("skills");
+  const below = ["activities", "volunteer", "awards", "affiliations", "languages"].map(k => imported.indexOf(k)).filter(i => i > -1);
+  const skillsLow = iSk > -1 && (iSk === imported.length - 1 || below.some(i => iSk > i));
+  if (!(split.applies || hasCoursework || skillsLow)) return { applies: false };
+  const present = new Set(imported);
+  const keys = ["summary", "education"];
+  if (split.applies || present.has("internships")) keys.push("internships");
+  if (present.has("skills")) keys.push("skills");
+  ["experience", "research", "projects", "certifications", "activities", "awards", "volunteer", "affiliations", "publications", "languages"].forEach(k => { if (present.has(k) && !keys.includes(k)) keys.push(k); });
+  const names = keys.map(k => STANDARD_SECTION_HEADERS[k] || k);
+  const orderText = names.join(" \u2192 ");
+  const steps = [];
+  if (!hasSummary) steps.push("Add a Professional Summary at the top.");
+  if (hasCoursework) steps.push("Move Relevant Coursework into Education as one line. It is not a standard section, and on its own it pushes your experience down the page.");
+  if (split.applies) steps.push("Give your internships (" + split.interns.join(", ") + ") their own Internships section right after Education. They are your strongest proof that you can do the work, so a recruiter should reach them early. " + split.others.join(", ") + (split.others.length === 1 ? " stays" : " stay") + " under Experience.");
+  if (present.has("skills") && (skillsLow || split.applies)) steps.push("Put Skills right after " + (split.applies ? "your internships" : "Education") + ", so the skills you list sit next to the work that backs them up.");
+  return {
+    applies: true, split, hasCoursework, skillsLow, keys, names, orderText, steps,
+    short: "Use this order: " + names.join(", ") + "." + (hasCoursework ? " Fold Relevant Coursework into Education." : "")
+  };
 }
 
 // ---- Section Header check (v12.3.18) ----
@@ -4794,6 +5116,7 @@ function analyzeSectionHeaders(data) {
     projects: ["academic projects"]
   };
   const rows = [];
+  const _split = analyzeInternshipSplit(data);
   heads.forEach(h => {
     if (!h || !h.raw || h.mapped === "ignored") return;
     const raw = String(h.raw).trim();
@@ -4809,6 +5132,10 @@ function analyzeSectionHeaders(data) {
       rows.push({ raw, standard: "Skills / Certifications", status: "split", action: "Split into two sections: \u201CSKILLS\u201D and \u201CCERTIFICATIONS\u201D" });
       return;
     }
+    if (key === "coursework") {
+      rows.push({ raw, standard: "Education", status: "fold", action: "Not a standard header. Move the courses into Education as one line: \u201CRelevant Coursework: \u2026\u201D" });
+      return;
+    }
     if (key === "unrecognized") {
       rows.push({ raw, standard: "\u2014", status: "unrecognized", action: "Not a standard header, so its content was not read into any section \u2014 rename it to the closest standard header, or move the content into one" });
       return;
@@ -4820,6 +5147,11 @@ function analyzeSectionHeaders(data) {
     let action = "Rename to \u201C" + std.toUpperCase() + "\u201D";
     if (n === norm(std)) { status = "standard"; action = "Matches the standard header"; }
     else if ((CLOSE[key] || []).includes(n)) { status = "variant"; action = "Widely recognized, but the standard header is \u201C" + std.toUpperCase() + "\u201D"; }
+    // v12.3.33: one Experience header holding internships and other jobs.
+    if (key === "experience" && _split.applies) {
+      status = "split";
+      action = "Split into \u201CINTERNSHIPS\u201D (" + _split.interns.join(", ") + ") and \u201CEXPERIENCE\u201D (" + _split.others.join(", ") + ") so your internships lead";
+    }
     if (h.duplicate) action += " (this section appears more than once \u2014 combine it)";
     rows.push({ raw, standard: std, status: h.duplicate && status === "standard" ? "variant" : status, action });
   });
@@ -6701,8 +7033,12 @@ function App() {
       }
     }
 
+    // v12.3.33: in credential-driven fields (finance, accounting, HR, healthcare
+    // and similar), relevant work is the proof; a missing Projects section is
+    // not a concern there.
+    const _projOptional = projectsAreOptional(data);
     if (hasProjects) { confidence += 9; addSignal("Projects help demonstrate hands-on ability."); }
-    else { confidence -= 5; addConcern("Projects are missing or not prominent."); addImprove("Add or strengthen projects", "Use projects to show tools, problem-solving, and outcomes.", "Medium"); }
+    else if (!_projOptional) { confidence -= 5; addConcern("Projects are missing or not prominent."); addImprove("Add or strengthen projects", "Use projects to show tools, problem-solving, and outcomes.", "Medium"); }
 
     if (hasEducation) confidence += 6;
     else { confidence -= 5; addConcern("Education information is incomplete or hard to find."); }
@@ -6842,8 +7178,16 @@ function App() {
 
     // What Increased My Confidence — recruiter-like, evidence-framed.
     let confidenceText;
-    if (hasSkills && skillCount >= 8) {
-      confidenceText = "The skills section gave me evidence that this candidate has the tools I'd expect for an entry-level technical role. That matters because it's something concrete I can picture you talking through in an interview, not just a claim.";
+    // v12.3.33: outside code-driven fields, the most relevant job is the
+    // strongest evidence, not the Skills list. Name it.
+    const _wsRR = fieldWorkSampleProfile(data.field);
+    const _topEntry = hasExperience ? rankEntriesForField(data)[0] : null;
+    const _topIsRelevant = !!(_topEntry && !_RETAIL_TITLE.test(String(_topEntry.title || "")));
+    const _topName = _topEntry ? (_topEntry.title && _topEntry.org ? "your " + _topEntry.title + " role at " + _topEntry.org : "your " + (_topEntry.title || _topEntry.org) + " role") : "";
+    if (_wsRR !== "code" && _topIsRelevant) {
+      confidenceText = "What increased my confidence was " + _topName + ". It's directly relevant to " + (data.field ? data.field + " roles" : "the roles you're targeting") + ", and it's the first thing I'd ask you about in an interview.";
+    } else if (hasSkills && skillCount >= 8) {
+      confidenceText = "The skills section gave me evidence that this candidate has the tools I'd expect for an entry-level " + (_wsRR === "code" ? "technical" : (data.field || "professional")) + " role. That matters because it's something concrete I can picture you talking through in an interview, not just a claim.";
     } else if (hasExperience) {
       confidenceText = "Your work experience increased my confidence because it shows me you've already operated in a real professional setting. That's concrete proof, and it's the kind of thing I'd want to dig into if we talked.";
     } else if (hasProjects) {
@@ -6852,13 +7196,16 @@ function App() {
       const confTop0 = finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present";
       confidenceText = "What increased my confidence was that " + confTop0.charAt(0).toLowerCase() + confTop0.slice(1) + ". That gives me a foundation to work from as I read the rest.";
     }
-    const confTop = finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present";
+    const confTop = (_wsRR !== "code" && _topIsRelevant)
+      ? "Y" + _topName.slice(1)
+      : (finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present");
 
     // Recruiter Confidence Timeline — 30–60 second thought process, time-based (reuses flags, no new scoring).
     const clampConf = (n) => Math.max(30, Math.min(98, Math.round(n)));
     const c1 = clampConf(hasSummary ? confidence - 4 : confidence - 14);
     const c2 = clampConf(hasExperience ? c1 + 12 : c1 - 6);
-    const c3 = clampConf(hasProjects ? c2 + 8 : c2 - 4);
+    const c3 = clampConf(hasProjects ? c2 + 8 : (_projOptional ? c2 : c2 - 4));
+    const _hasInterns = (data.experience || []).some(isInternEntry);
     const c4 = clampConf((hasSkills && skillCount >= 8) ? c3 + 6 : c3 - 3);
     const c5 = confidence;
     const timeline = [
@@ -6879,12 +7226,14 @@ function App() {
           : "Experience check: I was hoping for more work experience here to anchor your credibility."
       },
       {
-        stage: "20–35 sec — Projects and proof",
+        stage: (!hasProjects && _projOptional) ? "20–35 sec — Proof of the work" : "20–35 sec — Projects and proof",
         pct: c3,
-        up: hasProjects,
+        up: hasProjects || _projOptional,
         note: hasProjects
           ? "Projects and proof: the projects help confirm hands-on ability, which is exactly what I want to see."
-          : "Projects and proof: a couple of solid projects would help confirm your hands-on ability."
+          : _projOptional
+            ? "Proof of the work: your " + (_hasInterns ? "internships already show" : "work history already shows") + " the work itself, so I'm not looking for projects in " + (data.field || "this field") + ". A class project would only help if it shows a tool you list but don't use in a bullet."
+            : "Projects and proof: a couple of solid projects would help confirm your hands-on ability."
       },
       {
         stage: "35–50 sec — Skills scan",
@@ -7018,6 +7367,9 @@ function App() {
     } else if (!_summaryStrong) {
       addPlan("Rewrite your Professional Summary", 15, "Lead with your target role and one or two proof points so your direction is obvious at a glance.");
     }
+    // v12.3.33: section structure is a top-three task when it needs work.
+    const _stPlan = analyzeStructureAdvice(data);
+    if (_stPlan.applies) addPlan("Rename and reorder your sections", 15, _stPlan.short);
     if (verbTense.count >= 2) {
       const _tv = (verbTense.verbs || []).slice(0, 2).map(v => "\u201C" + v + "\u201D").join(", ");
       addPlan("Fix verb-tense consistency", 10, verbTense.count + " bullets switch to present tense" + (_tv ? " (" + _tv + ")" : "") + " partway through. Converting completed work to simple past is a fast fix a careful reviewer notices.");
@@ -7029,7 +7381,7 @@ function App() {
     }
     if (hasProjects && projQuant < Math.max(1, Math.ceil((proj.projects || 1) / 2))) {
       addPlan("Strengthen your strongest project", 15, "Turn one project into a mini case study: problem, tools, what you did, and the outcome.");
-    } else if (!hasProjects) {
+    } else if (!hasProjects && !projectsAreOptional(data)) {
       addPlan("Add one strong project", 25, "A single well-described project gives recruiters concrete evidence of hands-on ability.");
     }
     if (hasSkills && resumeStrength && resumeStrength.skills && resumeStrength.skills.crammed) {
@@ -7129,6 +7481,10 @@ function App() {
       addImp(verbTense.count >= 2 ? 5 : 3, "Fix verb-tense consistency",
         verbTense.notes[0] || "Convert completed work to simple past tense so every bullet reads consistently.",
         "10 min", verbTense.count >= 2 ? "High" : "Medium");
+    }
+    const _vc = analyzeVerbChoice(data);
+    if (_vc.count) {
+      addImp(_vc.count >= 2 ? 4 : 3, "Vary and sharpen your verbs", _vc.notes[0], "10 min", "Medium");
     }
     if (verbTense.inflatedCount) {
       const inflNote = (verbTense.notes || []).find(n => /leadership verb|reads as solo/i.test(n)) ||
@@ -7321,11 +7677,19 @@ function App() {
     // Build a SPECIFIC "tighten" note for a real line by inspecting what the line already
     // contains and naming the concrete detail that's missing. Returns null when the line is
     // already strong enough that a generic prompt would be noise.
-    function tightenNote(section, raw) {
+    function tightenNote(section, raw, entry) {
       const b = cleanBullet(raw);
       if (!b || b.length < 20) return null;
-      if (hasNumber(b)) return null;                 // already quantified — leave it alone
       const low = b.toLowerCase();
+      // v12.3.33: part-time retail/service roles. Don't push for volume or
+      // audience (that invites inflation). Flag wording that overstates the role.
+      if (entry && _RETAIL_TITLE.test(String(entry.title || ""))) {
+        if (/\bfinancial\s+(transactions?|operations|records|processing)\b|\bcash\s+management\b|\bhigh[- ]volume\s+financial\b/i.test(b)) {
+          return { weak: cap(b), note: "For a " + String(entry.title || "retail role").toLowerCase() + " role, \u201Cfinancial transactions\u201D can read as overstated. Describe it plainly, for example \u201CProcess customer transactions accurately in a high-volume store,\u201D and keep this job to one customer-focused bullet.", credibility: true };
+        }
+        return null;
+      }
+      if (hasNumber(b)) return null;                 // already quantified — leave it alone
 
       // Role-claim openers ("Supported…", "Contributed to…"): don't rewrite the verb (that would
       // inflate the claim). Instead, flag it to add the outcome, which is what it actually needs.
@@ -7380,17 +7744,20 @@ function App() {
       // Don't repeat the same note text across cards, and cap 2 cards per section
       // so the panel doesn't stack three near-identical items from one project.
       if (card.note && usedNotes.has(card.note)) return;
-      if ((sectionCount[card.section] || 0) >= 2) return;
+      const _capKey = card.capKey || card.section;
+      if ((sectionCount[_capKey] || 0) >= 2) return;
       seen.add(key);
       if (card.note) usedNotes.add(card.note);
-      sectionCount[card.section] = (sectionCount[card.section] || 0) + 1;
+      sectionCount[_capKey] = (sectionCount[_capKey] || 0) + 1;
       if (card.weak) card.weak = trunc(card.weak, 160);
       if (card.better) card.better = trunc(card.better, 190);
       examples.push(card);
     };
 
     // Gather candidate lines per section, in resume order.
-    const expList = (data.experience || []).filter(e => e && (e.title || e.org || (e.bullets || []).some(Boolean)));
+    // v12.3.33: most relevant entries first (internships and field matches up,
+    // part-time retail down), so the examples come from the work that matters.
+    const expList = rankEntriesForField(data);
     const projList = (data.projects || []).filter(p => p && (p.name || (p.bullets || []).some(Boolean)));
     const sumRaw = String(data.summary || "").trim();
 
@@ -7418,16 +7785,24 @@ function App() {
     // Pass 2 — real "tighten" cards from unquantified lines. Interleave Experience and
     // Projects so we don't stack multiple cards from a single section/project.
     const tightenPool = [];
-    for (const e of expList) for (const raw of (e.bullets || [])) { const t = tightenNote("Experience", raw); if (t) tightenPool.push({ kind: "tighten", section: "Experience", ...t }); }
+    // v12.3.33: one card per job before a second from the same job; a
+    // credibility card (overstated retail wording) is always included.
+    const _expPools = expList.map((e, ix) => (e.bullets || []).map(raw => tightenNote("Experience", raw, e)).filter(Boolean).map(c => ({ kind: "tighten", section: "Experience", capKey: "exp" + ix, ...c })));
+    const _cred = _expPools.flat().filter(c => c.credibility);
+    const _expRR = [];
+    for (let r = 0; r < 6; r++) _expPools.forEach(pl => { if (pl[r] && !pl[r].credibility) _expRR.push(pl[r]); });
+    _expRR.forEach(c => tightenPool.push(c));
     for (const p of projList) for (const raw of (p.bullets || [])) { const t = tightenNote("Projects", raw); if (t) tightenPool.push({ kind: "tighten", section: "Projects", ...t }); }
     // Alternate sections when adding.
     const expTight = tightenPool.filter(c => c.section === "Experience");
     const projTight = tightenPool.filter(c => c.section === "Projects");
     let ei = 0, pi = 0;
-    while (examples.length < 3 && (ei < expTight.length || pi < projTight.length)) {
+    const _limit = _cred.length ? 2 : 3;
+    while (examples.length < _limit && (ei < expTight.length || pi < projTight.length)) {
       if (ei < expTight.length) { addCard(expTight[ei++]); }
-      if (examples.length < 3 && pi < projTight.length) { addCard(projTight[pi++]); }
+      if (examples.length < _limit && pi < projTight.length) { addCard(projTight[pi++]); }
     }
+    _cred.slice(0, 1).forEach(c => addCard(c));
 
     // Pass 3 — lowest-value but still real: formatting-consistency (capitalization) cards.
     if (examples.length < 3) {
@@ -7519,7 +7894,26 @@ function App() {
           ? (certsInSkills(data).length
             ? "You list " + certsInSkills(data).slice(0, 2).join(" and ") + ". Finishing " + (/in progress/i.test(JSON.stringify(data.skills || {})) ? "the ones in progress" : "and showing them in a Certifications section") + " is your fastest credibility boost; for GRC roles, CISA or CRISC can follow."
             : "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost.")
-          : "In credential-driven fields (e.g. SHRM-CP/PHR for HR), a recognized certification is often the single fastest credibility boost.")
+          : (() => {
+              // v12.3.33: name a credential for the selected field.
+              const f = String(data.field || "");
+              const ex = /^finance/i.test(f) ? "Bloomberg Market Concepts (BMC), or a commercial banking or credit analysis certificate"
+                : /accounting/i.test(f) ? "progress toward the CPA, or QuickBooks Certified User"
+                : /human resources/i.test(f) ? "SHRM-CP or aPHR"
+                : /healthcare administration/i.test(f) ? "CMAA or a healthcare administration certificate"
+                : /healthcare|nursing/i.test(f) ? "BLS/ACLS or a specialty certification"
+                : /public health/i.test(f) ? "CHES"
+                : /project management/i.test(f) ? "CAPM"
+                : /supply chain|operations/i.test(f) ? "ASCM CPIM or a Lean Six Sigma Yellow Belt"
+                : /business administration|management/i.test(f) ? "CAPM or a Lean Six Sigma Yellow Belt"
+                : /law|legal/i.test(f) ? "a paralegal certificate"
+                : /social work|counseling/i.test(f) ? "the license your state requires (for example LMSW)"
+                : /education|public service/i.test(f) ? "your state teaching or program certification"
+                : "";
+              return ex
+                ? "In " + (f || "your field") + ", a recognized credential such as " + ex + " is often the fastest credibility boost. Add a Certifications section once you complete one."
+                : "In credential-driven fields, a recognized certification is often the single fastest credibility boost.";
+            })())
         : "A credential in your target field is fast, verifiable proof of commitment." });
     // Only suggest adding leadership if the resume doesn't already show it.
     if (!leadershipCount) bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
