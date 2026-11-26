@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.35: SECTIONS YOU MIGHT BE MISSING. New analyzeMissingSections() checks the resume against Coach Jeff's standard section list (Contact Information, Professional Summary, Education, Experience, Internships, Research Experience, Projects, Skills, Leadership & Activities, Volunteer Experience, Publications, Professional Affiliations, Languages, Certifications, Awards & Honors) and asks about each optional section that isn't there, with what to add if the answer is yes. Core sections are flagged elsewhere; Internships are handled by the split check; Research Experience and Publications are asked only for Sciences / Research or graduate-level tech and data; Projects are asked as optional in credential-driven fields; Professional Affiliations only when a professional organization already appears under Leadership & Activities; Languages and Awards & Honors are skipped when already mentioned (Dean's List, scholarships, a language line in Skills), and a 3.5+ GPA adds a Dean's List prompt. Shown as a Coach Review card and a report section. It asks rather than grades, so no score changes. certExampleForField() now supplies the field credential example for both this card and Bigger Projects. -->
 <!-- v12.3.34: MECHANICS, LAYOUT AND SCORES (second pass against the manual evaluation). (1) WRITING MECHANICS adds date ranges that mix a hyphen and an en dash, a phone number written "(818)-422-1528", and uneven spacing around "|". (2) New analyzeVerbChoice(): repeated opening verbs ("Analyzed (2)"), double verbs ("Tracked and maintained"), and filler openers ("Utilized", "Participate in", "Responsible for"); shown as a Coach Review improvement and counted in the Verb / Tense score. (3) LAYOUT CHECK: section headings now need 13 pt (12 pt passed before); left and right margins are reported separately and flagged when uneven (only the smaller one was shown); top and bottom are reported separately, and unused space at the bottom of a one-page resume is pointed out as room for a summary. (4) SCORECARD: no summary scores 25 (was 55; manual 1 of 5); a section structure that needs reordering scores 45 (was 72); verb choice and the entry format now lower their categories; the overall is weighted like the manual evaluation (content 30%, formatting 18%, skills 15%, ATS 15%, verbs 10%, summary 7%, order 5%) instead of a plain average; readiness bands match the manual 1-5 scale (Market-Ready 80+, Near-Ready 60-79). Rhea Malhotra's resume now scores 62 (manual 3.2 of 5, about 64). (5) The certification suggestion names a credential for the selected field (Finance: Bloomberg Market Concepts or a credit analysis certificate) instead of always citing SHRM for HR. (6) File names with draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)") get the rename quick win. -->
 <!-- v12.3.33: ALIGNMENT WITH THE MANUAL EVALUATION (Rhea Malhotra, Finance). (1) SECTION STRUCTURE: "RELEVANT COURSEWORK (...)" headings are recognized and folded into Education (they were missed, so the courses sat in Education as stray lines and the header check counted 4 of 5 headers). New analyzeStructureAdvice(): for a new or current graduate it recommends Summary, Education, Internships, Skills, Experience, Leadership & Activities when the uploaded resume has a coursework section, internships mixed with other jobs under one Experience header, or Skills at the bottom; the Section Order card no longer says "already leads with your strongest asset" in that case. The Section Headers table now says to fold Coursework into Education and to split an Experience header that holds internships and other jobs. Top Opportunities, First Impression and the Game Plan now lead with the summary, the section order and the entry format, in the manual evaluation's priority order. (2) ENTRY FORMAT: "Employer - Title" headers (spaced dash, no pipe) are split into employer and title at import, and a new "Job titles and locations" Content Check flags entries that lead with the employer and entries with no city and state. Activity roles no longer keep a trailing "|". Leftover "Overall GPA:" and "Expected Graduation:" labels are removed from education lines. (3) SKILLS EVIDENCE: a skill counts as shown when its key words appear together in one bullet ("Financial Statement Analysis" from "spread borrower financial statements"); wrapped skill rows are re-joined ("Forecasting & Budgeting" was split into "Forecasting &" and "Budgeting"); course names in Skills, Microsoft Office listed next to Excel, and terms the bullets show but Skills never names (e.g. Financial Spreading, Copilot) are reported separately; tools not shown get a skills-test note. Finance keyword bank adds Financial Statement Analysis, Credit Analysis, Financial Spreading, Ratio Analysis, Reconciliation and Valuation. (4) BEFORE -> AFTER: examples come from the most relevant roles first (internships and field matches up, part-time retail down, ties to the most recent), one per job before a second; retail bullets are never pushed for volume or audience, and wording such as "financial transactions" in a retail role is flagged as overstated. (5) PROJECTS: in credential-driven fields with relevant work (finance, accounting, HR, healthcare and similar) a missing Projects section no longer lowers recruiter confidence, the timeline step reads "Proof of the work", and the Game Plan no longer says "Add one strong project". The Recruiter Review names the most relevant role as the strongest evidence instead of the Skills list, and no longer calls a non-technical target an "entry-level technical role". -->
 <!-- v12.3.32: TARGET FIELD MENU. (1) "Business / Finance / Marketing" is retired; Finance already has its own field, and the combined keyword bank scored finance resumes against marketing terms (CRM, SEO, Salesforce) and, because the name contained "market", gave them portfolio advice. It is replaced by two fields: "Business Administration / Management" (credential profile: LinkedIn and certifications; keywords for operations, reporting, process improvement, project coordination, team leadership) and "Marketing / Sales" (portfolio profile; digital marketing, SEO, CRM, Salesforce, HubSpot, lead generation, campaign analysis). Both join the business cluster for Job Match adjacency. (2) Saved drafts using the retired name are moved to "Business Administration / Management". (3) The Target Field menu (upload screen and builder) is now alphabetical, with "General / Other" last. -->
@@ -172,7 +173,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.34";
+const BUILD_VERSION = "v12.3.35";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -5095,6 +5096,111 @@ function analyzeStructureAdvice(data) {
   };
 }
 
+// v12.3.34: one credential example per field, used by Bigger Projects and the
+// missing-sections card.
+function certExampleForField(f) {
+  f = String(f || "");
+  return /^finance/i.test(f) ? "Bloomberg Market Concepts (BMC), or a commercial banking or credit analysis certificate"
+    : /accounting/i.test(f) ? "progress toward the CPA, or QuickBooks Certified User"
+    : /human resources/i.test(f) ? "SHRM-CP or aPHR"
+    : /healthcare administration/i.test(f) ? "CMAA or a healthcare administration certificate"
+    : /healthcare|nursing/i.test(f) ? "BLS/ACLS or a specialty certification"
+    : /public health/i.test(f) ? "CHES"
+    : /project management/i.test(f) ? "CAPM"
+    : /supply chain|operations/i.test(f) ? "ASCM CPIM or a Lean Six Sigma Yellow Belt"
+    : /business administration|management/i.test(f) ? "CAPM or a Lean Six Sigma Yellow Belt"
+    : /marketing|sales/i.test(f) ? "Google Ads, Google Analytics or HubSpot certifications"
+    : /law|legal/i.test(f) ? "a paralegal certificate"
+    : /social work|counseling/i.test(f) ? "the license your state requires (for example LMSW)"
+    : /education|public service/i.test(f) ? "your state teaching or program certification"
+    : /grc|compliance|audit/i.test(f) ? "Security+, then CISA or CRISC"
+    : /cyber/i.test(f) ? "Security+ or CySA+"
+    : /cloud|devops/i.test(f) ? "AWS Cloud Practitioner or Azure Fundamentals"
+    : /help desk|it support|technical support|it specialist/i.test(f) ? "CompTIA A+ or Google IT Support"
+    : /quality assurance|qa/i.test(f) ? "ISTQB Foundation Level"
+    : /data|analytics/i.test(f) ? "Google Data Analytics or Microsoft PL-300 (Power BI)"
+    : "";
+}
+
+// ---- Sections you might be missing (v12.3.34) ----
+// Checks the resume against Coach Jeff's standard section list and asks about
+// each optional section that isn't there. It asks; it doesn't grade, so it
+// never changes a score. Core sections (Contact, Summary, Education,
+// Experience, Skills) are flagged elsewhere when missing.
+function analyzeMissingSections(data) {
+  const d = data || {};
+  const field = String(d.field || "");
+  const has = (k) => sectionHasContent(d, k);
+  const ws = fieldWorkSampleProfile(field);
+  const allText = collectResumeText(d);
+  const eduText = (d.education || []).map(e => [e.degree, e.school, e.gpa, e.coursework, e.honors].filter(Boolean).join(" ")).join(" ");
+  const actText = (d.activities || []).map(a => [a.role, a.org].concat(a.bullets || []).join(" ")).join(" ");
+  const sig = educationPlacementSignal(d);
+  const gradDegree = /\b(master|m\.s\.|m\.a\.|mba|ph\.?d|doctor)/i.test(eduText);
+  const researchField = /sciences|research/i.test(field) || ((ws === "code" || /data|analytics|ai/i.test(field)) && gradDegree);
+  const experienced = sig.careerStage === "experienced";
+  const gpaTxt = sig.bestGpa ? sig.bestGpa.toFixed(1) : "";
+  const items = [];
+  const add = (key, question, howTo) => items.push({ key, section: STANDARD_SECTION_HEADERS[key], question, howTo });
+
+  // Internships are covered by the split check when they sit under Experience.
+  if (researchField && !has("research")) add("research",
+    "Have you done research with a professor, lab, or research center?",
+    "Add a Research Experience section with your role, the lab or professor, dates, and what you did and found.");
+  if (!has("projects") && !(experienced && ws === "credential")) {
+    if (ws === "credential") add("projects",
+      "Optional for " + (field || "your field") + ". Is there a class or personal project you can describe accurately: what you built, the tool you used, and what you found?",
+      "If so, add a Projects section with one or two entries. It is the best way to show a tool you list in Skills but don't use in a bullet. If you can't recall the details, leave it off.");
+    else add("projects",
+      "Recruiters in " + (field || "your field") + " expect to see what you've built or made. Do you have class, personal, or team projects?",
+      "Add a Projects section with one or two of your strongest: the problem, the tools, what you did, and the result.");
+  }
+  if (!has("activities")) add("activities",
+    experienced
+      ? "Have you led a committee, employee group, or professional or community organization outside your main duties?"
+      : "Have you led or been active in a campus organization, team, club, or professional group?",
+    "Add a Leadership & Activities section with your role, the organization, dates, and one line on what you did.");
+  if (!has("volunteer")) add("volunteer",
+    "Do you volunteer regularly?",
+    "Add a Volunteer Experience section with the organization, your role, and dates. A single small commitment can be one line under Leadership & Activities instead.");
+  if (researchField && !has("publications")) add("publications",
+    "Have you written a paper, poster, or conference presentation?",
+    "List each one under Publications in a standard citation format.");
+  if (!has("affiliations")) {
+    const profOrg = (d.activities || []).find(a => /\bprofessional\b|honor society|\b(IEEE|ACM|SHRM|ALPFA|NSBE|SHPE|SWE|AMA|IMA|FMA)\b|beta alpha psi|delta sigma pi|alpha kappa psi|beta gamma sigma|phi beta lambda|financial management association/i.test([a.role, a.org].join(" ")));
+    if (profOrg) add("affiliations",
+      "You list " + (profOrg.org || profOrg.role) + " under Leadership & Activities. Is it a professional organization you belong to?",
+      "It can go under Professional Affiliations instead. With only one membership, keeping it with your leadership is fine.");
+  }
+  const _skText = [String(d.summary || "")].concat(d.skills ? [d.skills.technical, d.skills.dataVisualization, d.skills.tools, d.skills.domain] : []).join(" ");
+  const langMentioned = has("languages") || /\b(bilingual|fluent|native speaker|spanish|french|german|mandarin|chinese|cantonese|hindi|punjabi|urdu|arabic|korean|japanese|vietnamese|tagalog|portuguese|russian|italian|gujarati|tamil|telugu|bengali|farsi|persian|hebrew|polish|swahili|amharic|yoruba|igbo|haitian creole|asl|sign language)\b/i.test(_skText);
+  if (!langMentioned) add("languages",
+    "Do you speak a language besides English?",
+    "List it with your level, for example \u201CSpanish (conversational)\u201D or \u201CHindi (spoken)\u201D. One or two languages fit as a Languages line in Skills; more can be their own section.");
+  if (!has("certifications")) {
+    const ex = certExampleForField(field);
+    add("certifications",
+      "Have you completed a certification or license?",
+      "Add a Certifications section with the credential, the issuer, and the date. Short online courses usually belong on LinkedIn instead." + (ex ? " In " + field + ", examples include " + ex + "." : ""));
+  }
+  const honorShown = has("awards") || /\b(dean'?s list|president'?s list|honor roll|cum laude|summa|magna|scholarship|scholar\b|fellowship|award|first place|1st place|valedictorian|honors? (college|program))\b/i.test(allText);
+  if (!honorShown) {
+    if (experienced) add("awards",
+      "Have you received recognition at work, such as an employee award, a performance award, or a promotion for results?",
+      "Add an Awards & Honors section with the award, who gave it, and the year.");
+    else add("awards",
+      "Have you earned Dean's List semesters, scholarships, or competition placements?" + (sig.strongGpa && gpaTxt ? " With a " + gpaTxt + " GPA, check your transcript for Dean's List." : ""),
+      "One honor fits on your GPA line in Education (for example \u201CGPA: " + (gpaTxt || "3.6") + " | Dean's List, three semesters\u201D). Two or more get an Awards & Honors section.");
+  }
+
+  return {
+    applies: items.length > 0,
+    items,
+    count: items.length,
+    intro: "These standard sections aren't on your resume. Add one only if you have real content for it. Leaving a section off is better than filling it with weak material."
+  };
+}
+
 // ---- Section Header check (v12.3.18) ----
 // Compares every section header found in the UPLOADED resume with the standard
 // ATS header for that section and flags the ones that differ. Reads
@@ -6245,6 +6351,14 @@ function App() {
       parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thS + '">Your header</th><th style="' + thS + '">Standard header</th><th style="' + thS + '">What to do</th></tr>' +
         sh.rows.map(r => '<tr><td style="' + tdS + '">' + esc(r.raw) + '</td><td style="' + tdS + '">' + esc(r.standard) + '</td><td style="' + tdS + (r.status === "standard" ? 'color:#166534;' : (r.status === "variant" ? 'color:#6d7073;' : 'color:#b45309;font-weight:700;')) + '">' + esc(r.action) + '</td></tr>').join("") +
         '</table>');
+    }
+
+    // v12.3.34: sections you might be missing.
+    const msR = cr.missingSections || {};
+    if (msR.applies && Array.isArray(msR.items) && msR.items.length) {
+      parts.push(H2("Sections You Might Be Missing"));
+      parts.push(P(msR.intro, "color:#475569;"));
+      parts.push(UL(msR.items, it => '<b>' + esc(it.section) + ':</b> ' + esc(it.question) + ' ' + esc(it.howTo)));
     }
 
     // v12.3.26: Job Match evidence check, when a job posting was used.
@@ -7895,21 +8009,8 @@ function App() {
             ? "You list " + certsInSkills(data).slice(0, 2).join(" and ") + ". Finishing " + (/in progress/i.test(JSON.stringify(data.skills || {})) ? "the ones in progress" : "and showing them in a Certifications section") + " is your fastest credibility boost; for GRC roles, CISA or CRISC can follow."
             : "For GRC and compliance roles, a recognized certification (for example Security+, then CISA or CRISC) is often the fastest credibility boost.")
           : (() => {
-              // v12.3.33: name a credential for the selected field.
               const f = String(data.field || "");
-              const ex = /^finance/i.test(f) ? "Bloomberg Market Concepts (BMC), or a commercial banking or credit analysis certificate"
-                : /accounting/i.test(f) ? "progress toward the CPA, or QuickBooks Certified User"
-                : /human resources/i.test(f) ? "SHRM-CP or aPHR"
-                : /healthcare administration/i.test(f) ? "CMAA or a healthcare administration certificate"
-                : /healthcare|nursing/i.test(f) ? "BLS/ACLS or a specialty certification"
-                : /public health/i.test(f) ? "CHES"
-                : /project management/i.test(f) ? "CAPM"
-                : /supply chain|operations/i.test(f) ? "ASCM CPIM or a Lean Six Sigma Yellow Belt"
-                : /business administration|management/i.test(f) ? "CAPM or a Lean Six Sigma Yellow Belt"
-                : /law|legal/i.test(f) ? "a paralegal certificate"
-                : /social work|counseling/i.test(f) ? "the license your state requires (for example LMSW)"
-                : /education|public service/i.test(f) ? "your state teaching or program certification"
-                : "";
+              const ex = certExampleForField(f);
               return ex
                 ? "In " + (f || "your field") + ", a recognized credential such as " + ex + " is often the fastest credibility boost. Add a Certifications section once you complete one."
                 : "In credential-driven fields, a recognized certification is often the single fastest credibility boost.";
@@ -7971,7 +8072,8 @@ function App() {
       sectionOrderAdvice,
       sectionHeaders,
       layoutCheck,
-      contentChecks
+      contentChecks,
+      missingSections: analyzeMissingSections(data)
     };
   }, [data, hasSummary, hasSkills, hasExperience, hasProjects, hasEducation, leadershipCount, skillCount, expBulletCount, certCount, resumeStrength, recruiterReview, importText, currentResumeName]);
   // v12.3.20: one headline number. Resume Health now shows the scorecard overall
@@ -8593,6 +8695,25 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* 6a-2. Sections you might be missing (v12.3.34) */}
+          {(() => {
+            const ms = coachReview.missingSections || {};
+            if (!ms.applies) return null;
+            return (
+              <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderLeft: "5px solid #5980a6", borderRadius: 0, padding: "18px 20px", marginBottom: 16, boxShadow: "0 1px 5px rgba(0,0,0,0.06)", textAlign: "left" }}>
+                <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 4px" }}>🧩 Sections You Might Be Missing</h3>
+                <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>{ms.intro}</p>
+                {ms.items.map((it, i) => (
+                  <div key={i} style={{ padding: "8px 0", borderTop: i ? "1px solid #e9e9ea" : "none" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: "#3a3d3f", marginBottom: 2 }}>{it.section}</div>
+                    <div style={{ fontSize: 13, color: "#1d1f20", lineHeight: 1.5 }}>{it.question}</div>
+                    <div style={{ fontSize: 12.5, color: "#6d7073", lineHeight: 1.5 }}>{it.howTo}</div>
+                  </div>
+                ))}
               </div>
             );
           })()}
