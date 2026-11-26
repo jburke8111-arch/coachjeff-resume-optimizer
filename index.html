@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.37: SMALL CLEANUPS. (1) Five Major Areas: the Writing mechanics note names the kinds of issues found (date format, phone format, spacing) instead of "spelling, capitalization, punctuation, spacing, or brand-name". (2) Quantified bullets: spelled-out counts before a countable noun ("three credit reports", "five borrowers") now count as numbers, so Rhea Malhotra's resume shows 2 quantified bullets, not 1. (3) Resume Statistics: "Leadership" is now "Leadership & Activities" and counts every entry in that section (2 for Rhea), falling back to the leadership-evidence count when the section is empty. -->
 <!-- v12.3.36: CONSISTENCY ACROSS SCREENS (from a full read of Rhea Malhotra's screens and report). (1) The Snapshot's Resume Health label uses the scorecard's readiness bands (90+ Excellent, 80+ Market-Ready, 60+ Near-Ready, below 60 Needs Work); 62 read "Needs Improvement" on the Snapshot and "NEAR-READY" in the report. (2) Interview Conversion: "Moderate" now starts at 55, and the lowest band's advice no longer says "projects as experience". (3) Strengths: the most relevant role (e.g. Credit Analyst Intern at CoBank) leads Top 3 Strengths and What's Already Working; the Skills list counts as a strength only when most of it is backed up by bullets. (4) Coach Review: Highest-Impact Improvements and the Improvement Roadmap now include the section reorder and the job-title/location format, matching the Game Plan. (5) The mechanics risk flag is "Small mechanical errors" and names the kinds actually found (it said "casing, spelling, spacing, brand names" for date and phone fixes). (6) Recruiter timeline: when the final number is below the skills-scan number, the final note says which issues pulled it down. (7) Mechanics fixes are no longer repeated in Quick Wins when there are two or more (they are in Highest-Impact Improvements and the Credibility & Mechanics card). (8) Recruiter Review adds "Put your strongest work where I'll see it" when the section structure needs work. (9) "Add measurable wins" uses field examples (Finance: accounts or borrowers covered, report turnaround, errors reduced, dollars reconciled); Evaluation Context no longer calls a resume with no summary "focused" on the field. -->
 <!-- v12.3.35: SECTIONS YOU MIGHT BE MISSING. New analyzeMissingSections() checks the resume against Coach Jeff's standard section list (Contact Information, Professional Summary, Education, Experience, Internships, Research Experience, Projects, Skills, Leadership & Activities, Volunteer Experience, Publications, Professional Affiliations, Languages, Certifications, Awards & Honors) and asks about each optional section that isn't there, with what to add if the answer is yes. Core sections are flagged elsewhere; Internships are handled by the split check; Research Experience and Publications are asked only for Sciences / Research or graduate-level tech and data; Projects are asked as optional in credential-driven fields; Professional Affiliations only when a professional organization already appears under Leadership & Activities; Languages and Awards & Honors are skipped when already mentioned (Dean's List, scholarships, a language line in Skills), and a 3.5+ GPA adds a Dean's List prompt. Shown as a Coach Review card and a report section. It asks rather than grades, so no score changes. certExampleForField() now supplies the field credential example for both this card and Bigger Projects. -->
 <!-- v12.3.34: MECHANICS, LAYOUT AND SCORES (second pass against the manual evaluation). (1) WRITING MECHANICS adds date ranges that mix a hyphen and an en dash, a phone number written "(818)-422-1528", and uneven spacing around "|". (2) New analyzeVerbChoice(): repeated opening verbs ("Analyzed (2)"), double verbs ("Tracked and maintained"), and filler openers ("Utilized", "Participate in", "Responsible for"); shown as a Coach Review improvement and counted in the Verb / Tense score. (3) LAYOUT CHECK: section headings now need 13 pt (12 pt passed before); left and right margins are reported separately and flagged when uneven (only the smaller one was shown); top and bottom are reported separately, and unused space at the bottom of a one-page resume is pointed out as room for a summary. (4) SCORECARD: no summary scores 25 (was 55; manual 1 of 5); a section structure that needs reordering scores 45 (was 72); verb choice and the entry format now lower their categories; the overall is weighted like the manual evaluation (content 30%, formatting 18%, skills 15%, ATS 15%, verbs 10%, summary 7%, order 5%) instead of a plain average; readiness bands match the manual 1-5 scale (Market-Ready 80+, Near-Ready 60-79). Rhea Malhotra's resume now scores 62 (manual 3.2 of 5, about 64). (5) The certification suggestion names a credential for the selected field (Finance: Bloomberg Market Concepts or a credit analysis certificate) instead of always citing SHRM for HR. (6) File names with draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)") get the rename quick win. -->
@@ -174,7 +175,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.36";
+const BUILD_VERSION = "v12.3.37";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3014,7 +3015,9 @@ function isQuantifiedBullet(raw) {
     /\d+(\.\d+)?\s*(k\+?|m\+?|b\+?|million|thousand|billion)\b/i.test(stripped) ||
     /\b\d{2,}\+?\b/.test(stripped) ||                    // any standalone number ≥ 10 (users, records, hours…)
     /\b\d+(\.\d+)?\s*(users?|customers?|students?|records?|hours?|days?|weeks?|months?|people|teams?|projects?|models?|clients?|requests?|queries|images?|datasets?|gb|tb|ms|fps|reduction|increase|faster|improvement)/i.test(stripped) ||
-    /\bgpa\b[\s:]*\d/i.test(b);                          // GPA counts even on original
+    /\bgpa\b[\s:]*\d/i.test(b) ||                        // GPA counts even on original
+    // v12.3.37: spelled-out counts ("three credit reports", "five borrowers").
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|dozens?|hundreds?|thousands?)\s+(?:[a-z-]+\s+)?(users?|customers?|clients?|reports?|borrowers?|accounts?|students?|members?|people|teams?|projects?|events?|employees?|staff|stores?|locations?|sites?|cases?|loans?|deals?|companies|vendors?|patients?|courses?|sessions?|workshops?|presentations?|analyses|models?|dashboards?|audits?|departments?|interns?|volunteers?|campaigns?|products?|applications?|candidates?|hires?)\b/i.test(b);
   return strongMetric;
 }
 
@@ -4006,7 +4009,7 @@ function buildFiveMajorAreasReview(data, ctx) {
       title: "Writing mechanics",
       status: mechanics && mechanics.count ? "Needs attention" : "Strong",
       note: mechanics && mechanics.count
-        ? (mechanics.count + " small spelling, capitalization, punctuation, spacing, or brand-name issue" + (mechanics.count === 1 ? " was" : "s were") + " detected. These are quick fixes with an outsized effect on polish.")
+        ? (mechanics.count + " small mechanical issue" + (mechanics.count === 1 ? " was" : "s were") + " detected (" + Array.from(new Set((mechanics.findings || []).map(f => String(f.label || "").toLowerCase()).filter(Boolean))).slice(0, 4).join(", ") + "). These are quick fixes with an outsized effect on polish.")
         : "No meaningful spelling, capitalization, punctuation, or spacing problems were detected."
     },
     {
@@ -8367,7 +8370,7 @@ function App() {
 
             <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 15, boxShadow: "0 1px 5px rgba(0,0,0,.04)", textAlign: "left" }}>
               <h3 style={{ fontSize: 17, color: "#5980a6", margin: "0 0 9px" }}>Resume Statistics</h3>
-              {[["Skills", skillCount],["Experience bullets", expBulletCount],["Projects", projectCount],["Leadership", leadershipCount],["Certifications", certCount]].map(([label,value]) => <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f2f2f3", fontSize: 12.5 }}><span style={{ color: "#6d7073", fontWeight: 700 }}>{label}</span><b style={{ color: "#5980a6" }}>{value}</b></div>)}
+              {[["Skills", skillCount],["Experience bullets", expBulletCount],["Projects", projectCount],["Leadership & Activities", (data.activities || []).filter(x => x && (x.role || x.org)).length || leadershipCount],["Certifications", certCount]].map(([label,value]) => <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f2f2f3", fontSize: 12.5 }}><span style={{ color: "#6d7073", fontWeight: 700 }}>{label}</span><b style={{ color: "#5980a6" }}>{value}</b></div>)}
             </div>
           </div>
 
