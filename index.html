@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.26: EVIDENCE CHECK + WRITING-ERROR CHECKS (from a client whose Job Match went 48% to 100% mostly by adding Skills keywords, and whose resume kept merged bullets and placeholders through several manual reviews). (1) JOB MATCH EVIDENCE CHECK: each matched skill-like term is checked against the resume without its Skills section and Summary (experience, projects, education, certifications, other entries). Job Match shows "X of Y matched skills are backed by a bullet or project" and lists the Skills/Summary-only matches; the tailoring guidance and the Review Report (new "Job Match Evidence Check" section) say the same. The match % itself is unchanged. (2) MECHANICS: five new conservative checks, each quoting the exact spot: run-together bullets (lowercase word followed by a capitalized action verb, e.g. "workflows Coordinated with"), missing period between sentences (limited to common summary sentence openers, e.g. "in progress Business analyst"), stray punctuation at the start of a bullet ("•. Tested"), leftover placeholders ([brackets], TBD, XX%), and a generic target ("seeking a role." with no role named). Mechanics now reports up to 10 findings (was 8). -->
 <!-- v12.3.25: NEW TARGET FIELD "GRC / Compliance / IT Audit". Section order leads with Experience (Summary, Skills, Experience, Certifications, Education, Projects; Education still moves up for a new or current graduate). Its keyword bank covers GRC terms (risk assessment, internal controls, control testing, audit evidence, policy review, NIST, ISO 27001, SOC 2, HIPAA, PCI DSS, SOX, vendor/third-party risk, risk register). It is treated as credential-driven: no GitHub nudge, LinkedIn and certifications (Security+, CISA, CRISC) instead. Grouped with the technical fields for Job Match adjacency, next to Cybersecurity. -->
 <!-- v12.3.24: MANUAL-EVAL PARITY. Content Checks now adds three findings the manual evaluation catches: (4) "Too many bullets for some roles" (about 5 to 7 for a recent role of a year or more; 2 to 4 for a role under a year or one that ended 5+ years ago), also named in the "Cut to 2 pages" top priority; (5) "Repeated phrasing" for stock 3-word phrases reused across bullets (e.g. "ensuring adherence to", "resolving issues efficiently"); (6) "Education details" for degree entries missing a graduation date or written subject-first ("... Master's Degree") instead of degree-first as on the diploma. Certificates and bootcamps are exempt. Also adds a one-line note under the Snapshot's Recruiter confidence explaining how it differs from Resume Health. -->
 <!-- v12.3.23: SNAPSHOT AND RATING CONSISTENCY. (1) The Resume Snapshot's "Recruiter confidence" line was hard-coded to "High"; it now shows the Recruiter Review's actual percentage and decision (e.g. "77% — Borderline"), so the two screens agree. (2) Star ratings and impact labels now line up: verb tense gets 5 stars / High only when 2+ bullets slip (1 bullet = 3 stars / Medium), and Formatting polish with 2+ issues reads Medium to match its 3 stars. (3) Certifications listed inside the Skills section (e.g. "CompTIA Security+ (in progress)") now count in the Snapshot's Certifications total and completeness check, and the "Earn a targeted certification" tip names the ones already listed instead of suggesting the candidate start from zero. -->
@@ -163,7 +164,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.25-industry";
+const BUILD_VERSION = "v12.3.26-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -2395,14 +2396,69 @@ function analyzeBuilderOptimization(data) {
     const fitWarning = (crossDomainGaps.length >= 2)
       ? { skills: crossDomainGaps.slice(0, 6), inFieldGaps: inFieldGaps.slice(0, 6) }
       : null;
+    // v12.3.26: EVIDENCE CHECK. The match % counts a keyword the same whether it
+    // sits in a bullet or only in the Skills list, so a resume can reach a high
+    // match just by adding Skills keywords. Here we check each matched skill-like
+    // term against the resume WITHOUT the Skills section and Summary: experience,
+    // projects, education, certifications, and other entries. Terms found only in
+    // Skills/Summary are reported so the user can back them up or be ready to
+    // explain them. The match % itself is unchanged.
+    const evidenceText = (() => {
+      const parts = [];
+      ["experience", "projects", "education", "activities", "certifications", "awards", "publications", "volunteer", "affiliations", "research", "internships"].forEach(k => {
+        (data[k] || []).forEach(item => Object.keys(item || {}).forEach(key => {
+          if (key === "id") return;
+          const v = item[key];
+          if (Array.isArray(v)) parts.push(v.join(" ")); else if (typeof v === "string") parts.push(v);
+        }));
+      });
+      return parts.join(" ");
+    })();
+    const evidenceNorm = normForMatch(evidenceText);
+    const evidenceWords = new Set(Object.keys(tokenizeImportant(evidenceText)));
+    // Light word-form matching so "risk" is backed by "risks" and "reporting" by
+    // "reports" (plural, -ing, -ed, -ment forms). Applied word by word.
+    const _stemWord = (w) => w.length > 4 ? w.replace(/(ments|ment|ings|ing|ies|ed|es|s)$/, "") : w;
+    const _stemPhrase = (t) => " " + String(t || "").split(" ").filter(Boolean).map(_stemWord).join(" ") + " ";
+    const evidenceStem = _stemPhrase(evidenceNorm);
+    const _inEvidence = (n) => (" " + evidenceNorm + " ").includes(" " + n + " ") || evidenceStem.includes(_stemPhrase(n));
+    const evidenceHasSkill = (skill) => {
+      const n = normForMatch(skill);
+      if (!n) return false;
+      if (evidenceNorm.includes(n) || _inEvidence(n)) return true;
+      const ev = SKILL_EVIDENCE[n];
+      return !!(ev && ev.some(term => _inEvidence(normForMatch(term))));
+    };
+    const _evItems = [];
+    const _evSeen = new Set();
+    mentionedSkills.filter(s => resumeHasSkill(s)).forEach(s => {
+      const k = normForMatch(s);
+      if (_evSeen.has(k)) return;
+      _evSeen.add(k);
+      _evItems.push({ name: s, backed: evidenceHasSkill(s) });
+    });
+    present.filter(looksLikeSkill).forEach(w => {
+      const k = normForMatch(w);
+      if (!k || _evSeen.has(k)) return;
+      // Skip a single word already covered by a matched multi-word skill.
+      if ([..._evSeen].some(s => (" " + s + " ").includes(" " + k + " "))) return;
+      _evSeen.add(k);
+      _evItems.push({ name: w, backed: evidenceWords.has(w) || _inEvidence(k) });
+    });
+    const evidence = {
+      total: _evItems.length,
+      backedCount: _evItems.filter(i => i.backed).length,
+      listedOnly: _evItems.filter(i => !i.backed).map(i => i.name)
+    };
     const suggestions = [
+      ...(evidence.listedOnly.length ? ["Back up the skills that appear only in your Skills list or Summary (" + evidence.listedOnly.slice(0, 6).join(", ") + ") with a bullet or project that shows them, or be ready to explain them in an interview. Don't add skills just to raise the match score."] : []),
       missingSkills.length ? "Add only truthful missing skills from the posting where the resume has real evidence: " + missingSkills.slice(0, 6).join(", ") + "." : "Keep the skills section aligned with the job posting; the strongest listed skills are already visible.",
       missingDisplay.length ? "Use employer language naturally in the summary, skills, projects, or experience: " + missingDisplay.slice(0, 6).join(", ") + "." : "Keyword coverage is strong; focus on proof and metrics rather than adding more terms.",
       "Reorder the skills section so the job posting's most repeated required tools and skills appear first.",
       "Rewrite 1-2 bullets to show the same problems, tools, or outcomes emphasized in the posting.",
       "Do not add unsupported keywords; every added term should connect to coursework, projects, experience, certifications, or volunteer work."
     ];
-    keyword = { ranked, present, missing, missingDisplay, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct, fitWarning, crossDomainGaps, inFieldGaps };
+    keyword = { ranked, present, missing, missingDisplay, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct, fitWarning, crossDomainGaps, inFieldGaps, evidence };
   }
   return { resumeText, fieldSkills, skillsAlready, suggestedMissing, keyword };
 }
@@ -3086,6 +3142,80 @@ function analyzeMechanics(data, rawImportText) {
       "\u2013 item  \u2192  \u2022 item");
   }
 
+  // v12.3.26: STRUCTURAL WRITING ERRORS that survived several rounds of manual
+  // review on a real client resume. Each check quotes the exact spot so the
+  // user can find it. Patterns are deliberately conservative.
+  const _units = [
+    String((data && data.summary) || ""),
+    ...((data && data.experience) || []).flatMap(e => (e.bullets || [])),
+    ...((data && data.projects) || []).flatMap(p => (p.bullets || []))
+  ].map(s => String(s || "").trim()).filter(Boolean);
+  const _scan = _units.length ? _units : String(text || "").split(/\n/);
+  const _snip = (s, i, len) => {
+    const a = Math.max(0, i - 28), b = Math.min(s.length, i + (len || 0) + 28);
+    return (a > 0 ? "…" : "") + s.slice(a, b).trim() + (b < s.length ? "…" : "");
+  };
+
+  // (g) Run-together bullets: a lowercase word followed directly by a
+  // capitalized action verb with no punctuation, e.g. "...workflows Coordinated
+  // with...". This happens when two bullets get merged during editing.
+  const ACTION_VERBS = "Achieved|Administered|Analyzed|Assessed|Assigned|Assisted|Audited|Automated|Built|Collaborated|Collected|Communicated|Compiled|Completed|Conducted|Configured|Coordinated|Created|Defined|Delivered|Deployed|Designed|Developed|Documented|Drove|Enhanced|Ensured|Established|Evaluated|Executed|Facilitated|Generated|Guided|Identified|Implemented|Improved|Increased|Integrated|Investigated|Launched|Led|Maintained|Managed|Mapped|Monitored|Optimized|Organized|Oversaw|Partnered|Performed|Prepared|Presented|Prioritized|Produced|Provided|Reduced|Reported|Researched|Resolved|Reviewed|Streamlined|Supported|Tested|Tracked|Trained|Translated|Updated|Utilized|Validated|Wrote";
+  const runTogetherRe = new RegExp("\\b[a-z][a-z0-9\\-]*\\s+(" + ACTION_VERBS + ")\\s+(?:[a-z]|\\d)", "g");
+  const _rt = [];
+  for (const u of _scan) {
+    runTogetherRe.lastIndex = 0;
+    const m = runTogetherRe.exec(u);
+    if (m) _rt.push(_snip(u, m.index, m[0].length));
+  }
+  if (_rt.length) {
+    add("Run-together bullets",
+      (_rt.length === 1 ? "Two bullets appear to have merged into one" : _rt.length + " bullets appear to have other bullets merged into them") +
+      " — a new sentence starts mid-bullet with no punctuation. Split them into separate bullets: " + _rt.slice(0, 3).map(x => "“" + x + "”").join("; "),
+      _rt[0]);
+  }
+
+  // (h) Missing period between sentences: a sentence runs straight into a new
+  // one, e.g. "...Security+ in progress Business analyst with...". Limited to
+  // words that typically open a summary sentence, to avoid flagging proper nouns.
+  const SENTENCE_STARTERS = "Business|Experienced|Proven|Results|Detail|Skilled|Motivated|Dedicated|Passionate|Seeking|Currently|Recent|Certified|Highly|Strong|Accomplished|Analytical|Driven|Former|Versatile|Adept|Bringing|Known|Focused|Targeting";
+  const missingPeriodRe = new RegExp("\\b[a-z][a-z0-9\\+\\)]*\\s+(" + SENTENCE_STARTERS + ")\\s+[a-z]");
+  for (const u of _scan) {
+    const m = u.match(missingPeriodRe);
+    if (m) {
+      add("Missing period",
+        "A sentence runs straight into the next one with no period. Add a period where the new sentence starts: “" + _snip(u, m.index, m[0].length) + "”",
+        _snip(u, m.index, m[0].length));
+      break;
+    }
+  }
+
+  // (i) Stray punctuation at the start of a bullet, e.g. "•. Tested..." or ", Led...".
+  const _rawLines = String(rawImportText || "").split(/\n/);
+  const strayLine = _rawLines.find(l => /^\s*[•▪●\-\*]\s*[.,;:]+\s*\S/.test(l))
+    || _units.find(b => /^[.,;:]+\s*\S/.test(b));
+  if (strayLine) {
+    add("Stray punctuation",
+      "A bullet starts with a stray punctuation mark. Delete it: “" + strayLine.trim().slice(0, 60) + "”",
+      strayLine.trim().slice(0, 60));
+  }
+
+  // (j) Leftover placeholders: [brackets], TBD, or XX% left from a template or
+  // from coaching notes. A recruiter seeing these is an automatic red flag.
+  const phMatch = String(text || "").match(/\[[^\]\n]{2,60}\]|\bTBD\b|\bX{2,}%?/);
+  if (phMatch) {
+    add("Placeholder text",
+      "Placeholder text is still on the page: “" + phMatch[0] + "”. Replace it with the real information or remove it.",
+      phMatch[0]);
+  }
+
+  // (k) Generic target: "seeking a role." with no role named.
+  const genericTarget = String((data && data.summary) || text || "").match(/\b(?:seeking|targeting|pursuing)\s+(?:a|an)\s+(?:new\s+|full[- ]time\s+)?(?:role|position|job|opportunity)(?=\s*(?:[.,;]|$))/i);
+  if (genericTarget) {
+    add("Generic target",
+      "Your summary says “" + genericTarget[0] + "” without naming the role. Name the job you're applying for (for example, “seeking a GRC Analyst role”) and change it for each application.",
+      genericTarget[0]);
+  }
+
   let score = 100;
   if (findings.length === 1) score = 88;
   else if (findings.length === 2) score = 78;
@@ -3097,7 +3227,7 @@ function analyzeMechanics(data, rawImportText) {
     notes.push(findings.length + " small mechanical error" + (findings.length === 1 ? "" : "s") +
       " that a careful recruiter will notice: " + list + ". These are fast fixes, but each one quietly signals carelessness \u2014 clean them up before you apply.");
   }
-  return { findings: findings.slice(0, 8), count: findings.length, score, notes };
+  return { findings: findings.slice(0, 10), count: findings.length, score, notes };
 }
 
 // ---- 2. Metric credibility (Sections 14 & 21): can you defend this number? ----
@@ -5317,6 +5447,19 @@ function App() {
       parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thS + '">Your header</th><th style="' + thS + '">Standard header</th><th style="' + thS + '">What to do</th></tr>' +
         sh.rows.map(r => '<tr><td style="' + tdS + '">' + esc(r.raw) + '</td><td style="' + tdS + '">' + esc(r.standard) + '</td><td style="' + tdS + (r.status === "standard" ? 'color:#166534;' : (r.status === "variant" ? 'color:#6d7073;' : 'color:#b45309;font-weight:700;')) + '">' + esc(r.action) + '</td></tr>').join("") +
         '</table>');
+    }
+
+    // v12.3.26: Job Match evidence check, when a job posting was used.
+    const _kw = (typeof optimizer !== "undefined" && optimizer && optimizer.keyword) ? optimizer.keyword : null;
+    if (_kw && _kw.evidence && _kw.evidence.total > 0) {
+      const ev = _kw.evidence;
+      parts.push(H2("Job Match Evidence Check"));
+      parts.push(P("Job match: " + _kw.matchPct + "%. " + ev.backedCount + " of " + ev.total + " matched skills are backed by a bullet or project.", "color:#475569;"));
+      if (ev.listedOnly.length) {
+        parts.push(P("Listed in Skills or Summary only: " + ev.listedOnly.join(", ") + ". The match % counts these the same as skills you've shown in a bullet. Add a bullet or project that shows each one, or be ready to explain it in an interview."));
+      } else {
+        parts.push(P("Every matched skill shows up in your experience, projects, or education, not just your Skills list.", "color:#166534;"));
+      }
     }
 
     const anyCredibility = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
@@ -7768,6 +7911,16 @@ function App() {
                 <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#3a3d3f" }}>{optimizer.keyword.missingSkills.slice(0, 10).join(", ") || "No major suggested skill gaps from the posting."}</p>
               </div>
             </div>}
+            {optimizer.keyword && optimizer.keyword.evidence && optimizer.keyword.evidence.total > 0 && (() => {
+              const ev = optimizer.keyword.evidence;
+              const allBacked = ev.listedOnly.length === 0;
+              return <div style={{ marginTop: 12, padding: 12, borderRadius: 0, background: allBacked ? "#f0fdf4" : "#fffbeb", border: "1px solid " + (allBacked ? "#bbf7d0" : "#fde68a"), textAlign: "left" }}>
+                <b style={{ fontSize: 12, color: allBacked ? "#166534" : "#92400e" }}>Evidence check: {ev.backedCount} of {ev.total} matched skills are backed by a bullet or project</b>
+                {allBacked
+                  ? <p style={{ fontSize: 11.5, lineHeight: 1.5, margin: "6px 0 0", color: "#166534" }}>Every matched skill shows up in your experience, projects, or education, not just your Skills list.</p>
+                  : <p style={{ fontSize: 11.5, lineHeight: 1.5, margin: "6px 0 0", color: "#3a3d3f" }}><b>Listed in Skills or Summary only:</b> {ev.listedOnly.join(", ")}. The match % counts these the same as skills you've shown in a bullet. Add a bullet or project that shows each one, or be ready to explain it in an interview. Adding skills just to raise the score tends to surface in interviews.</p>}
+              </div>;
+            })()}
             {optimizer.keyword && optimizer.keyword.fitWarning && <div style={{ marginTop: 12, padding: 14, borderRadius: 0, background: "#fef2f2", border: "1.5px solid #fca5a5", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 18 }}>⚠️</span>
