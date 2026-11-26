@@ -4,6 +4,8 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.28: NO TABLES IN THE BACKUP .DOC OR PRINT/PDF. Title/date, company/location, degree/date, and certification rows used hidden two-cell tables, which some ATS parsers misread. The backup .doc export (used only if the .docx builder cannot load) now writes each row as a normal paragraph with a right tab stop at the 7-inch margin, in the markup Word itself uses for tabs in HTML (tab-stops + mso-tab-count). Print/PDF uses a flex row. Visual layout is unchanged. -->
+<!-- v12.3.27: EXPORT FORMAT MATCHES COACH JEFF'S RECOMMENDED SPEC. The .docx export already followed the spec; Print/PDF and the backup .doc export (shared HTML builder) did not. HTML builder now: name 20 pt bold caps with 6 pt after; contact line 11 pt black (links black, no underline) with 12 pt after; section headings 13 pt bold caps with 12 pt before / 6 pt after; skill lines 3 pt after; company/location row 3 pt after; bullets 0 pt with 6 pt after the last bullet between entries (replaces the old filler spacer paragraph); education degree first with 6 pt after the last line of each entry; certifications/awards 3 pt after. .docx consistency: 6 pt between projects, activities, and volunteer entries (previously 0), 3 pt after the org line in activities/volunteer, and education puts its 6 pt after the last line of each entry (previously after the school line even when location/GPA/coursework followed). -->
 <!-- v12.3.26: EVIDENCE CHECK + WRITING-ERROR CHECKS (from a client whose Job Match went 48% to 100% mostly by adding Skills keywords, and whose resume kept merged bullets and placeholders through several manual reviews). (1) JOB MATCH EVIDENCE CHECK: each matched skill-like term is checked against the resume without its Skills section and Summary (experience, projects, education, certifications, other entries). Job Match shows "X of Y matched skills are backed by a bullet or project" and lists the Skills/Summary-only matches; the tailoring guidance and the Review Report (new "Job Match Evidence Check" section) say the same. The match % itself is unchanged. (2) MECHANICS: five new conservative checks, each quoting the exact spot: run-together bullets (lowercase word followed by a capitalized action verb, e.g. "workflows Coordinated with"), missing period between sentences (limited to common summary sentence openers, e.g. "in progress Business analyst"), stray punctuation at the start of a bullet ("•. Tested"), leftover placeholders ([brackets], TBD, XX%), and a generic target ("seeking a role." with no role named). Mechanics now reports up to 10 findings (was 8). -->
 <!-- v12.3.25: NEW TARGET FIELD "GRC / Compliance / IT Audit". Section order leads with Experience (Summary, Skills, Experience, Certifications, Education, Projects; Education still moves up for a new or current graduate). Its keyword bank covers GRC terms (risk assessment, internal controls, control testing, audit evidence, policy review, NIST, ISO 27001, SOC 2, HIPAA, PCI DSS, SOX, vendor/third-party risk, risk register). It is treated as credential-driven: no GitHub nudge, LinkedIn and certifications (Security+, CISA, CRISC) instead. Grouped with the technical fields for Job Match adjacency, next to Cybersecurity. -->
 <!-- v12.3.24: MANUAL-EVAL PARITY. Content Checks now adds three findings the manual evaluation catches: (4) "Too many bullets for some roles" (about 5 to 7 for a recent role of a year or more; 2 to 4 for a role under a year or one that ended 5+ years ago), also named in the "Cut to 2 pages" top priority; (5) "Repeated phrasing" for stock 3-word phrases reused across bullets (e.g. "ensuring adherence to", "resolving issues efficiently"); (6) "Education details" for degree entries missing a graduation date or written subject-first ("... Master's Degree") instead of degree-first as on the diploma. Certificates and bootcamps are exempt. Also adds a one-line note under the Snapshot's Recruiter confidence explaining how it differs from Resume Health. -->
@@ -164,7 +166,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.26-industry";
+const BUILD_VERSION = "v12.3.28-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -5168,48 +5170,62 @@ function App() {
 
   const escapeHtml = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const buildResumeHtml = () => {
+  const buildResumeHtml = (opts = {}) => {
       const c = data.contact;
       const parts = [];
       // Header section
-      const headerHtml = (t) => '<p style="margin:10pt 0 4pt 0;"><span style="font-size:13pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
+      // v12.3.27: spacing matches Coach Jeff's recommended format (headings 13 pt
+      // bold caps, 12 pt before / 6 pt after; see the .docx builder).
+      const headerHtml = (t) => '<p style="margin:12pt 0 6pt 0;"><span style="font-size:13pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml(t.toUpperCase()) + '</span></p>';
       // Two-column row via a borderless full-width table
-      const twoCol = (l, r, o = {}) =>
-        '<table style="width:100%;border-collapse:collapse;margin:0;"><tr>' +
-        '<td style="border:none;padding:0;font-size:11pt;font-family:Arial,sans-serif;' + (o.lb ? "font-weight:bold;" : "") + '">' + escapeHtml(l) + '</td>' +
-        '<td style="border:none;padding:0;text-align:right;font-size:11pt;font-family:Arial,sans-serif;' + (o.ri ? "" : "") + '">' + escapeHtml(r || "") + '</td>' +
-        '</tr></table>';
+      // v12.3.28: no tables. Left text with right-aligned date/location on one line.
+      //  - Word (.doc backup export): a right tab stop at the 7" margin, written the
+      //    way Word itself saves tabs in HTML (tab-stops + mso-tab-count), so the
+      //    file opens in Word as a normal paragraph with a tab, ATS-safe.
+      //  - Print/PDF: a flex row (browsers ignore Word's tab markup).
+      const twoCol = (l, r, o = {}) => {
+        const after = (o.after || 0);
+        const left = (o.lb ? '<b>' + escapeHtml(l) + '</b>' : escapeHtml(l));
+        if (opts.word) {
+          return '<p style="margin:0 0 ' + after + 'pt 0;font-size:11pt;font-family:Arial,sans-serif;tab-stops:right 504.0pt;">' + left +
+            (r ? '<span style="mso-tab-count:1">\u00A0\u00A0</span>' + escapeHtml(r) : '') + '</p>';
+        }
+        return '<div style="display:flex;justify-content:space-between;gap:12pt;margin:0 0 ' + after + 'pt 0;font-size:11pt;font-family:Arial,sans-serif;"><span>' + left + '</span>' +
+          (r ? '<span style="white-space:nowrap;text-align:right;">' + escapeHtml(r) + '</span>' : '') + '</div>';
+      };
       const para = (html, after) => '<p style="margin:0 0 ' + (after != null ? after : 0) + 'pt 0;font-size:11pt;font-family:Arial,sans-serif;">' + html + '</p>';
-      const bullet = (t) => '<p style="margin:0 0 0pt 18pt;font-size:11pt;font-family:Arial,sans-serif;text-indent:-18pt;">&#8226;&nbsp;' + escapeHtml(t).replace(/^([••\-\*]\s*)+/, "") + '</p>';
+      const bullet = (t, after) => '<p style="margin:0 0 ' + (after || 0) + 'pt 18pt;font-size:11pt;font-family:Arial,sans-serif;text-indent:-18pt;">&#8226;&nbsp;' + escapeHtml(t).replace(/^([••\-\*]\s*)+/, "") + '</p>';
+      // Bullets with 0 pt between them and 6 pt after the last one (between entries).
+      const bulletsWithGap = (list, gapAfter) => list.forEach((b, i) => parts.push(bullet(b, i === list.length - 1 ? gapAfter : 0)));
 
       // Name + contact (centered)
-      parts.push('<p style="margin:0 0 2pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
+      parts.push('<p style="margin:0 0 6pt 0;text-align:center;"><span style="font-size:20pt;font-weight:bold;color:#000000;letter-spacing:1px;">' + escapeHtml((data.name || "First Last").toUpperCase()) + '</span></p>');
       const cp = [];
       if (c.cityState) cp.push(escapeHtml(c.cityState));
       if (c.phone) cp.push(escapeHtml(c.phone));
-      if (c.email) cp.push('<a href="mailto:' + escapeHtml(c.email) + '" style="color:#0563C1;">' + escapeHtml(c.email) + '</a>');
-      if (c.linkedin) cp.push('<a href="https://' + escapeHtml(c.linkedin.replace(/^https?:\/\//, "")) + '" style="color:#0563C1;">' + escapeHtml(cleanDisplayUrl(c.linkedin)) + '</a>');
-      if (c.portfolio) cp.push('<a href="https://' + escapeHtml(c.portfolio.replace(/^https?:\/\//, "")) + '" style="color:#0563C1;">' + escapeHtml(cleanDisplayUrl(c.portfolio)) + '</a>');
-      if (cp.length) parts.push('<p style="margin:0 0 8pt 0;text-align:center;font-size:11pt;color:#595959;font-family:Arial,sans-serif;">' + cp.join("&nbsp;&nbsp;|&nbsp;&nbsp;") + '</p>');
+      if (c.email) cp.push('<a href="mailto:' + escapeHtml(c.email) + '" style="color:#000000;text-decoration:none;">' + escapeHtml(c.email) + '</a>');
+      if (c.linkedin) cp.push('<a href="https://' + escapeHtml(c.linkedin.replace(/^https?:\/\//, "")) + '" style="color:#000000;text-decoration:none;">' + escapeHtml(cleanDisplayUrl(c.linkedin)) + '</a>');
+      if (c.portfolio) cp.push('<a href="https://' + escapeHtml(c.portfolio.replace(/^https?:\/\//, "")) + '" style="color:#000000;text-decoration:none;">' + escapeHtml(cleanDisplayUrl(c.portfolio)) + '</a>');
+      if (cp.length) parts.push('<p style="margin:0 0 12pt 0;text-align:center;font-size:11pt;color:#000000;font-family:Arial,sans-serif;">' + cp.join("&nbsp;&nbsp;|&nbsp;&nbsp;") + '</p>');
 
       for (const key of data.order) {
         if (data.hidden[key]) continue;
         if (key === "summary") { if (!data.summary.trim()) continue; parts.push(headerHtml("Professional Summary")); parts.push(para(escapeHtml(data.summary), 6)); }
         if (key === "skills") { const s = data.skills; if (!s.technical && !s.dataVisualization && !s.tools && !s.domain) continue; parts.push(headerHtml("Skills"));
-          if (s.technical) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.technical) || 'Technical Skills') + ':</b> ' + escapeHtml(s.technical), 0));
-          if (s.dataVisualization) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.dataVisualization) || 'Data Visualization') + ':</b> ' + escapeHtml(s.dataVisualization), 0));
-          if (s.tools) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.tools) || 'Tools & Platforms') + ':</b> ' + escapeHtml(s.tools), 0));
-          if (s.domain) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.domain) || 'Domain Knowledge') + ':</b> ' + escapeHtml(s.domain), 6)); }
+          if (s.technical) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.technical) || 'Technical Skills') + ':</b> ' + escapeHtml(s.technical), 3));
+          if (s.dataVisualization) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.dataVisualization) || 'Data Visualization') + ':</b> ' + escapeHtml(s.dataVisualization), 3));
+          if (s.tools) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.tools) || 'Tools & Platforms') + ':</b> ' + escapeHtml(s.tools), 3));
+          if (s.domain) parts.push(para('<b>' + escapeHtml((s.labels && s.labels.domain) || 'Domain Knowledge') + ':</b> ' + escapeHtml(s.domain), 3)); }
         if (key === "experience" || key === "internships" || key === "research") { const items = data.experience.filter((e) => (e.title || e.org) && expSectionOf(e) === key); if (!items.length) continue; parts.push(headerHtml(EXP_SECTION_LABELS[key]));
-          items.forEach((e) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true, after: 3 })); e.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); parts.push('<p style="margin:0 0 6pt 0;font-size:4pt;">&nbsp;</p>'); }); }
+          items.forEach((e, idx) => { parts.push(twoCol(e.title || "", [e.start, e.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(e.org || "", e.location || "", { ri: true, after: 3 })); bulletsWithGap(e.bullets.filter((b) => b.trim()), idx < items.length - 1 ? 6 : 0); }); }
         if (key === "projects") { const items = data.projects.filter((p) => p.name); if (!items.length) continue; parts.push(headerHtml("Projects"));
-          items.forEach((p) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); sp.accomplishments.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
+          items.forEach((p, idx) => { parts.push(twoCol(p.name || "", p.date || "", { lb: true })); const sp = splitProjectLines(p.bullets); if (sp.context) parts.push(para(escapeHtml(sp.context), 0)); if (sp.toolsValue) parts.push(para('<strong>Technologies:</strong> ' + escapeHtml(sp.toolsValue), 0)); bulletsWithGap(sp.accomplishments.filter((b) => b.trim()), idx < items.length - 1 ? 6 : 0); }); }
         if (key === "education") { const items = data.education.filter((ed) => ed.degree || ed.school); if (!items.length) continue; parts.push(headerHtml("Education"));
-          items.forEach((ed) => { const dm = splitDegreeMinor(ed.degree || ""); const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(); if (degreeText.length > 58 && (ed.grad || "").trim()) { parts.push(para('<b>' + escapeHtml(degreeText) + '</b>', 0)); parts.push(twoCol(ed.school || "", ed.grad || "", { lb: false })); } else { parts.push(twoCol(degreeText, ed.grad || "", { lb: true })); if (ed.school) parts.push(para(escapeHtml(ed.school), 0)); } if (ed.location) parts.push(para(escapeHtml(ed.location), 0)); if (dm.minor) parts.push(para(escapeHtml(dm.minor), 0)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) parts.push(para(escapeHtml(ex.join(" | ")), ed.coursework ? 0 : 6)); if (ed.coursework) parts.push(para("Relevant Coursework: " + escapeHtml(ed.coursework), 6)); }); }
+          items.forEach((ed) => { const dm = splitDegreeMinor(ed.degree || ""); const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim(); const lines = []; if (degreeText.length > 58 && (ed.grad || "").trim()) { parts.push(para('<b>' + escapeHtml(degreeText) + '</b>', 0)); lines.push(a => twoCol(ed.school || "", ed.grad || "", { lb: false, after: a })); } else { parts.push(twoCol(degreeText, ed.grad || "", { lb: true })); if (ed.school) lines.push(a => para(escapeHtml(ed.school), a)); } if (ed.location) lines.push(a => para(escapeHtml(ed.location), a)); if (dm.minor) lines.push(a => para(escapeHtml(dm.minor), a)); const ex = []; if (ed.gpa) ex.push("GPA: " + ed.gpa); if (ed.honor) ex.push(ed.honor); if (ex.length) lines.push(a => para(escapeHtml(ex.join(" | ")), a)); if (ed.coursework) lines.push(a => para("Relevant Coursework: " + escapeHtml(ed.coursework), a)); lines.forEach((fn, i) => parts.push(fn(i === lines.length - 1 ? 6 : 0))); }); }
         if (key === "activities") { const items = data.activities.filter((a) => a.role || a.org); if (!items.length) continue; parts.push(headerHtml("Leadership & Activities"));
-          items.forEach((a) => { parts.push(twoCol(a.role || "", [a.start, a.end].filter(Boolean).join(" – "), { lb: true })); if (a.org) parts.push(twoCol(a.org, "", { ri: true })); a.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
+          items.forEach((a, idx) => { parts.push(twoCol(a.role || "", [a.start, a.end].filter(Boolean).join(" – "), { lb: true })); if (a.org) parts.push(twoCol(a.org, "", { ri: true, after: 3 })); bulletsWithGap(a.bullets.filter((b) => b.trim()), idx < items.length - 1 ? 6 : 0); }); }
         if (key === "certifications") { const items = data.certifications.filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Certifications"));
-          items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), { lb: true })); }); }
+          items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), { lb: true, after: 3 })); }); }
         if (key === "awards") { const items = data.awards.filter((x) => x.name); if (!items.length) continue; parts.push(headerHtml("Awards & Honors"));
           items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), { lb: true })); }); }
         if (key === "publications") { const items = data.publications.filter((x) => x.citation); if (!items.length) continue; parts.push(headerHtml("Publications"));
@@ -5218,7 +5234,7 @@ function App() {
           items.forEach((x) => { parts.push(twoCol(x.name || "", [x.issuer, x.date].filter(Boolean).join(", "), {})); }); }
         if (key === "languages") { if (!String(data.languages || "").trim()) continue; parts.push(headerHtml("Languages")); parts.push(para(escapeHtml(data.languages), 6)); }
         if (key === "volunteer") { const items = data.volunteer.filter((v) => v.role || v.org); if (!items.length) continue; parts.push(headerHtml("Volunteer Experience"));
-          items.forEach((v) => { parts.push(twoCol(v.role || "", [v.start, v.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(v.org || "", v.location || "", { ri: true })); v.bullets.filter((b) => b.trim()).forEach((b) => parts.push(bullet(b))); }); }
+          items.forEach((v, idx) => { parts.push(twoCol(v.role || "", [v.start, v.end].filter(Boolean).join(" – "), { lb: true })); parts.push(twoCol(v.org || "", v.location || "", { ri: true, after: 3 })); bulletsWithGap(v.bullets.filter((b) => b.trim()), idx < items.length - 1 ? 6 : 0); }); }
       }
 
       const html =
@@ -5233,7 +5249,7 @@ function App() {
   const exportDocx = () => {
     setBusy(true);
     try {
-      const html = buildResumeHtml();
+      const html = buildResumeHtml({ word: true });
       const blob = new Blob(['\ufeff', html], { type: "application/msword" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -5668,8 +5684,9 @@ function App() {
           const sp = splitProjectLines(p.bullets);
           if (sp.context) P.push(xBody(sp.context, { after: 0, keepNext: true }));
           if (sp.toolsValue) P.push(xPar([xRun("Technologies: ", { bold: true, size: 11 }), xRun(sp.toolsValue, { size: 11 })], { after: 0, keepNext: true }));
-          sp.accomplishments.filter((b) => b.trim()).forEach((b) => P.push(xBullet(b)));
-          
+          // v12.3.27: 6 pt between projects, matching the 6 pt between jobs.
+          const pb = sp.accomplishments.filter((b) => b.trim());
+          pb.forEach((b, bi) => P.push(xBullet(b, { after: bi === pb.length - 1 && idx < items.length - 1 ? 120 : 0 })));
         });
       }
 
@@ -5680,26 +5697,23 @@ function App() {
         items.forEach((ed) => {
           const dm = splitDegreeMinor(ed.degree || "");
           const degreeText = String(dm.degree || "").replace(/\s*\|\s*$/, "").trim();
-          // v12.3.13: pair the graduation date with the DEGREE line (the primary
-          // credential), not the school line — so the date no longer floats out
-          // to the right of the school while the degree sits bare. This matches
-          // the Experience/Projects convention (title + date on one row) and the
-          // HTML export path. Long-degree guard mirrors Experience: if the degree
-          // is too long to share a line with a right-aligned date without ugly
-          // wrapping, keep the degree intact and place the date on the school row.
+          // v12.3.13: the graduation date pairs with the DEGREE line. Long degrees
+          // keep the degree intact and move the date to the school row.
+          // v12.3.27: 6 pt after the LAST line of each entry (degree first, school
+          // and date below), per Coach Jeff's recommended format.
+          const lines = [];
           if (degreeText.length > 58 && (ed.grad || "").trim()) {
             P.push(xPar(xRun(degreeText, { bold: true, size: 11 }), { after: 0, keepNext: true }));
-            P.push(xTabRow(ed.school || "", ed.grad || "", { after: 120, keepNext: true }));
+            lines.push((a, k) => xTabRow(ed.school || "", ed.grad || "", { after: a, keepNext: k }));
           } else {
             P.push(xTabRow(degreeText, ed.grad || "", { lb: true, after: 0, keepNext: true }));
-            if (ed.school) P.push(xBody(ed.school, { after: 120, keepNext: true }));
+            if (ed.school) lines.push((a, k) => xBody(ed.school, { after: a, keepNext: k }));
           }
-          if (ed.location) P.push(xBody(ed.location, { after: 0, keepNext: true }));
-          if (dm.minor) P.push(xBody(dm.minor, { after: 0, keepNext: true }));
-          const ex = [];
-          if (ed.gpa) ex.push("GPA: " + ed.gpa);
-          if (ex.length) P.push(xBody(ex.join(" | "), { after: ed.coursework ? 0 : 120, keepNext: !!ed.coursework }));
-          if (ed.coursework) P.push(xBody("Relevant Coursework: " + ed.coursework, { after: 120 }));
+          if (ed.location) lines.push((a, k) => xBody(ed.location, { after: a, keepNext: k }));
+          if (dm.minor) lines.push((a, k) => xBody(dm.minor, { after: a, keepNext: k }));
+          if (ed.gpa) lines.push((a, k) => xBody("GPA: " + ed.gpa, { after: a, keepNext: k }));
+          if (ed.coursework) lines.push((a, k) => xBody("Relevant Coursework: " + ed.coursework, { after: a, keepNext: k }));
+          lines.forEach((fn, i) => { const last = i === lines.length - 1; P.push(fn(last ? 120 : 0, !last)); });
         });
       }
 
@@ -5726,9 +5740,10 @@ function App() {
         P.push(xHeader("Leadership & Activities"));
         items.forEach((a, idx) => {
           P.push(xTabRow(a.role || "", [a.start, a.end].filter(Boolean).join(" – "), { lb: true, after: 0, keepNext: true }));
-          if (a.org) P.push(xTabRow(a.org, "", { after: 0, keepNext: true }));
-          a.bullets.filter((b) => b.trim()).forEach((b) => P.push(xBullet(b)));
-          
+          if (a.org) P.push(xTabRow(a.org, "", { after: 60, keepNext: true }));
+          const ab = a.bullets.filter((b) => b.trim());
+          ab.forEach((b, bi) => P.push(xBullet(b, { after: bi === ab.length - 1 && idx < items.length - 1 ? 120 : 0 })));
+
         });
       }
 
@@ -5764,9 +5779,10 @@ function App() {
         P.push(xHeader("Volunteer Experience"));
         items.forEach((v, idx) => {
           P.push(xTabRow(v.role || "", [v.start, v.end].filter(Boolean).join(" – "), { lb: true, after: 0, keepNext: true }));
-          P.push(xTabRow(formatOrgLocation(v.org, v.location), "", { after: 0, keepNext: true }));
-          v.bullets.filter((b) => b.trim()).forEach((b) => P.push(xBullet(b)));
-          
+          P.push(xTabRow(formatOrgLocation(v.org, v.location), "", { after: 60, keepNext: true }));
+          const vb = v.bullets.filter((b) => b.trim());
+          vb.forEach((b, bi) => P.push(xBullet(b, { after: bi === vb.length - 1 && idx < items.length - 1 ? 120 : 0 })));
+
         });
       }
     }
