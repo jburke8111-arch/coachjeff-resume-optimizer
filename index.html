@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.32: TARGET FIELD MENU. (1) "Business / Finance / Marketing" is retired; Finance already has its own field, and the combined keyword bank scored finance resumes against marketing terms (CRM, SEO, Salesforce) and, because the name contained "market", gave them portfolio advice. It is replaced by two fields: "Business Administration / Management" (credential profile: LinkedIn and certifications; keywords for operations, reporting, process improvement, project coordination, team leadership) and "Marketing / Sales" (portfolio profile; digital marketing, SEO, CRM, Salesforce, HubSpot, lead generation, campaign analysis). Both join the business cluster for Job Match adjacency. (2) Saved drafts using the retired name are moved to "Business Administration / Management". (3) The Target Field menu (upload screen and builder) is now alphabetical, with "General / Other" last. -->
 <!-- v12.3.31: REQUIREMENTS CHECK + WORD LAYOUT CHECK. (1) Job Match now pulls hard requirements from the posting (years of experience, degree level, named certifications in one-of groups, security clearance), labels each Required or Preferred from the posting headings and wording ("preferred", "a plus", "must", "minimum"), and compares each with the resume (Shown, Close, In progress, Equivalent experience accepted, Not shown). Years use dated experience with overlapping jobs counted once. An Experience gap warning appears when a required year count exceeds the resume by more than a year, since Job Match counts keywords, not years. Shown in Job Match, the tailoring guidance, and the Review Report. (2) Word uploads now feed the Layout Check (previously PDF only): body/heading/name/contact sizes resolved through run, style and document defaults; page margins; page and total word count (page count is not read from the file because the stored count goes stale); plus Word-only flags for tables, text boxes, multiple columns, contact info only in the page header, 3+ blank spacer lines, dates pushed right with spaces or stacked tabs, more than 2 fonts, and images. -->
 <!-- v12.3.30: COPIED POSTING TEXT. Job Match flags runs of 6+ words that appear word for word in both the posting and the resume (Summary, Skills, Experience, Projects; Education and Certifications are skipped because matching degree wording is normal). Each run needs 4+ content words, so ordinary phrasing does not trigger it. Shown as a "Possible copied posting text" card in Job Match, in the tailoring guidance, and in the Review Report under Job Match Evidence Check. Advice: keep it only if true, and say it in your own words. -->
 <!-- v12.3.29: RESULTS WITHOUT A NUMBER. Content Checks adds two findings. (1) "Results without a number": bullets with no digit that claim an outcome ("improving compliance rates", "enhancing client satisfaction", "resulting in effective decision-making", "increasing user engagement"); purpose phrasing ("to improve ...") is skipped. Advice: add the real number if known and explainable, or cut the result phrase; don't estimate. (2) "Missing number": a result with "by" and no figure ("improved compliance rates by and ..."). Verified on a client resume: 16 unmeasured results and 1 blank metric caught in the original; 1 real case left in the final version; no hits on purpose phrases or bullets that already have numbers. Shown in the Coach Review and the Review Report via Content Checks. -->
@@ -169,7 +170,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.31-industry";
+const BUILD_VERSION = "v12.3.32";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -180,7 +181,8 @@ const FIELD_PRESETS = {
   "Data / Analytics / AI/ML": ["summary", "skills", "projects", "experience", "education", "publications", "certifications", "awards", "activities", "volunteer"],
   "AI / Machine Learning / HPC": ["summary", "skills", "projects", "experience", "education", "publications", "certifications", "awards", "activities", "volunteer"],
   "Creative / Design / Media": ["summary", "projects", "skills", "experience", "education", "activities", "awards", "certifications", "volunteer", "publications"],
-  "Business / Finance / Marketing": ["summary", "experience", "education", "skills", "projects", "activities", "certifications", "awards", "volunteer", "publications"],
+  "Business Administration / Management": ["summary", "experience", "education", "skills", "projects", "activities", "certifications", "awards", "volunteer", "publications"],
+  "Marketing / Sales": ["summary", "experience", "projects", "skills", "education", "activities", "certifications", "awards", "volunteer", "publications"],
   "Human Resources": ["summary", "experience", "education", "skills", "certifications", "activities", "awards", "volunteer", "projects", "publications"],
   "Healthcare / Nursing": ["summary", "education", "certifications", "skills", "experience", "activities", "volunteer", "awards", "projects", "publications"],
   "Sciences / Research": ["summary", "education", "experience", "publications", "skills", "projects", "activities", "certifications", "awards", "volunteer"],
@@ -205,6 +207,16 @@ const FIELD_PRESETS = {
   "General / Other": ["summary", "education", "skills", "experience", "projects", "activities", "certifications", "awards", "volunteer", "publications"],
 };
 
+// v12.3.32: Target Field menu is alphabetical, with "General / Other" kept last
+// as the fallback. Order here is display only; scoring is keyed by name.
+const FIELD_OPTIONS = Object.keys(FIELD_PRESETS)
+  .filter((f) => f !== "General / Other")
+  .sort((a, b) => a.localeCompare(b))
+  .concat(["General / Other"]);
+
+// v12.3.32: retired field names, mapped to their replacement for saved drafts.
+const RETIRED_FIELDS = { "Business / Finance / Marketing": "Business Administration / Management" };
+
 // Classifies a target field by what kind of "prove your work" asset a recruiter expects.
 // - "code":      a code host (GitHub/GitLab) is a real, expected signal
 // - "portfolio": a visual/writing portfolio site is the norm
@@ -225,7 +237,8 @@ const SKILL_BANK = {
   "Data / Analytics / AI/ML": ["Python", "SQL", "Excel", "Tableau", "Power BI", "Data Analysis", "Data Visualization", "Statistics", "Pandas", "NumPy", "Machine Learning", "Dashboarding", "Reporting", "Business Intelligence", "Research", "Communication"],
   "AI / Machine Learning / HPC": ["Python", "PyTorch", "TensorFlow", "scikit-learn", "Keras", "NumPy", "Pandas", "CUDA", "C++", "MPI", "SLURM", "Linux", "Docker", "FAISS", "Vector Search", "High-Performance Computing", "Machine Learning", "Deep Learning", "Computer Vision", "Research"],
   "Creative / Design / Media": ["Adobe Creative Suite", "Canva", "Figma", "Graphic Design", "Content Creation", "Copywriting", "Social Media", "Branding", "Video Editing", "Portfolio Development", "Storytelling", "User Research", "UX Design", "Presentation Design", "Project Coordination"],
-  "Business / Finance / Marketing": ["Excel", "Financial Analysis", "Market Research", "CRM", "Salesforce", "Data Analysis", "Budget Tracking", "Forecasting", "Customer Relationship Management", "Lead Generation", "Digital Marketing", "SEO", "Google Analytics", "Campaign Analysis", "Presentation Skills", "Business Development", "Account Management"],
+  "Business Administration / Management": ["Excel", "Microsoft Office", "Data Analysis", "Reporting", "Business Analysis", "Operations", "Process Improvement", "Project Coordination", "Budget Tracking", "Stakeholder Communication", "Team Leadership", "Customer Service", "Market Research", "Presentation Skills", "Problem Solving", "Time Management"],
+  "Marketing / Sales": ["Digital Marketing", "Social Media", "Content Creation", "Email Marketing", "SEO", "Google Analytics", "Market Research", "Campaign Analysis", "CRM", "Salesforce", "HubSpot", "Lead Generation", "Customer Relationship Management", "Business Development", "Account Management", "Copywriting", "Presentation Skills", "Excel"],
   "Human Resources": ["Recruiting", "Onboarding", "Employee Relations", "HRIS", "Workday", "ADP", "Benefits Administration", "Compliance", "Interview Coordination", "Applicant Tracking Systems", "Talent Acquisition", "Training Coordination", "Policy Documentation", "Confidential Records", "Customer Service"],
   "Healthcare / Nursing": ["Patient Care", "Clinical Documentation", "HIPAA", "Vital Signs", "Care Coordination", "EHR", "Epic", "Medical Terminology", "Patient Education", "Quality Improvement", "Scheduling", "Triage", "Team Collaboration", "Safety Protocols"],
   "Sciences / Research": ["Research Design", "Literature Review", "Data Collection", "Data Analysis", "Laboratory Techniques", "Statistical Analysis", "SPSS", "R", "Python", "Quality Control", "Technical Writing", "Scientific Communication", "Protocol Development", "Data Visualization"],
@@ -2541,7 +2554,7 @@ function analyzeBuilderOptimization(data) {
     // roles while still catching true domain mismatches.
     const FIELD_CLUSTERS = [
       ["Technology / CS / Engineering", "Data / Analytics / AI/ML", "AI / Machine Learning / HPC", "Cloud / DevOps", "Cybersecurity", "GRC / Compliance / IT Audit", "Quality Assurance / QA Testing", "Help Desk / IT Support", "Technical Support Specialist", "IT Specialist", "Product Management"],
-      ["Business / Finance / Marketing", "Accounting", "Finance", "Project Management", "Supply Chain / Operations", "Human Resources"],
+      ["Business Administration / Management", "Marketing / Sales", "Accounting", "Finance", "Project Management", "Supply Chain / Operations", "Human Resources"],
       ["Healthcare / Nursing", "Public Health", "Healthcare Administration"],
       ["Creative / Design / Media"],
       ["Sciences / Research", "Engineering (non-software)"],
@@ -5361,6 +5374,8 @@ function App() {
         if (s && s.order && s.contact) {
           // Migrate older drafts to the current shape.
           if (s.jobPost === undefined) s.jobPost = "";
+          // v12.3.32: retired target fields move to their replacement.
+          if (RETIRED_FIELDS[s.field]) s.field = RETIRED_FIELDS[s.field];
           if (s.jobPostUrl === undefined) s.jobPostUrl = "";
           if (!s.certifications) s.certifications = [emptyCert()];
           if (!s.awards) s.awards = [emptyAward()];
@@ -7680,7 +7695,7 @@ function App() {
               <p style={{ fontSize: 11.5, color: "#6d7073", lineHeight: 1.35, marginBottom: 8, textAlign: "left" }}>Choose your target role once before importing your resume. Coach Jeff will personalize the entire workflow using this selection.</p>
               <select value={data.field} onChange={(e) => applyPreset(e.target.value)} style={iC}>
                 <option value="">— What type of role are you targeting? —</option>
-                {Object.keys(FIELD_PRESETS).map((f) => <option key={f}>{f}</option>)}
+                {FIELD_OPTIONS.map((f) => <option key={f}>{f}</option>)}
               </select>
             </div>
             <label style={{ fontSize: 12, fontWeight: 800, color: "#6d7073", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>{currentResumeName ? "Current Resume" : "Upload Resume"}</label>
@@ -8458,7 +8473,7 @@ function App() {
                     <div style={{ fontSize: 10.5, color: "#6d7073", marginBottom: 5 }}>Only change this if the student's career direction changed.</div>
                     <select value={data.field} onChange={(e) => applyPreset(e.target.value)} style={iC}>
                       <option value="">— Select your field —</option>
-                      {Object.keys(FIELD_PRESETS).map((f) => <option key={f}>{f}</option>)}
+                      {FIELD_OPTIONS.map((f) => <option key={f}>{f}</option>)}
                     </select>
                   </div>
                 </details>
