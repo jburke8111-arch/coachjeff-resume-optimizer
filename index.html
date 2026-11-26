@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.36: CONSISTENCY ACROSS SCREENS (from a full read of Rhea Malhotra's screens and report). (1) The Snapshot's Resume Health label uses the scorecard's readiness bands (90+ Excellent, 80+ Market-Ready, 60+ Near-Ready, below 60 Needs Work); 62 read "Needs Improvement" on the Snapshot and "NEAR-READY" in the report. (2) Interview Conversion: "Moderate" now starts at 55, and the lowest band's advice no longer says "projects as experience". (3) Strengths: the most relevant role (e.g. Credit Analyst Intern at CoBank) leads Top 3 Strengths and What's Already Working; the Skills list counts as a strength only when most of it is backed up by bullets. (4) Coach Review: Highest-Impact Improvements and the Improvement Roadmap now include the section reorder and the job-title/location format, matching the Game Plan. (5) The mechanics risk flag is "Small mechanical errors" and names the kinds actually found (it said "casing, spelling, spacing, brand names" for date and phone fixes). (6) Recruiter timeline: when the final number is below the skills-scan number, the final note says which issues pulled it down. (7) Mechanics fixes are no longer repeated in Quick Wins when there are two or more (they are in Highest-Impact Improvements and the Credibility & Mechanics card). (8) Recruiter Review adds "Put your strongest work where I'll see it" when the section structure needs work. (9) "Add measurable wins" uses field examples (Finance: accounts or borrowers covered, report turnaround, errors reduced, dollars reconciled); Evaluation Context no longer calls a resume with no summary "focused" on the field. -->
 <!-- v12.3.35: SECTIONS YOU MIGHT BE MISSING. New analyzeMissingSections() checks the resume against Coach Jeff's standard section list (Contact Information, Professional Summary, Education, Experience, Internships, Research Experience, Projects, Skills, Leadership & Activities, Volunteer Experience, Publications, Professional Affiliations, Languages, Certifications, Awards & Honors) and asks about each optional section that isn't there, with what to add if the answer is yes. Core sections are flagged elsewhere; Internships are handled by the split check; Research Experience and Publications are asked only for Sciences / Research or graduate-level tech and data; Projects are asked as optional in credential-driven fields; Professional Affiliations only when a professional organization already appears under Leadership & Activities; Languages and Awards & Honors are skipped when already mentioned (Dean's List, scholarships, a language line in Skills), and a 3.5+ GPA adds a Dean's List prompt. Shown as a Coach Review card and a report section. It asks rather than grades, so no score changes. certExampleForField() now supplies the field credential example for both this card and Bigger Projects. -->
 <!-- v12.3.34: MECHANICS, LAYOUT AND SCORES (second pass against the manual evaluation). (1) WRITING MECHANICS adds date ranges that mix a hyphen and an en dash, a phone number written "(818)-422-1528", and uneven spacing around "|". (2) New analyzeVerbChoice(): repeated opening verbs ("Analyzed (2)"), double verbs ("Tracked and maintained"), and filler openers ("Utilized", "Participate in", "Responsible for"); shown as a Coach Review improvement and counted in the Verb / Tense score. (3) LAYOUT CHECK: section headings now need 13 pt (12 pt passed before); left and right margins are reported separately and flagged when uneven (only the smaller one was shown); top and bottom are reported separately, and unused space at the bottom of a one-page resume is pointed out as room for a summary. (4) SCORECARD: no summary scores 25 (was 55; manual 1 of 5); a section structure that needs reordering scores 45 (was 72); verb choice and the entry format now lower their categories; the overall is weighted like the manual evaluation (content 30%, formatting 18%, skills 15%, ATS 15%, verbs 10%, summary 7%, order 5%) instead of a plain average; readiness bands match the manual 1-5 scale (Market-Ready 80+, Near-Ready 60-79). Rhea Malhotra's resume now scores 62 (manual 3.2 of 5, about 64). (5) The certification suggestion names a credential for the selected field (Finance: Bloomberg Market Concepts or a credit analysis certificate) instead of always citing SHRM for HR. (6) File names with draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)") get the rename quick win. -->
 <!-- v12.3.33: ALIGNMENT WITH THE MANUAL EVALUATION (Rhea Malhotra, Finance). (1) SECTION STRUCTURE: "RELEVANT COURSEWORK (...)" headings are recognized and folded into Education (they were missed, so the courses sat in Education as stray lines and the header check counted 4 of 5 headers). New analyzeStructureAdvice(): for a new or current graduate it recommends Summary, Education, Internships, Skills, Experience, Leadership & Activities when the uploaded resume has a coursework section, internships mixed with other jobs under one Experience header, or Skills at the bottom; the Section Order card no longer says "already leads with your strongest asset" in that case. The Section Headers table now says to fold Coursework into Education and to split an Experience header that holds internships and other jobs. Top Opportunities, First Impression and the Game Plan now lead with the summary, the section order and the entry format, in the manual evaluation's priority order. (2) ENTRY FORMAT: "Employer - Title" headers (spaced dash, no pipe) are split into employer and title at import, and a new "Job titles and locations" Content Check flags entries that lead with the employer and entries with no city and state. Activity roles no longer keep a trailing "|". Leftover "Overall GPA:" and "Expected Graduation:" labels are removed from education lines. (3) SKILLS EVIDENCE: a skill counts as shown when its key words appear together in one bullet ("Financial Statement Analysis" from "spread borrower financial statements"); wrapped skill rows are re-joined ("Forecasting & Budgeting" was split into "Forecasting &" and "Budgeting"); course names in Skills, Microsoft Office listed next to Excel, and terms the bullets show but Skills never names (e.g. Financial Spreading, Copilot) are reported separately; tools not shown get a skills-test note. Finance keyword bank adds Financial Statement Analysis, Credit Analysis, Financial Spreading, Ratio Analysis, Reconciliation and Valuation. (4) BEFORE -> AFTER: examples come from the most relevant roles first (internships and field matches up, part-time retail down, ties to the most recent), one per job before a second; retail bullets are never pushed for volume or audience, and wording such as "financial transactions" in a retail role is flagged as overstated. (5) PROJECTS: in credential-driven fields with relevant work (finance, accounting, HR, healthcare and similar) a missing Projects section no longer lowers recruiter confidence, the timeline step reads "Proof of the work", and the Game Plan no longer says "Add one strong project". The Recruiter Review names the most relevant role as the strongest evidence instead of the Skills list, and no longer calls a non-technical target an "entry-level technical role". -->
@@ -173,7 +174,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.35";
+const BUILD_VERSION = "v12.3.36";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -3956,9 +3957,10 @@ function buildRiskFlags(data, ctx) {
   }
   if (mechanics && mechanics.count) {
     flags.push({
-      title: "Small typos & casing",
+      title: "Small mechanical errors",
+      // v12.3.36: name the kinds actually found.
       note: mechanics.count + " minor issue" + (mechanics.count === 1 ? "" : "s") +
-        " (casing, spelling, spacing, brand names). Individually trivial, but together they signal less polish than the content deserves. Five-minute fix, outsized payoff."
+        " (" + Array.from(new Set((mechanics.findings || []).map(f => String(f.label || "").toLowerCase()).filter(Boolean))).slice(0, 4).join(", ") + "). Individually trivial, but together they signal less polish than the content deserves. Five-minute fix, outsized payoff."
     });
   }
   return flags;
@@ -4044,12 +4046,12 @@ function buildConversionEstimate(recruiterReview, scorecard, fieldFit) {
   } else if (blend >= 72) {
     band = "Moderate-to-High";
     note = "The foundation is competitive. Clearing the top fixes — especially the risk flags above — should meaningfully raise your odds for suitable roles.";
-  } else if (blend >= 60) {
+  } else if (blend >= 55) {
     band = "Moderate";
     note = "There's real material here, but positioning and evidence need tightening before this competes for higher-demand postings.";
   } else {
     band = "Building";
-    note = "Focus first on direction (summary + target role) and evidence (projects as experience). Those moves raise conversion faster than anything else.";
+    note = "Focus first on direction (a summary that names the target role) and evidence (numbers and results in your bullets). Those moves raise conversion faster than anything else.";
   }
   return {
     band, note,
@@ -5494,7 +5496,7 @@ function buildEvaluationContext(data, resumeStrength) {
   const present = identities.filter(i => i.re.test(text)).map(i => i.name);
 
   const strengthLine = "You've given a clear target: " + field +
-    " roles. That direction should drive your summary, skill order, and which projects lead.";
+    " roles. That direction should drive your summary, skill order, and " + ((data.projects || []).some(p => p && p.name) ? "which projects lead." : "which experience leads.");
 
   let focusNote = "";
   if (present.length >= 3) {
@@ -5505,7 +5507,9 @@ function buildEvaluationContext(data, resumeStrength) {
     focusNote = "The resume shows limited evidence matching " + field +
       " so far. Make sure your strongest " + field + "-relevant work is near the top and named in the summary.";
   } else {
-    focusNote = "The resume reads as focused on " + field + " — good. Keep the summary and skill order pointed at that target.";
+    focusNote = String(data.summary || "").trim().length < 40
+      ? "Your experience fits " + field + ", but nothing at the top says so yet. A Professional Summary that names the role will make that focus clear."
+      : "The resume reads as focused on " + field + " — good. Keep the summary and skill order pointed at that target.";
   }
 
   const tailorTip = "Recommended: keep one master resume, then tailor a copy per application (summary + skill order) toward whichever role you're targeting.";
@@ -7026,7 +7030,8 @@ function App() {
 
   const saveBadge = { idle: ["Draft", "#8b8e91"], saving: ["Saving…", "#d97706"], saved: ["Saved", "#16a34a"], error: ["Save failed", "#dc2626"] }[saveState];
 
-  const scoreStatus = (score) => score >= 90 ? "Excellent" : score >= 80 ? "Strong" : score >= 70 ? "Good" : score >= 60 ? "Needs Improvement" : "Major Improvements Needed";
+  // v12.3.36: same bands as the scorecard's market readiness (80 / 60).
+  const scoreStatus = (score) => score >= 90 ? "Excellent" : score >= 80 ? "Market-Ready" : score >= 60 ? "Near-Ready" : "Needs Work";
   const snapshotCard = (title, children, footer) => (
     <div style={{ background: "#fff", border: "1px solid #d6d6d8", borderRadius: 0, padding: 18, boxShadow: "0 1px 5px rgba(0,0,0,.04)" }}>
       <h3 style={{ fontSize: 18, color: "#5980a6", margin: "0 0 10px", textAlign: "left" }}>{title}</h3>
@@ -7062,11 +7067,18 @@ function App() {
     ).length;
   })();
   const effectiveExpBullets = expBulletCount || rawBulletFallback;
+  // v12.3.36: lead with the most relevant role, and only praise the Skills
+  // list when most of it is backed up by bullets.
+  const _ciS = analyzeContentIntegrity(data);
+  const _skillsBacked = hasSkills && skillCount && (_ciS.unsupported || []).length <= Math.floor(skillCount / 3);
+  const _topS = rankEntriesForField(data)[0];
+  const _topSRel = _topS && !_RETAIL_TITLE.test(String(_topS.title || "")) && _topS.title && _topS.org;
   const snapshotStrengths = [
-    hasSkills ? "Skills section includes " + skillCount + " identifiable skills/tools." : "",
+    _topSRel ? "Your " + _topS.title + " role at " + _topS.org + " is directly relevant to " + (data.field ? data.field + " roles" : "your target") + "." : "",
+    _skillsBacked ? "Skills section includes " + skillCount + " identifiable skills/tools." : "",
     // Only mention a bullet count when we actually have one; otherwise state the
     // section's presence without an unreliable (and possibly zero) number.
-    hasExperience ? ("Experience section is present" + (effectiveExpBullets ? " with " + effectiveExpBullets + " accomplishment bullet" + (effectiveExpBullets === 1 ? "" : "s") : "") + ".") : "",
+    hasExperience ? ("Experience section is present" + (effectiveExpBullets ? " with " + effectiveExpBullets + " bullet" + (effectiveExpBullets === 1 ? "" : "s") : "") + ".") : "",
     hasProjects ? "Projects section helps show hands-on work." : "",
     hasEducation ? "Education information is included." : "",
     atsScore >= 90 ? "Resume appears generally ATS-friendly from the current builder checks." : ""
@@ -7156,6 +7168,9 @@ function App() {
 
     if (hasEducation) confidence += 6;
     else { confidence -= 5; addConcern("Education information is incomplete or hard to find."); }
+    // v12.3.36: a section structure that buries the strongest work is a recruiter issue too.
+    const _stRR = analyzeStructureAdvice(data);
+    if (_stRR.applies) addImprove("Put your strongest work where I'll see it", "Reorder your sections: " + _stRR.names.join(", ") + ".", "High");
 
     if (leadershipCount) confidence += 4;
     else addImprove("Add leadership or initiative", "Include campus, volunteer, team, mentoring, or project leadership if accurate.", "Low");
@@ -7314,6 +7329,11 @@ function App() {
       ? "Y" + _topName.slice(1)
       : (finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present");
 
+    const _dropReasons = [];
+    { const _ly = analyzeLayout(data); if (_ly.measured && _ly.issues >= 2) _dropReasons.push("text size and margins"); }
+    { const _mc = analyzeMechanics(data, importText); if (_mc.count) _dropReasons.push("date and punctuation slips"); }
+    { const _ci = analyzeContentIntegrity(data); if ((_ci.unsupported || []).length >= 3) _dropReasons.push("skills I couldn't find in your bullets"); if (_ci.duplicates.length) _dropReasons.push("two bullets that read almost the same"); }
+    { const _sh = analyzeSectionHeaders(data); if ((_sh.mustFix || 0) >= 2) _dropReasons.push("non-standard section headers"); }
     // Recruiter Confidence Timeline — 30–60 second thought process, time-based (reuses flags, no new scoring).
     const clampConf = (n) => Math.max(30, Math.min(98, Math.round(n)));
     const c1 = clampConf(hasSummary ? confidence - 4 : confidence - 14);
@@ -7361,13 +7381,15 @@ function App() {
         stage: "50–60 sec — Final decision",
         pct: c5,
         up: confidence >= 80,
-        note: confidence >= 90
+        note: (confidence >= 90
           ? "Final decision: I've seen enough evidence that I'd feel good moving you forward."
           : confidence >= 80
             ? "Final decision: I see real potential — I'd want a few fixes, then I'm ready to move you forward."
             : confidence >= 70
               ? "Final decision: I see potential, but I'd want stronger positioning before I schedule you."
-              : "Final decision: not yet for me today, but the resume is very fixable."
+              : "Final decision: not yet for me today, but the resume is very fixable.") +
+          // v12.3.36: say why confidence dips at the end (risk-flag penalties).
+          (c5 < c4 ? " The small issues I noticed along the way (" + (_dropReasons.length ? _dropReasons.slice(0, 2).join(", ") : "layout and polish") + ") pulled my confidence back down a little." : "")
       }
     ];
 
@@ -7513,8 +7535,14 @@ function App() {
     // ---- What's already working ----
     const strengths = [];
     const addStrength = (label, why) => { if (!strengths.some(s => s.label === label)) strengths.push({ label, why }); };
-    if (hasSkills && skillCount >= 6) addStrength("Technical Skills", "You list " + skillCount + " concrete skills/tools. That gives a recruiter something specific to picture you doing.");
-    if (hasExperience) addStrength("Work Experience", "Real-world experience is credibility coursework can't give. It signals you've operated in a professional setting.");
+    // v12.3.36: the most relevant role leads; Skills is a strength only when
+    // most listed skills are backed up by a bullet.
+    const _ciW = analyzeContentIntegrity(data);
+    const _topW = rankEntriesForField(data)[0];
+    const _topWRel = _topW && !_RETAIL_TITLE.test(String(_topW.title || "")) && _topW.title && _topW.org;
+    if (_topWRel) addStrength(isInternEntry(_topW) ? "Relevant Internship" : "Relevant Experience", "Your " + _topW.title + " role at " + _topW.org + " is directly relevant to " + (data.field ? data.field : "your target") + " roles. It's the first thing a recruiter will ask about, so keep it near the top.");
+    else if (hasExperience) addStrength("Work Experience", "Real-world experience is credibility coursework can't give. It signals you've operated in a professional setting.");
+    if (hasSkills && skillCount >= 6 && (_ciW.unsupported || []).length <= Math.floor(skillCount / 3)) addStrength("Technical Skills", "You list " + skillCount + " concrete skills/tools, and your bullets back up most of them.");
     if (hasProjects) addStrength("Projects", "Projects prove hands-on ability — they show you can apply what you know, not just list it.");
     // Only claim certifications if there's REAL cert content (a named entry that isn't actually
     // a publication/award mis-mapped by the parser). Prevents "you have certifications" on a
@@ -7678,7 +7706,14 @@ function App() {
         "Your formatting already reads cleanly — no specific issues stood out. Do one last read-through for alignment, consistent dates, and spacing so nothing distracts from strong content.",
         "5 min", "Low");
     }
-    const improvementsFinal = improvements.sort((a, b) => b.stars - a.stars).slice(0, 5);
+    // v12.3.36: match the Game Plan. Section structure and entry format are
+    // high-impact when they need work.
+    const _stImp = analyzeStructureAdvice(data);
+    if (_stImp.applies) addImp(5, "Rename and reorder your sections", _stImp.short, "15 min", "High");
+    if ((_ciW.employerFirst || []).length || ((_ciW.noLocation || []).length && _ciW.noLocation.length === _ciW.entryCount)) {
+      addImp(4, "Put job titles first and add locations", "Start each entry with the job title and dates, then the employer with its city and state on the next line. Recruiters scan titles first.", "10 min", "High");
+    }
+    const improvementsFinal = improvements.sort((a, b) => b.stars - a.stars).slice(0, 6);
 
     // ---- Roadmap (ordered coaching path) — each stop carries a concrete action,
     // grounded in this resume's actual gaps, so the strip earns its space. ----
@@ -7689,6 +7724,8 @@ function App() {
         ? "Sharpen your opening to name your target role and top 2–3 strengths in the first line."
         : "Add a 2–3 line summary naming your target role and strongest qualifications — it's the first thing read."
     });
+    if (_stImp.applies) roadmap.push({ step: "Sections", action: _stImp.short });
+    if ((_ciW.employerFirst || []).length) roadmap.push({ step: "Entry Format", action: "Put the job title and dates on line one, then Employer | City, ST on line two." });
     if (hasExperience || expBullets) {
       const q = (typeof expQuant === "number" && typeof expBullets === "number") ? (expBullets - expQuant) : 0;
       roadmap.push({
@@ -7973,7 +8010,10 @@ function App() {
     if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length) quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
     // Mechanics quick wins — each specific error is its own fast fix.
-    mechanics.findings.slice(0, 2).forEach(f => {
+    // v12.3.36: the same fixes are already listed in Highest-Impact
+    // Improvements and the Credibility & Mechanics card; only show them here
+    // when there is just one.
+    if (mechanics.count === 1) mechanics.findings.slice(0, 1).forEach(f => {
       if (f.example) quickWins.push("Fix a " + f.label.toLowerCase() + " slip: " + f.example + ".");
     });
     // Section-quality tips (ambiguous campus, cert gap, buried award).
@@ -8020,7 +8060,7 @@ function App() {
     if (!leadershipCount) bigger.push({ label: "Take on volunteer leadership", why: "A visible leadership role fills the initiative gap most early resumes have." });
     bigger.push({ label: "Network intentionally", why: "Most early-career roles come through people. A few genuine conversations beats 50 cold applications." });
     bigger.push(workSample === "credential"
-      ? { label: "Add measurable wins to your experience", why: "In place of a project portfolio, quantified results (headcount, time saved, compliance rates) are your strongest proof." }
+      ? { label: "Add measurable wins to your experience", why: "In place of a project portfolio, quantified results (" + (/financ|accounting/i.test(String(data.field || "")) ? "accounts or borrowers covered, report turnaround, errors reduced, dollars reconciled" : /human resources/i.test(String(data.field || "")) ? "roles filled, time to hire, onboarding errors reduced" : /health/i.test(String(data.field || "")) ? "patients served, wait times, documentation accuracy" : /grc|compliance|audit/i.test(String(data.field || "")) ? "controls tested, findings closed, compliance rates" : "volume handled, time saved, errors reduced") + ") are your strongest proof." }
       : { label: "Add one more strong project", why: "A second well-documented project deepens the evidence of what you can actually do." });
     const biggerFinal = bigger.slice(0, 5);
 
