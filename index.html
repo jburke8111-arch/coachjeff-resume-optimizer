@@ -4,6 +4,9 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.31: REQUIREMENTS CHECK + WORD LAYOUT CHECK. (1) Job Match now pulls hard requirements from the posting (years of experience, degree level, named certifications in one-of groups, security clearance), labels each Required or Preferred from the posting headings and wording ("preferred", "a plus", "must", "minimum"), and compares each with the resume (Shown, Close, In progress, Equivalent experience accepted, Not shown). Years use dated experience with overlapping jobs counted once. An Experience gap warning appears when a required year count exceeds the resume by more than a year, since Job Match counts keywords, not years. Shown in Job Match, the tailoring guidance, and the Review Report. (2) Word uploads now feed the Layout Check (previously PDF only): body/heading/name/contact sizes resolved through run, style and document defaults; page margins; page and total word count (page count is not read from the file because the stored count goes stale); plus Word-only flags for tables, text boxes, multiple columns, contact info only in the page header, 3+ blank spacer lines, dates pushed right with spaces or stacked tabs, more than 2 fonts, and images. -->
+<!-- v12.3.30: COPIED POSTING TEXT. Job Match flags runs of 6+ words that appear word for word in both the posting and the resume (Summary, Skills, Experience, Projects; Education and Certifications are skipped because matching degree wording is normal). Each run needs 4+ content words, so ordinary phrasing does not trigger it. Shown as a "Possible copied posting text" card in Job Match, in the tailoring guidance, and in the Review Report under Job Match Evidence Check. Advice: keep it only if true, and say it in your own words. -->
+<!-- v12.3.29: RESULTS WITHOUT A NUMBER. Content Checks adds two findings. (1) "Results without a number": bullets with no digit that claim an outcome ("improving compliance rates", "enhancing client satisfaction", "resulting in effective decision-making", "increasing user engagement"); purpose phrasing ("to improve ...") is skipped. Advice: add the real number if known and explainable, or cut the result phrase; don't estimate. (2) "Missing number": a result with "by" and no figure ("improved compliance rates by and ..."). Verified on a client resume: 16 unmeasured results and 1 blank metric caught in the original; 1 real case left in the final version; no hits on purpose phrases or bullets that already have numbers. Shown in the Coach Review and the Review Report via Content Checks. -->
 <!-- v12.3.28: NO TABLES IN THE BACKUP .DOC OR PRINT/PDF. Title/date, company/location, degree/date, and certification rows used hidden two-cell tables, which some ATS parsers misread. The backup .doc export (used only if the .docx builder cannot load) now writes each row as a normal paragraph with a right tab stop at the 7-inch margin, in the markup Word itself uses for tabs in HTML (tab-stops + mso-tab-count). Print/PDF uses a flex row. Visual layout is unchanged. -->
 <!-- v12.3.27: EXPORT FORMAT MATCHES COACH JEFF'S RECOMMENDED SPEC. The .docx export already followed the spec; Print/PDF and the backup .doc export (shared HTML builder) did not. HTML builder now: name 20 pt bold caps with 6 pt after; contact line 11 pt black (links black, no underline) with 12 pt after; section headings 13 pt bold caps with 12 pt before / 6 pt after; skill lines 3 pt after; company/location row 3 pt after; bullets 0 pt with 6 pt after the last bullet between entries (replaces the old filler spacer paragraph); education degree first with 6 pt after the last line of each entry; certifications/awards 3 pt after. .docx consistency: 6 pt between projects, activities, and volunteer entries (previously 0), 3 pt after the org line in activities/volunteer, and education puts its 6 pt after the last line of each entry (previously after the school line even when location/GPA/coursework followed). -->
 <!-- v12.3.26: EVIDENCE CHECK + WRITING-ERROR CHECKS (from a client whose Job Match went 48% to 100% mostly by adding Skills keywords, and whose resume kept merged bullets and placeholders through several manual reviews). (1) JOB MATCH EVIDENCE CHECK: each matched skill-like term is checked against the resume without its Skills section and Summary (experience, projects, education, certifications, other entries). Job Match shows "X of Y matched skills are backed by a bullet or project" and lists the Skills/Summary-only matches; the tailoring guidance and the Review Report (new "Job Match Evidence Check" section) say the same. The match % itself is unchanged. (2) MECHANICS: five new conservative checks, each quoting the exact spot: run-together bullets (lowercase word followed by a capitalized action verb, e.g. "workflows Coordinated with"), missing period between sentences (limited to common summary sentence openers, e.g. "in progress Business analyst"), stray punctuation at the start of a bullet ("•. Tested"), leftover placeholders ([brackets], TBD, XX%), and a generic target ("seeking a role." with no role named). Mechanics now reports up to 10 findings (was 8). -->
@@ -166,7 +169,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.28-industry";
+const BUILD_VERSION = "v12.3.31-industry";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -2142,7 +2145,9 @@ async function extractTextFromImportedFile(file) {
     const result = await mammoth.extractRawText({ arrayBuffer });
     const links = await extractDocxHyperlinks(arrayBuffer);
     const linkSummary = summarizeImportedLinks(links);
-    return { resumeText: (result.value || "").trim(), fileName: file.name || "", transfer: false, links: linkSummary };
+    let docxLayout = null;
+    try { docxLayout = await summarizeDocxLayout(arrayBuffer); } catch (e) { docxLayout = null; }
+    return { resumeText: (result.value || "").trim(), fileName: file.name || "", transfer: false, links: linkSummary, layout: docxLayout };
   }
   if (name.endsWith(".pdf")) {
     const pdfResult = await extractPdfTextFromFile(file);
@@ -2245,6 +2250,179 @@ function cleanJobPostingForScoring(raw) {
   // block), fall back to the original so we never score against empty text.
   if (cleaned.replace(/\s+/g, "").length < Math.max(60, text.replace(/\s+/g, "").length * 0.15)) return text;
   return cleaned;
+}
+
+// ---- Requirements check (v12.3.31) ----
+// Pulls the hard requirements out of a job posting (years of experience,
+// degree, named certifications, security clearance), labels each one Required
+// or Preferred from the posting's own headings and wording, and compares it
+// with the resume. Years are counted from dated experience with overlapping
+// jobs counted once.
+function experienceMonthsUnion(data) {
+  const months = new Set();
+  (data.experience || []).forEach(e => {
+    if (!e) return;
+    let a = _monthIndex(e.start, false), b = _monthIndex(e.end, true);
+    if (a === null && b === null) {
+      const txt = [e.title, e.org, e.location].join(" ");
+      const r = txt.match(/((?:[a-z]{3,9}\.?\s+)?(?:19|20)\d{2})\s*[-–—to]+\s*((?:[a-z]{3,9}\.?\s+)?(?:19|20)\d{2}|present|current)/i);
+      if (r) { a = _monthIndex(r[1], false); b = _monthIndex(r[2], true); }
+    }
+    if (a !== null && b === null) b = a;
+    if (a !== null && b !== null && b >= a && b - a < 600) for (let m = a; m <= b; m++) months.add(m);
+  });
+  return months.size;
+}
+
+const REQ_CERTS = [
+  ["CISSP", /\bCISSP\b/i], ["CISA", /\bCISA\b/], ["CISM", /\bCISM\b/], ["CRISC", /\bCRISC\b/], ["CGEIT", /\bCGEIT\b/],
+  ["CCSP", /\bCCSP\b/], ["SSCP", /\bSSCP\b/], ["CDPSE", /\bCDPSE\b/],
+  ["Security+", /\bSecurity\s?\+|\bSec\+/i], ["CySA+", /\bCySA\s?\+/i], ["Network+", /\bNetwork\s?\+/i], ["CASP+", /\bCASP\s?\+/i],
+  ["PenTest+", /\bPenTest\s?\+/i], ["CompTIA A+", /\bCompTIA\s+A\+|\bA\+\s+certif/i], ["CEH", /\bCEH\b/], ["OSCP", /\bOSCP\b/],
+  ["GIAC", /\bGIAC\b|\bGSEC\b|\bGCIH\b|\bGCIA\b|\bGPEN\b/], ["CIPP", /\bCIPP(?:\/[A-Z]{1,2})?\b/], ["CIPM", /\bCIPM\b/], ["CIPT", /\bCIPT\b/],
+  ["ISO 27001 Lead Auditor/Implementer", /ISO\s*\/?\s*(?:IEC\s*)?27001\s*(?:lead\s*)?(?:auditor|implementer)/i],
+  ["CCNA", /\bCCNA\b/], ["CCNP", /\bCCNP\b/],
+  ["AWS certification", /\bAWS\s+Certifi(?:ed|cation)/i], ["Azure certification", /\bAZ-\d{3}\b|\bAzure\s+(?:Administrator|Fundamentals|Security Engineer|Solutions Architect)/i],
+  ["PMP", /\bPMP\b/], ["CAPM", /\bCAPM\b/], ["Certified ScrumMaster (CSM)", /\bCSM\b|Certified Scrum\s?Master/i], ["PSM", /\bPSM\s?I*\b/],
+  ["CBAP", /\bCBAP\b/], ["CCBA", /\bCCBA\b/], ["ECBA", /\bECBA\b/], ["PMI-PBA", /\bPMI-PBA\b/],
+  ["ITIL", /\bITIL\b/], ["Six Sigma", /\bSix Sigma\b|\b(?:Green|Black) Belt\b/i],
+  ["CPA", /\bCPA\b/], ["CFA", /\bCFA\b/], ["Certified Internal Auditor (CIA)", /\bCIA\b|Certified Internal Auditor/], ["CFE", /\bCFE\b|Certified Fraud Examiner/i],
+  ["SHRM-CP", /\bSHRM-CP\b/i], ["SHRM-SCP", /\bSHRM-SCP\b/i], ["PHR", /\bPHR\b/], ["SPHR", /\bSPHR\b/]
+];
+
+function _postingLinesWithNeed(jobPost) {
+  const raw = String(jobPost || "").replace(/\r/g, "");
+  const pieces = raw.split(/\n|•|(?<=[.;])\s+(?=[A-Z])/).map(s => s.replace(/^[\s\-*–—▪●·]+/, "").trim()).filter(Boolean);
+  const REQ_H = /^(required|minimum|basic|must[- ]have|requirements?|qualifications|what you(?:'|’)?ll need|what you need|what we(?:'|’)?re looking for|what you bring|you have|who you are|your (?:skills|qualifications|background)|skills and experience|experience and (?:skills|education)|education and experience|knowledge,? skills)/i;
+  const PREF_H = /(preferred|nice[- ]to[- ]have|bonus|desired|pluses|extra credit|additional qualifications|it(?:'|’)?s a plus)/i;
+  const OTHER_H = /^(responsibilities|duties|what you(?:'|’)?ll do|about (?:the|us|you)|benefits|perks|compensation|salary|why join|the role|overview|summary|job description|position summary|our team|who we are|location)/i;
+  let mode = "";
+  return pieces.map(t => {
+    const words = t.split(/\s+/).length;
+    const isHead = t.length <= 70 && (/:$/.test(t) || (words <= 8 && !/[.!?]$/.test(t)));
+    if (isHead) {
+      if (PREF_H.test(t)) mode = "Preferred";
+      else if (REQ_H.test(t)) mode = "Required";
+      else if (OTHER_H.test(t)) mode = "";
+    }
+    let need = mode;
+    if (/\b(preferred|a plus|is a plus|nice to have|desired|bonus|ideally|advantageous)\b/i.test(t)) need = "Preferred";
+    else if (/\b(required|must|minimum|at least|mandatory)\b/i.test(t)) need = "Required";
+    return { t, need };
+  });
+}
+
+function analyzeRequirements(data) {
+  const post = String(data.jobPost || "");
+  if (post.trim().length < 80) return null;
+  const lines = _postingLinesWithNeed(post);
+  const resumeText = collectResumeText(data) + " " + (data.certifications || []).map(c => [c && c.name, c && c.issuer, c && c.date].join(" ")).join(" ");
+  // One entry per field, bullet, certification and degree, so "in progress"
+  // next to one credential doesn't spill onto another.
+  const resumeLines = [];
+  const push = (v) => { if (v) String(v).split(/\n|;|•/).forEach(x => x.trim() && resumeLines.push(x)); };
+  push(data.summary); const _sk = data.skills || {}; [_sk.technical, _sk.dataVisualization, _sk.tools, _sk.domain].forEach(push);
+  ["experience", "projects", "activities", "volunteer"].forEach(k => (data[k] || []).forEach(it => { if (!it) return; (it.bullets || []).forEach(push); push([it.title, it.org, it.name, it.role].filter(Boolean).join(" ")); }));
+  ["certifications", "education", "awards"].forEach(k => (data[k] || []).forEach(it => it && push(Object.keys(it).filter(x => x !== "id").map(x => it[x]).filter(v => typeof v === "string").join(" "))));
+  const items = [];
+  const short = (s) => { s = String(s).trim(); return s.length > 130 ? s.slice(0, 127) + "…" : s; };
+
+  // (1) Years of experience
+  const NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, fifteen: 15 };
+  const yrsRe = /(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen)\s*(?:\(\d{1,2}\)\s*)?(?:\+|plus)?\s*(?:(?:-|–|—|to)\s*(\d{1,2})\s*\+?\s*)?(?:years?|yrs?)(?:\s+or\s+more)?\b(?:'|’)?/i;
+  const yrsMonths = experienceMonthsUnion(data);
+  const haveYears = Math.round(yrsMonths / 12 * 10) / 10;
+  const seenYears = new Set();
+  lines.forEach(l => {
+    const m = l.t.match(yrsRe);
+    if (!m) return;
+    if (!/experience|\bexp\b|working (?:in|with|on)|background in|in (?:a|an) .{0,30}role/i.test(l.t)) return;
+    if (/\b(?:within|after|every|per|for the (?:past|last)|old|of age|years? ago|founded|history)\b/i.test(l.t.slice(Math.max(0, m.index - 20), m.index + m[0].length + 15)) && !/experience/i.test(l.t.slice(m.index, m.index + 60))) return;
+    const min = NUMW[String(m[1]).toLowerCase()] || parseInt(m[1], 10);
+    if (!min || min > 25) return;
+    const key = min + "|" + l.need;
+    if (seenYears.has(key)) return;
+    seenYears.add(key);
+    let status;
+    if (yrsMonths === 0) status = "check";
+    else if (haveYears >= min - 0.25) status = "met";
+    else if (haveYears >= min - 1) status = "close";
+    else status = "gap";
+    items.push({ kind: "years", need: l.need || "Listed", label: short(l.t), min,
+      yours: yrsMonths ? ("about " + (haveYears >= 1 ? Math.round(haveYears * 2) / 2 : haveYears) + " years of dated experience") : "No dated experience found",
+      status });
+  });
+
+  // (2) Degree
+  const LEVEL = (t) => {
+    if (/\b(ph\.?\s?d|doctorate|doctoral)\b/i.test(t)) return 4;
+    if (/\b(master(?:'|’)?s|masters|mba|m\.s\.|m\.a\.|msc|graduate degree|advanced degree)\b/i.test(t)) return 3;
+    if (/\b(bachelor(?:'|’)?s?|bachelors|b\.s\.|b\.a\.|bs\/ba|ba\/bs|bsc|undergraduate degree|four[- ]year degree|4[- ]year degree|college degree|university degree)\b/i.test(t)) return 2;
+    if (/\bassociate(?:'|’)?s?\s+degree\b/i.test(t)) return 1;
+    if (/\bdegree\b/i.test(t) && !/degree of\b|\bdegrees?\s+(?:fahrenheit|celsius)/i.test(t)) return 2;
+    return 0;
+  };
+  const LNAME = ["", "Associate degree", "Bachelor's degree", "Master's degree", "Doctorate"];
+  const degLines = lines.filter(l => LEVEL(l.t) > 0 && !/high degree|degree of/i.test(l.t));
+  if (degLines.length) {
+    const eduText = (data.education || []).filter(e => e && (e.degree || e.school)).map(e => ({ lvl: LEVEL(String(e.degree || "") + " " + String(e.school || "")), prog: /\b(expected|anticipated|in progress|present|pursuing|candidate)\b/i.test([e.degree, e.grad].join(" ")) || (/\b(20\d{2})\b/.test(String(e.grad || "")) && parseInt(String(e.grad).match(/\b(20\d{2})\b/)[1], 10) > new Date().getFullYear()) }));
+    const doneLvl = Math.max(0, ...eduText.filter(e => !e.prog).map(e => e.lvl));
+    const progLvl = Math.max(0, ...eduText.filter(e => e.prog).map(e => e.lvl));
+    const used = new Set();
+    degLines.forEach(l => {
+      const lvl = LEVEL(l.t);
+      const k = lvl + "|" + l.need;
+      if (used.has(k)) return; used.add(k);
+      const flexible = /or equivalent|equivalent (?:work |combination|practical )?experience|in lieu of|or (?:relevant|related|comparable) experience|combination of education and experience/i.test(l.t);
+      const status = doneLvl >= lvl ? "met" : progLvl >= lvl ? "inprogress" : flexible ? "flexible" : "gap";
+      items.push({ kind: "degree", need: l.need || "Listed", label: short(l.t), min: lvl,
+        yours: doneLvl ? LNAME[doneLvl] + (progLvl > doneLvl ? " (" + LNAME[progLvl] + " in progress)" : "") : progLvl ? LNAME[progLvl] + " in progress" : "No degree found",
+        status, flexible });
+    });
+  }
+
+  // (3) Named certifications (one-of groups stay together)
+  const certStatus = (name, re) => {
+    const hitLine = resumeLines.find(x => re.test(x));
+    if (!hitLine) return "gap";
+    return /\b(in progress|pursuing|expected|studying|planned|anticipated|candidate|preparing|scheduled)\b/i.test(hitLine) ? "inprogress" : "met";
+  };
+  const seenCert = new Set();
+  lines.forEach(l => {
+    const found = REQ_CERTS.filter(([n, re]) => re.test(l.t));
+    if (!found.length) return;
+    const anyOf = found.length > 1 && /\bor\b|one of|any of|such as|e\.g\.|including|\(/i.test(l.t);
+    const groups = anyOf ? [found] : found.map(f => [f]);
+    groups.forEach(g => {
+      const names = g.map(f => f[0]);
+      const k = names.join("/") + "|" + l.need;
+      if (seenCert.has(k)) return; seenCert.add(k);
+      const st = g.map(([n, re]) => ({ n, s: certStatus(n, re) }));
+      const met = st.filter(x => x.s === "met").map(x => x.n);
+      const prog = st.filter(x => x.s === "inprogress").map(x => x.n);
+      const status = met.length ? "met" : prog.length ? "inprogress" : "gap";
+      const nameTxt = names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + (names.length > 2 ? "," : "") + " or " + names[names.length - 1];
+      items.push({ kind: "cert", need: l.need || "Listed", label: nameTxt, detail: short(l.t),
+        yours: met.length ? met.join(", ") + " listed" : prog.length ? prog.join(", ") + " listed as in progress" : "Not on resume",
+        status });
+    });
+  });
+
+  // (4) Security clearance
+  const clrLine = lines.find(l => /\b(security clearance|clearance|ts\/sci|top secret|secret clearance|public trust|polygraph)\b/i.test(l.t) && !/\bclearance sale\b/i.test(l.t));
+  if (clrLine) {
+    const obtain = /\b(able to obtain|ability to obtain|eligible|eligibility|obtain and maintain|must be able to)\b/i.test(clrLine.t);
+    const has = /\b(clearance|public trust|ts\/sci|top secret)\b/i.test(resumeText);
+    items.push({ kind: "clearance", need: clrLine.need || "Listed", label: short(clrLine.t),
+      yours: has ? "Clearance mentioned on resume" : "No clearance on resume",
+      status: has ? "met" : obtain ? "check" : "gap", obtain });
+  }
+
+  const required = (i) => i.need !== "Preferred";
+  const yearGaps = items.filter(i => i.kind === "years" && required(i) && i.status === "gap");
+  const gap = yearGaps.length ? (() => { const g = yearGaps.sort((a, b) => b.min - a.min)[0]; return { need: g.min, have: haveYears, label: g.label }; })() : null;
+  const requiredUnmet = items.filter(i => required(i) && (i.status === "gap"));
+  return { items, gap, haveYears, requiredUnmet: requiredUnmet.length, labeled: lines.some(l => l.need) };
 }
 
 function analyzeBuilderOptimization(data) {
@@ -2452,7 +2630,62 @@ function analyzeBuilderOptimization(data) {
       backedCount: _evItems.filter(i => i.backed).length,
       listedOnly: _evItems.filter(i => !i.backed).map(i => i.name)
     };
+    // v12.3.30: COPIED POSTING TEXT. Runs of 6+ words that appear word for word
+    // in both the posting and the resume's Summary, Skills, Experience, or
+    // Projects (Education and Certifications are skipped: matching a posting's
+    // degree wording is normal). Each run must contain at least 4 content words,
+    // so ordinary phrases ("to ensure that the team is") don't count.
+    const copied = (() => {
+      const N = 6;
+      const COPY_STOP = new Set(["a","an","the","and","or","of","to","in","on","for","with","by","at","as","from","into","is","are","be","that","this","our","your","their","its","will","we","you","all","any","such","other","including","etc"]);
+      const tokPairs = (t) => {
+        const out = [];
+        const re = /[A-Za-z0-9][A-Za-z0-9+#'’]*/g; let m;
+        const str = String(t || "");
+        while ((m = re.exec(str))) out.push({ w: m[0].toLowerCase().replace(/[’']/g, ""), i: m.index, end: m.index + m[0].length });
+        return out;
+      };
+      const postToks = tokPairs(jobPostRaw).map(x => x.w);
+      if (postToks.length < N) return [];
+      const grams = new Set();
+      for (let i = 0; i + N <= postToks.length; i++) grams.add(postToks.slice(i, i + N).join(" "));
+      const units = [];
+      if (data.summary) units.push({ where: "Summary", text: data.summary });
+      const sk = data.skills || {};
+      [["technical", "Skills"], ["dataVisualization", "Skills"], ["tools", "Skills"], ["domain", "Skills"]].forEach(([k, w]) => { if (sk[k]) units.push({ where: w, text: sk[k] }); });
+      (data.experience || []).forEach(e => (e.bullets || []).forEach(b => b && units.push({ where: e.org || e.title || "Experience", text: b })));
+      (data.projects || []).forEach(p => (p.bullets || []).forEach(b => b && units.push({ where: p.name || "Projects", text: b })));
+      const found = [];
+      units.forEach(u => {
+        const tk = tokPairs(u.text);
+        const hit = new Array(tk.length).fill(false);
+        for (let i = 0; i + N <= tk.length; i++) {
+          if (grams.has(tk.slice(i, i + N).map(x => x.w).join(" "))) for (let j = i; j < i + N; j++) hit[j] = true;
+        }
+        for (let i = 0; i < tk.length; ) {
+          if (!hit[i]) { i++; continue; }
+          let j = i; while (j + 1 < tk.length && hit[j + 1]) j++;
+          const words = tk.slice(i, j + 1).map(x => x.w);
+          const content = words.filter(w => w.length >= 3 && !COPY_STOP.has(w)).length;
+          if (words.length >= N && content >= 4) found.push({ where: u.where, phrase: String(u.text).slice(tk[i].i, tk[j].end).trim(), words: words.length });
+          i = j + 1;
+        }
+      });
+      const seenP = new Set();
+      return found.sort((a, b) => b.words - a.words).filter(f => { const k = f.phrase.toLowerCase(); if (seenP.has(k)) return false; seenP.add(k); return true; });
+    })();
+    // v12.3.31: hard requirements (years, degree, certifications, clearance).
+    let requirements = null;
+    try { requirements = analyzeRequirements(data); } catch (e) { requirements = null; }
+    const _reqSugg = [];
+    if (requirements && requirements.gap) _reqSugg.push("Experience gap: the posting asks for " + requirements.gap.need + "+ years and your dated experience adds up to about " + (Math.round(requirements.gap.have * 2) / 2) + ". If the rest is a strong match, apply anyway and use your cover letter to point to the work that fits. Don't stretch dates or titles to close it.");
+    if (requirements) {
+      const rc = requirements.items.filter(i => i.kind === "cert" && i.need === "Required" && i.status === "gap");
+      if (rc.length) _reqSugg.push("Required credential not on your resume: " + rc.map(i => i.label).join("; ") + ". List one as \u201Cin progress\u201D only if you're enrolled or have an exam date.");
+    }
     const suggestions = [
+      ..._reqSugg,
+      ...(copied.length ? ["Some of your wording matches the job posting word for word (" + copied.slice(0, 2).map(c => "\u201C" + (c.phrase.length > 60 ? c.phrase.slice(0, 57) + "\u2026" : c.phrase) + "\u201D").join("; ") + "). Keep it only if it's true for you, and put it in your own words."] : []),
       ...(evidence.listedOnly.length ? ["Back up the skills that appear only in your Skills list or Summary (" + evidence.listedOnly.slice(0, 6).join(", ") + ") with a bullet or project that shows them, or be ready to explain them in an interview. Don't add skills just to raise the match score."] : []),
       missingSkills.length ? "Add only truthful missing skills from the posting where the resume has real evidence: " + missingSkills.slice(0, 6).join(", ") + "." : "Keep the skills section aligned with the job posting; the strongest listed skills are already visible.",
       missingDisplay.length ? "Use employer language naturally in the summary, skills, projects, or experience: " + missingDisplay.slice(0, 6).join(", ") + "." : "Keyword coverage is strong; focus on proof and metrics rather than adding more terms.",
@@ -2460,7 +2693,7 @@ function analyzeBuilderOptimization(data) {
       "Rewrite 1-2 bullets to show the same problems, tools, or outcomes emphasized in the posting.",
       "Do not add unsupported keywords; every added term should connect to coursework, projects, experience, certifications, or volunteer work."
     ];
-    keyword = { ranked, present, missing, missingDisplay, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct, fitWarning, crossDomainGaps, inFieldGaps, evidence };
+    keyword = { ranked, present, missing, missingDisplay, mentionedSkills, missingSkills, requiredSkills, preferredSkills, requiredMissing, preferredMissing, topSkills, suggestions, titleMatch, matchPct, projectedPct, fitWarning, crossDomainGaps, inFieldGaps, evidence, copied, requirements };
   }
   return { resumeText, fieldSkills, skillsAlready, suggestedMissing, keyword };
 }
@@ -3430,7 +3663,7 @@ function parserLimitationNote(data) {
         "Bold, italics and color \u2014 bold only your name, section headings, job titles, degree and skills sub-headers.",
         "Words broken across lines (e.g. a hyphen splitting a term mid-line) \u2014 these only show in the rendered layout."
       ],
-      why: "Font sizes, margins and page density were measured from your PDF and are in the Layout Check above. These remaining visual details still need a quick look from you."
+      why: "Font sizes, margins and page density were measured from your " + (data.importedLayout.source === "docx" ? "Word file" : "PDF") + " and are in the Layout Check above. These remaining visual details still need a quick look from you."
     };
   }
   return {
@@ -4105,6 +4338,157 @@ function summarizePdfLayout(raw) {
   return { source: "pdf", pages: raw.pages || 1, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words };
 }
 
+// ---- Word layout measurement (v12.3.31) ----
+// Reads an uploaded .docx directly: font sizes (resolved through run, style
+// and document defaults), page margins, page count and word count as Word last
+// saved them, plus Word-only layout problems that cost readability or confuse
+// applicant tracking systems (tables, text boxes, columns, contact info in the
+// page header, blank lines used as spacers, dates pushed right with spaces or
+// stacked tabs, too many fonts, images).
+async function summarizeDocxLayout(arrayBuffer) {
+  if (typeof window === "undefined" || typeof window.JSZip === "undefined" || typeof DOMParser === "undefined") return null;
+  const zip = await window.JSZip.loadAsync(arrayBuffer);
+  const read = async (p) => (zip.file(p) ? await zip.file(p).async("text") : "");
+  const docXml = await read("word/document.xml");
+  if (!docXml) return null;
+  const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  const parse = (x) => new DOMParser().parseFromString(x, "application/xml");
+  const doc = parse(docXml);
+  const kids = (el, tag) => el ? Array.from(el.childNodes).filter(n => n.nodeType === 1 && n.namespaceURI === W && n.localName === tag) : [];
+  const kid = (el, tag) => kids(el, tag)[0] || null;
+  const att = (el, name) => el ? (el.getAttributeNS(W, name) || el.getAttribute("w:" + name)) : null;
+  const all = (el, tag) => Array.from(el.getElementsByTagNameNS(W, tag));
+  const inFallback = (el) => { for (let n = el.parentNode; n; n = n.parentNode) if (n.localName === "Fallback") return true; return false; };
+
+  // Theme fonts (for rFonts asciiTheme="minorHAnsi" etc.)
+  let themeMinor = "", themeMajor = "";
+  try {
+    const th = await read("word/theme/theme1.xml");
+    if (th) {
+      const mi = th.match(/<a:minorFont>[\s\S]*?<a:latin typeface="([^"]*)"/); if (mi) themeMinor = mi[1];
+      const ma = th.match(/<a:majorFont>[\s\S]*?<a:latin typeface="([^"]*)"/); if (ma) themeMajor = ma[1];
+    }
+  } catch (e) { /* optional */ }
+  const fontOf = (rPr) => {
+    const f = kid(rPr, "rFonts");
+    if (!f) return null;
+    const a = att(f, "ascii") || att(f, "hAnsi");
+    if (a) return a;
+    const t = att(f, "asciiTheme") || att(f, "hAnsiTheme");
+    if (t) return /major/i.test(t) ? (themeMajor || null) : (themeMinor || null);
+    return null;
+  };
+  const szOf = (rPr) => { const s = kid(rPr, "sz"); const v = s ? parseFloat(att(s, "val")) : NaN; return isNaN(v) ? null : v / 2; };
+
+  // Styles with basedOn inheritance
+  const styles = {};
+  let defSz = null, defFont = null, defPara = null;
+  const stylesXml = await read("word/styles.xml");
+  if (stylesXml) {
+    const st = parse(stylesXml);
+    const dd = all(st, "docDefaults")[0];
+    if (dd) { const r = all(dd, "rPr")[0]; if (r) { defSz = szOf(r); defFont = fontOf(r); } }
+    all(st, "style").forEach(s => {
+      const id = att(s, "styleId");
+      const r = kid(s, "rPr");
+      styles[id] = { basedOn: att(kid(s, "basedOn"), "val"), sz: r ? szOf(r) : null, font: r ? fontOf(r) : null };
+      if (att(s, "type") === "paragraph" && (att(s, "default") === "1" || att(s, "default") === "true")) defPara = id;
+    });
+  }
+  const styleVal = (id, key) => { for (let i = 0, s = id; s && styles[s] && i < 12; i++, s = styles[s].basedOn) if (styles[s][key]) return styles[s][key]; return null; };
+
+  const body = all(doc, "body")[0];
+  if (!body) return null;
+  const ownerP = (el) => { for (let n = el.parentNode; n; n = n.parentNode) if (n.namespaceURI === W && n.localName === "p") return n; return null; };
+  const paras = all(body, "p").filter(p => !inFallback(p));
+  const fontChars = {};
+  const info = paras.map(p => {
+    const pPr = kid(p, "pPr");
+    const pStyle = att(kid(pPr, "pStyle"), "val") || defPara;
+    const runs = all(p, "r").filter(r => ownerP(r) === p && !inFallback(r));
+    let text = "";
+    const sized = [];
+    runs.forEach(r => {
+      const rPr = kid(r, "rPr");
+      const rStyle = att(kid(rPr, "rStyle"), "val");
+      let t = "";
+      Array.from(r.childNodes).forEach(n => { if (n.namespaceURI !== W) return; if (n.localName === "t") t += n.textContent; else if (n.localName === "tab") t += "\t"; else if (n.localName === "br") t += "\n"; });
+      if (!t) return;
+      const sz = szOf(rPr) || (rStyle && styleVal(rStyle, "sz")) || styleVal(pStyle, "sz") || defSz || 10;
+      const font = fontOf(rPr) || (rStyle && styleVal(rStyle, "font")) || styleVal(pStyle, "font") || defFont || themeMinor || "";
+      const n = t.replace(/\s/g, "").length;
+      if (font && n) fontChars[font] = (fontChars[font] || 0) + n;
+      sized.push({ sz, n });
+      text += t;
+    });
+    let inTable = false;
+    for (let n = p.parentNode; n && n !== body; n = n.parentNode) if (n.localName === "tbl") { inTable = true; break; }
+    const hasDrawing = all(p, "drawing").length > 0 || p.getElementsByTagName("*").length && Array.from(p.getElementsByTagName("*")).some(x => x.localName === "pict");
+    return { text, sized, inTable, hasDrawing };
+  });
+
+  const half = (n) => Math.round(n * 2) / 2;
+  const modeSz = (list) => {
+    const w = {};
+    list.forEach(pi => pi.sized.forEach(s => { const k = half(s.sz); w[k] = (w[k] || 0) + s.n; }));
+    const best = Object.keys(w).sort((a, b) => w[b] - w[a])[0];
+    return best ? parseFloat(best) : 0;
+  };
+  const filled = info.filter(pi => pi.text.trim());
+  if (filled.length < 6) return null;
+  const bodyPt = modeSz(filled);
+  const heads = filled.filter(pi => { try { return !!_headingKey(pi.text.trim()); } catch (e) { return false; } });
+  const headingPt = heads.length ? modeSz(heads) : 0;
+  const namePt = filled[0].sized.length ? half(Math.max(...filled[0].sized.map(s => s.sz))) : 0;
+  const CONTACT = /@|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
+  const contactPara = filled.slice(0, 6).find(pi => CONTACT.test(pi.text));
+  const contactPt = contactPara ? modeSz([contactPara]) : 0;
+
+  // Page setup (the body's final section)
+  const sects = all(body, "sectPr");
+  const sect = sects[sects.length - 1] || null;
+  const tw = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : Math.round((n / 1440) * 100) / 100; };
+  const mar = kid(sect, "pgMar");
+  const marginT = tw(att(mar, "top"), 1), marginB = tw(att(mar, "bottom"), 1), marginL = tw(att(mar, "left"), 1.25), marginR = tw(att(mar, "right"), 1.25);
+  const columns = Math.max(1, ...sects.flatMap(s => kids(s, "cols").map(c => parseInt(att(c, "num") || "1", 10) || 1)));
+
+  // Word-only structure
+  const tables = all(body, "tbl").filter(t => { for (let n = t.parentNode; n && n !== body; n = n.parentNode) if (n.localName === "tbl") return false; return !inFallback(t); }).length;
+  const tableTextParas = info.filter(pi => pi.inTable && pi.text.trim()).length;
+  const elems = Array.from(body.getElementsByTagName("*"));
+  const textBoxes = elems.filter(n => (n.localName === "txbxContent") && !inFallback(n)).length;
+  const images = elems.filter(n => n.localName === "blip" && !inFallback(n)).length;
+  let lastFilled = -1; info.forEach((pi, i) => { if (pi.text.trim()) lastFilled = i; });
+  let firstFilled = info.findIndex(pi => pi.text.trim());
+  const blankLines = info.filter((pi, i) => i > firstFilled && i < lastFilled && !pi.inTable && !pi.text.trim() && !pi.hasDrawing).length;
+  // Spaces or stacked tabs immediately before a date (a typed bullet followed
+  // by spaces, or a year mentioned inside a bullet, doesn't count).
+  const DATE_AFTER = "(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+)?(?:(?:19|20)\\d{2}\\b|present\\b|current\\b)";
+  const spaceRe = new RegExp(" {4,}" + DATE_AFTER, "i"), tabRe = new RegExp("\\t{2,}" + DATE_AFTER, "i");
+  const spaceAligned = filled.filter(pi => spaceRe.test(pi.text)).length;
+  const stackedTabs = filled.filter(pi => tabRe.test(pi.text)).length;
+  let headerContact = false, headerText = "";
+  for (const p of Object.keys(zip.files).filter(f => /^word\/header\d*\.xml$/i.test(f))) {
+    const hx = parse(await read(p));
+    headerText += " " + all(hx, "t").map(t => t.textContent).join("");
+  }
+  headerContact = CONTACT.test(headerText);
+  const bodyContact = !!contactPara;
+  const totalChars = Object.values(fontChars).reduce((a, b) => a + b, 0) || 1;
+  const fonts = Object.keys(fontChars).filter(f => !/symbol|wingdings|webdings/i.test(f) && fontChars[f] / totalChars >= 0.03).sort((a, b) => fontChars[b] - fontChars[a]);
+
+  // Page count is NOT taken from the file: the count Word stores goes stale and
+  // other editors write their own (tested files claimed 4 and 1 pages and
+  // rendered at 3 and 2). Length is judged from the word count instead.
+  const pages = null;
+  const words = filled.reduce((n, pi) => n + pi.text.split(/\s+/).filter(Boolean).length, 0);
+
+  return {
+    source: "docx", pages, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words,
+    docx: { tables, tableTextParas, textBoxes, images, columns, headerContact, bodyContact, blankLines, spaceAligned, stackedTabs, fonts }
+  };
+}
+
 // Compares the measured layout with the BEST-format standards (11 pt body,
 // 13 pt headings, 20 pt name, 0.75 inch margins). Applies only when a PDF was
 // imported; otherwise `measured` is false and nothing is scored.
@@ -4122,13 +4506,35 @@ function analyzeLayout(data) {
   add("Left and right margins", "about " + side.toFixed(2) + " in", "0.75 in", side >= 0.7, 12, "Set left and right margins to 0.75 inch");
   const tb = Math.min(L.marginT, L.marginB);
   add("Top and bottom margins", "about " + tb.toFixed(2) + " in", "0.75 in", tb >= 0.6, 6, "Set top and bottom margins to 0.75 inch");
-  const perPage = Math.round(L.words / Math.max(1, L.pages));
-  add("Words per page", String(perPage), "about 450 or fewer", perPage <= 500, 10, "Trim the summary and long bullets so the page is easier to scan");
-  add("Page count", String(L.pages), "1 (up to 2 if the content warrants it)", L.pages <= 2, 10, "Cut to 2 pages or fewer");
+  // v12.3.31: Word files have no reliable page count (see summarizeDocxLayout),
+  // so they get a word-count length row instead of the two page rows.
+  const isDocx = L.source === "docx";
+  if (isDocx) add("Length", L.words + " words", "about 450 to 900 (1 to 2 pages)", L.words <= 1000, 6, "Over 1,000 words usually runs past 2 pages at 11 pt. Trim the summary, older roles and long bullets.");
+  if (L.pages) {
+    const perPage = Math.round(L.words / Math.max(1, L.pages));
+    add("Words per page", String(perPage), "about 450 or fewer", perPage <= 500, 10, "Trim the summary and long bullets so the page is easier to scan");
+    add("Page count", String(L.pages), "1 (up to 2 if the content warrants it)", L.pages <= 2, 10, "Cut to 2 pages or fewer");
+  }
+  // v12.3.31: Word-only structure checks. Shown only when a problem is found,
+  // with one summary row when the file is clean.
+  if (isDocx && L.docx) {
+    const D = L.docx;
+    const before = rows.length;
+    if (D.tables) add("Tables", D.tables + (D.tables === 1 ? " table" : " tables"), "None", false, 10, "Move the text out of tables and line up dates with one right tab stop instead. Many applicant tracking systems read table cells out of order or skip them.");
+    if (D.textBoxes) add("Text boxes", D.textBoxes + (D.textBoxes === 1 ? " text box" : " text boxes"), "None", false, 10, "Move the text into the body of the page. Some applicant tracking systems skip text boxes entirely.");
+    if (D.columns > 1) add("Columns", D.columns + " columns", "1 column", false, 8, "Use a single column. Two-column layouts are often read straight across, mixing lines from both columns.");
+    if (D.headerContact && !D.bodyContact) add("Contact info location", "In the page header", "In the body, under your name", false, 8, "Move your name and contact line out of the header into the page itself. Some applicant tracking systems ignore headers.");
+    if (D.blankLines >= 3) add("Blank lines used for spacing", D.blankLines + " blank lines", "None (use Spacing Before/After)", false, 4, "Delete the blank lines and set paragraph spacing instead: 6 pt between jobs and 12 pt before each section heading.");
+    if (D.spaceAligned + D.stackedTabs >= 1) add("Dates lined up with spaces or several tabs", (D.spaceAligned + D.stackedTabs) + ((D.spaceAligned + D.stackedTabs) === 1 ? " line" : " lines"), "One right tab stop", false, 4, "Replace the spaces or extra tabs with one right tab stop near the right margin. Spaces and stacked tabs shift when the font or size changes, so dates end up uneven.");
+    if (D.fonts && D.fonts.length > 2) add("Fonts", D.fonts.slice(0, 4).join(", "), "1 font (2 at most)", false, 3, "Use one font throughout. Mixed fonts look like pieces were pasted in from different files.");
+    if (D.images) add("Images or icons", D.images + (D.images === 1 ? " image" : " images"), "None", false, 2, "Remove photos, logos and icons. Applicant tracking systems can't read them, and plain-text contact details work everywhere.");
+    if (rows.length === before) rows.push({ item: "Word structure", yours: "No tables, text boxes, columns, or spacer lines", standard: "Plain single-column layout", ok: true, fix: "Meets the standard" });
+  }
   const bad = rows.filter(r => !r.ok);
+  const _src = isDocx ? "Word file" : "PDF";
   const intro = !bad.length
-    ? "Measured from your uploaded PDF: font sizes, margins, and page density all meet the standard."
-    : "Measured from your uploaded PDF: " + bad.length + " of " + rows.length + " layout items fall short of the standard. Small text and tight margins make a resume harder to read and are the most common reason strong content gets skimmed past.";
+    ? "Measured from your uploaded " + _src + ": font sizes, margins, and page density all meet the standard."
+    : "Measured from your uploaded " + _src + ": " + bad.length + " of " + rows.length + " layout items fall short of the standard. Small text, tight margins and layout tricks (tables, text boxes, spacer lines) make a resume harder to read and are the most common reason strong content gets skimmed past.";
   return { measured: true, rows, findings: bad, issues: bad.length, score: Math.max(40, 100 - penalty), intro };
 }
 
@@ -4255,7 +4661,36 @@ function analyzeContentIntegrity(data) {
   if (eduIssues.length) findings.push({ label: "Education details",
     detail: eduIssues.slice(0, 4).join("; ") + ". Add each degree's graduation year (or month and year) unless you're intentionally leaving it off, and use the official degree name." });
 
-  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, longRoles, repeatedPhrases, eduIssues, findings, count: findings.length };
+  // v12.3.29 (7): results without a measure. A bullet that claims an outcome
+  // ("improving compliance rates", "enhancing client satisfaction", "resulting
+  // in effective decision-making") but has no number invites "by how much?" in
+  // an interview. Only bullets with NO digit are checked. Purpose phrases
+  // ("to improve ...") are skipped. A blank metric ("improved X by and ...")
+  // is reported separately because it reads as unfinished.
+  const OUTCOME_VERB = "improv(?:e|ed|es|ing|ement|ements)|enhanc(?:e|ed|es|ing|ement)|increas(?:e|ed|es|ing)|reduc(?:e|ed|es|ing|tion)|boost(?:ed|ing)?|rais(?:ed|ing)|decreas(?:e|ed|ing)|strengthen(?:ed|ing)?|streamlin(?:ed|ing)|maximiz(?:ed|ing)|minimiz(?:ed|ing)|optimiz(?:ed|ing)";
+  const OUTCOME_NOUN = "rates?|efficiency|satisfaction|engagement|productivity|performance|accuracy|compliance|quality|stability|retention|revenue|sales|posture|decision[- ]making|outcomes?|user experience|turnaround|throughput|costs?|errors?|response times?|processing times?|morale|adoption|visibility|reliability";
+  const outcomeRe = new RegExp("(?:^|[^a-z])(?:resulting in|resulted in|leading to|led to|which (?:resulted in|led to))?\\s*(?:an?\\s+)?(?:" + OUTCOME_VERB + ")\\b(?:\\s+(?:in|of|to|the|overall|team|client|customer|user|project|program|system|operational|data|process|their|its|our))*(?:\\s+[a-z\\-]+){0,2}?\\s+(?:" + OUTCOME_NOUN + ")\\b", "i");
+  const resultingRe = /\b(?:resulting in|resulted in|leading to)\s+(?:an?\s+|more\s+|better\s+|effective\s+|improved\s+|increased\s+|greater\s+)?[a-z\- ]{0,30}?\b(decision[- ]making|outcomes?|efficiency|satisfaction|stability|productivity|performance|accuracy|engagement|compliance)\b/i;
+  const blankRe = /\b(?:improv\w*|increas\w*|reduc\w*|enhanc\w*|boost\w*|decreas\w*)\b[^.;]{0,40}?\bby\s+(?:and|with|while|through|for|to|in|,|\.|$)/i;
+  const unmeasured = [], blankMetric = [];
+  entries.forEach(e => (e.bullets || []).forEach(b => {
+    const t = String(b || "").trim();
+    if (!t || /\d/.test(t)) return;
+    const bm = t.match(blankRe);
+    if (bm) { blankMetric.push({ where: e.where, text: t, phrase: bm[0] }); return; }
+    const m = t.match(outcomeRe) || t.match(resultingRe);
+    if (!m) return;
+    const idx = t.toLowerCase().indexOf(m[0].trim().toLowerCase());
+    // Skip purpose phrasing: "... to improve user experience".
+    if (idx > 0 && /\bto\s*$/i.test(t.slice(0, idx))) return;
+    unmeasured.push({ where: e.where, text: t, phrase: m[0].trim().replace(/^[^a-z]+/i, "") });
+  }));
+  if (blankMetric.length) findings.push({ label: "Missing number",
+    detail: blankMetric.slice(0, 2).map(x => "“" + x.phrase + "…” (" + x.where + ")").join("; ") + ". The sentence says “by” but the number is missing. Add the real figure, or delete the result phrase and keep what you did." });
+  if (unmeasured.length) findings.push({ label: "Results without a number",
+    detail: unmeasured.slice(0, 3).map(x => "“" + x.phrase + "” (" + x.where + ")").join("; ") + (unmeasured.length > 3 ? ", and " + (unmeasured.length - 3) + " more" : "") + ". A result with no number invites “by how much?” in an interview. Add the real number if you know it and can explain where it came from, or cut the result phrase and keep what you did. Don't estimate." });
+
+  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], certFlags, longRoles, repeatedPhrases, eduIssues, unmeasured, blankMetric, findings, count: findings.length };
 }
 
 // ---- Top fixes (v12.3.21) ----
@@ -5476,6 +5911,20 @@ function App() {
       } else {
         parts.push(P("Every matched skill shows up in your experience, projects, or education, not just your Skills list.", "color:#166534;"));
       }
+    }
+    if (_kw && _kw.requirements && _kw.requirements.items && _kw.requirements.items.length) {
+      const rq = _kw.requirements;
+      const KIND = { years: "Experience", degree: "Education", cert: "Certification", clearance: "Clearance" };
+      const ST = { met: "Shown", close: "Close", inprogress: "In progress", flexible: "Equivalent experience accepted", check: "Check", gap: "Not shown" };
+      parts.push(H2("Requirements Check"));
+      if (rq.gap) parts.push(P("Experience gap: the posting asks for " + rq.gap.need + "+ years and your dated experience adds up to about " + (Math.round(rq.gap.have * 2) / 2) + ". Job Match counts keywords, not years. If the rest is a strong fit, apply anyway and use your cover letter to point to the work that fits. Don't stretch dates or titles to close it.", "color:#991b1b;"));
+      parts.push(UL(rq.items, it => '<b>' + KIND[it.kind] + '</b> (' + (it.need === "Listed" ? "listed, not labeled" : it.need.toLowerCase()) + '): ' + esc(it.kind === "cert" ? it.label : '\u201C' + it.label + '\u201D') + '. Your resume: ' + esc(it.yours) + ' \u2014 <b>' + ST[it.status] + '</b>'));
+      if (!rq.labeled) parts.push(P("This posting doesn't separate required from preferred, so treat each item as required.", "color:#475569;"));
+    }
+    if (_kw && Array.isArray(_kw.copied) && _kw.copied.length) {
+      parts.push(H3("Possible copied posting text"));
+      parts.push(P("These phrases match the job posting word for word. Keep each one only if it's true for you, and say it in your own words."));
+      parts.push(UL(_kw.copied.slice(0, 4), c => '\u201C' + esc(c.phrase) + '\u201D (' + esc(c.where) + ')'));
     }
 
     const anyCredibility = (mech.count || 0) + (mc.count || 0) + (tm.count || 0) + (sq.count || 0) + (fn && fn.ok === false ? 1 : 0);
@@ -7927,6 +8376,33 @@ function App() {
                 <p style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 6, color: "#3a3d3f" }}>{optimizer.keyword.missingSkills.slice(0, 10).join(", ") || "No major suggested skill gaps from the posting."}</p>
               </div>
             </div>}
+            {optimizer.keyword && optimizer.keyword.requirements && optimizer.keyword.requirements.items.length > 0 && (() => {
+              const rq = optimizer.keyword.requirements;
+              const KIND = { years: "Experience", degree: "Education", cert: "Certification", clearance: "Clearance" };
+              const ST = {
+                met: { t: "Shown", c: "#166534" },
+                close: { t: "Close", c: "#b45309" },
+                inprogress: { t: "In progress", c: "#b45309" },
+                flexible: { t: "Equivalent experience accepted", c: "#b45309" },
+                check: { t: "Check", c: "#6d7073" },
+                gap: { t: "Not shown", c: "#991b1b" }
+              };
+              const order = { Required: 0, Listed: 1, Preferred: 2 };
+              const list = rq.items.slice().sort((a, b) => (order[a.need] - order[b.need]));
+              return <div style={{ marginTop: 12, padding: 12, borderRadius: 0, background: "#fff", border: "1px solid #d6d6d8", textAlign: "left" }}>
+                <b style={{ fontSize: 12, color: "#1d1f20" }}>Requirements check</b>
+                {rq.gap && <p style={{ fontSize: 11.5, lineHeight: 1.5, margin: "6px 0", padding: "8px 10px", background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b" }}><b>Experience gap:</b> the posting asks for {rq.gap.need}+ years and your dated experience adds up to about {Math.round(rq.gap.have * 2) / 2}. Job Match counts keywords, not years, so a high match % can hide this. If the rest is a strong fit, apply anyway and use your cover letter to point to the work that fits. Don't stretch dates or titles to close it.</p>}
+                <ul style={{ margin: "6px 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#3a3d3f" }}>
+                  {list.slice(0, 8).map((it, i) => <li key={i} style={{ marginBottom: 4 }}>
+                    <b>{KIND[it.kind]}</b> <span style={{ color: "#6d7073" }}>({it.need === "Listed" ? "listed, not labeled" : it.need.toLowerCase()})</span>: {it.kind === "cert" ? it.label : "\u201C" + it.label + "\u201D"}<br />
+                    <span style={{ color: "#6d7073" }}>Your resume:</span> {it.yours} {"\u2014"} <b style={{ color: ST[it.status].c }}>{ST[it.status].t}</b>
+                    {it.kind === "years" && it.status !== "check" && <span style={{ color: "#6d7073" }}> (counts all dated jobs; count only the years that fit what the posting describes)</span>}
+                    {it.kind === "clearance" && it.obtain && it.status === "check" && <span style={{ color: "#6d7073" }}> (the posting says you must be able to obtain one; this usually requires U.S. citizenship)</span>}
+                  </li>)}
+                </ul>
+                {!rq.labeled && <p style={{ fontSize: 11, color: "#6d7073", margin: "4px 0 0" }}>This posting doesn't separate required from preferred, so treat each item as required.</p>}
+              </div>;
+            })()}
             {optimizer.keyword && optimizer.keyword.evidence && optimizer.keyword.evidence.total > 0 && (() => {
               const ev = optimizer.keyword.evidence;
               const allBacked = ev.listedOnly.length === 0;
@@ -7937,6 +8413,11 @@ function App() {
                   : <p style={{ fontSize: 11.5, lineHeight: 1.5, margin: "6px 0 0", color: "#3a3d3f" }}><b>Listed in Skills or Summary only:</b> {ev.listedOnly.join(", ")}. The match % counts these the same as skills you've shown in a bullet. Add a bullet or project that shows each one, or be ready to explain it in an interview. Adding skills just to raise the score tends to surface in interviews.</p>}
               </div>;
             })()}
+            {optimizer.keyword && optimizer.keyword.copied && optimizer.keyword.copied.length > 0 && <div style={{ marginTop: 12, padding: 12, borderRadius: 0, background: "#fffbeb", border: "1px solid #fde68a", textAlign: "left" }}>
+              <b style={{ fontSize: 12, color: "#92400e" }}>Possible copied posting text</b>
+              <p style={{ fontSize: 11.5, lineHeight: 1.5, margin: "6px 0 6px", color: "#3a3d3f" }}>These phrases match the job posting word for word. Recruiters notice copied language, and it's hard to defend in an interview. Keep each one only if it's true for you, and say it in your own words.</p>
+              <ul style={{ margin: "0 0 0 18px", padding: 0, fontSize: 11.5, lineHeight: 1.5, color: "#3a3d3f" }}>{optimizer.keyword.copied.slice(0, 4).map((c, i) => <li key={i} style={{ marginBottom: 3 }}>{"\u201C" + c.phrase + "\u201D"} <span style={{ color: "#6d7073" }}>({c.where})</span></li>)}</ul>
+            </div>}
             {optimizer.keyword && optimizer.keyword.fitWarning && <div style={{ marginTop: 12, padding: 14, borderRadius: 0, background: "#fef2f2", border: "1.5px solid #fca5a5", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 18 }}>⚠️</span>
