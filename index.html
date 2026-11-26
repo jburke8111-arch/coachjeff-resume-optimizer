@@ -4,6 +4,8 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.42: Recruiter Confidence Timeline, first glance with no summary: "Without a Professional Summary at the top, I'm hunting for direction." (was "Without a clear summary"). -->
+<!-- v12.3.41: Recruiter Review's "Here's What Would Increase My Confidence" says "Add a professional summary" when there is none (it said "Clarify the professional summary", which made no sense on a resume without one). -->
 <!-- v12.3.40: (1) ADDITIONAL EXPERIENCE IN THE REBUILT RESUME. Entries tagged Additional Experience render as their own section (Word, PDF backup and preview) right after Experience, and the main section is titled "Relevant Experience" when that happens. The section is in the editor's "Appears under this section" menu, in the section list (removable), and is added to saved drafts' section order. (2) NO UPGRADED VERBS. Before → After no longer swaps "Assisted with / Helped / Aided" for a lead verb ("Assisted with mascot appearances" became "Organized mascot appearances"); those bullets get the "keep the verb honest, add the result" card instead. -->
 <!-- v12.3.39: IMPORT AND STRUCTURE FIXES (from Lily Persio's resume). (1) Combined "HONORS/SKILLS"-style headings route labelled lines: Skills lines to Skills, "Certificates:" to Certifications (comma or semicolon lists), "Honors:" to Awards; a wrapped line is re-joined. (2) When no Skills section exists, inferred skills use whole words only ("Valuation" was read out of "evaluation", "Git" out of "digital") and are marked inferred so the Skills checks skip them. (3) PDF import keeps a wide column gap before a trailing "City, ST" as " | ", so "Employer [tab] City, ST" splits into employer and location; an employer row above "Title  Dates" now starts the entry; "Organization, Role" one-liners split; seasons ("Summer 2024 – Summer 2026") parse as dates so those entries are no longer dropped, and Mechanics asks for months instead. (4) A university line above college-level degrees ("Smeal College of Business / MBA", "Bellisario College / BA") is a parent, not a degree: both degrees keep the university name and location; "School | City, ST" splits cleanly. (5) Before → After no longer rewrites "Assisted with the development and evaluation of..." into "Built development and evaluation of..."; it shows a tighten card. (6) Relevant Experience and Additional Experience are approved headers. Additional Experience entries stay below the relevant work (sorted within their section), are left out of the entry-format check and of relevance ranking, and memberships listed there are pointed to Professional Affiliations. When a retail or service job is as recent as the relevant work under one Experience header, the tool recommends the Relevant / Additional split; the recommended order puts Additional Experience right after Relevant Experience, then Skills. Also: graduation timing compares month and year (a May 2026 graduate read in November 2026 is a recent graduate, not a current student); experience months count each calendar month once and skip memberships; superscript ordinals ("1st") are repaired; the remaining section order follows the approved list. -->
 <!-- v12.3.38: NEW TARGET FIELD "Merchandising / Buying" for merchandising analyst, assistant buyer, merchandise planner, allocation and licensing roles (retail corporate programs, consumer brands, licensing offices). Keyword bank: merchandising, merchandise and assortment planning, product category, sales and trend analysis, inventory, allocation, vendor relations, pricing, forecasting, licensing, brand management, retail analytics, Excel (pivot tables, VLOOKUP). Credential profile: LinkedIn and certifications, no portfolio or GitHub nudge; projects are optional when the resume shows relevant work. Section order leads with Experience (Education moves up for a new or current graduate). Joins the business cluster for Job Match adjacency. Field examples for the certification suggestion and "Add measurable wins". "Retail" is left out of the name on purpose: store-side retail roles need different keywords. -->
@@ -178,7 +180,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.40";
+const BUILD_VERSION = "v12.3.42";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -7325,7 +7327,7 @@ function App() {
     let confidence = 55;
 
     if (hasSummary) { confidence += 8; addSignal("Professional summary gives the recruiter a starting point."); }
-    else { confidence -= 8; addConcern("Career direction is not immediately clear."); addImprove("Clarify the professional summary", "State the target role, strongest skills, and one or two pieces of evidence.", "High"); }
+    else { confidence -= 8; addConcern("Career direction is not immediately clear."); addImprove("Add a professional summary", "Two or three lines at the top: the role you're targeting, your strongest skills, and one or two pieces of evidence.", "High"); }
 
     if (hasSkills && skillCount >= 8) { confidence += 10; addSignal("Skills section shows relevant tools and capabilities."); }
     else { confidence -= 6; addConcern("Skills section could be more complete or better organized."); addImprove("Organize the skills section", "Group technical skills, tools, and domain knowledge so they are easy to scan.", "Medium"); }
@@ -7534,7 +7536,7 @@ function App() {
         up: hasSummary,
         note: hasSummary
           ? "First glance: your summary tells me quickly what role you're targeting, so I can read with context."
-          : "First glance: the selected target is " + (data.field || "the target field") + ", but the resume itself does not state that direction clearly near the top. Without a clear summary, I'm hunting for direction."
+          : "First glance: the selected target is " + (data.field || "the target field") + ", but the resume itself does not state that direction clearly near the top. Without a Professional Summary at the top, I'm hunting for direction."
       },
       {
         stage: "10–20 sec — Experience check",
