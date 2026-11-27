@@ -4,6 +4,13 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.49: MARKET-READY CAP. A resume that still shows references, high school or personal details (street address, date of birth, age, marital status) is held at 79 (Near-Ready) even when its categories add up to 80 or more. A line under Resume Health and in the report says why, e.g. "Held at 79 (from 86) until the references are removed." Layout items read from a PDF (columns, tables, fonts, symbol bullets) lower Formatting & Polish but never trigger the cap, so a misread PDF can't hold back a strong resume. -->
+<!-- v12.3.48: ATS AND RECRUITER BASICS. (1) PDFs now get the structure checks Word files get: Columns (text split side by side on 5+ lines), Tables or grid lines (vertical rules), Boxes or shaded blocks, Images or icons; a clean PDF shows one "Page structure" row. The page-header check stays Word-only (a PDF has no separate header). (2) Font row for Word and PDF: one font, from the ATS-friendly list (Calibri, Arial, Times New Roman, Garamond, Georgia, Cambria, Helvetica, Verdana, Tahoma, Aptos and similar, plus the Google Docs/LibreOffice clones); replaces the Word-only "more than 2 fonts" row. (3) Symbol bullets and icons: arrows, checkmarks, stars, squares, phone/email icons, emoji, icon fonts (Font Awesome, Wingdings) and Word list bullets drawn with non-round glyphs. (4) Font counts use letters and digits only, so a bullet glyph drawn from another font is not a second font; Word list bullets and typed Wingdings bullets (which show as Ø, §, ü) are told apart from round bullets. Citizenship and work-authorization lines are not flagged as personal details; high school is flagged for graduates and for students within 12 months of graduating, and only from education entries, not bullets that mention a high school; "I/O" and "Level I" are not first-person words; a "Relevant Coursework" sub-label is not treated as a section heading. (5) Content Checks: References on the resume (a References section or "available upon request"); High school listed (graduates and students within 12 months of graduating); First-person words (I, me, my, we, our, us) in the summary and bullets; Personal details (street address in the contact area, date of birth, age, marital status and similar). References, high school and personal details lower ATS Structure & Parsing (3, 3 and 4 points); first-person words lower Verb / Tense Consistency (8 points). Page length is unchanged: 2 pages stays acceptable when the content warrants it. -->
+<!-- v12.3.47: LAYOUT CHECK COVERS THE FULL FORMAT TABLE. New rows: Name in all caps; Font size by section (flags a section below 11 pt even when most of the page is 11 pt); Line spacing (Single); Space before section headings (12 pt) and after (6 pt); Space between bullets (0 pt). Word files are read exactly from paragraph settings (styles and defaults included); PDFs are estimated from the gaps between lines, labelled "(estimated)", and only flagged when clearly off. The bold row now also flags a plain name and plain skills sub-headers ("Bold on name, titles, degree, sub-headers"). -->
+<!-- v12.3.46: Layout Check adds "Section headings in all caps": flags any section heading on the uploaded PDF or Word file that is not in all caps (e.g. "Education" → "EDUCATION"). The rebuilt resume already prints headings in all caps. -->
+<!-- v12.3.45: Layout Check adds "Bold section headings": flags section headings (the standard headers and their common variants) on the uploaded PDF or Word file that are not bold. Shown only when the file uses bold somewhere, so an unreadable font style isn't reported as plain. Heading size (13 pt) was already checked. -->
+<!-- v12.3.44: EMPHASIS AND LINES (Coach Jeff standard: no italics anywhere; bold only on the name, section headings, job titles, degree title and skills sub-headers; no full-width lines). The Layout Check now reads font styles from the uploaded PDF (font names) or Word file (w:b, w:i, styles) and adds rows for Italics, Bold text (flags bold employers, schools, dates, locations, contact details, bullet text), Bold on titles and degree (when a job title or the degree is plain), and Full-width lines (PDF drawn lines spanning 60%+ of the page; Word paragraph borders and horizontal-line shapes). The "can't check" list drops bold and italics and keeps color. Rebuilt Word export: the project "Technologies:" label is no longer bold. -->
+<!-- v12.3.43: ALIGNMENT WITH THE ANDRIN CHIRAYATH EVALUATION. (1) SECTION ORDER follows the two vetted evaluations: when the other job is unrelated (retail, restaurant) the internships lead (Education, Internships, Skills, Experience); when it is a real, related job (Andrin's Nordstrom logistics work) the order is Education, Skills, Experience, Internships, with Internships directly below Experience. Projects follow the work history, then Certifications, then Leadership & Activities. The Section Order card, Top Opportunities, Game Plan, Roadmap and Section Headers table now give the same order (the card used to say Summary, Education, Skills, Experience, Projects while the others said Internships first). (2) The "missing period" check no longer fires on title-case names ("award-winning Business and IT Continuity Planning"); a "-winning" adjective followed by a preposition ("award-winning in business continuity capstone") is flagged as a grammar slip. (3) Recruiter Review: real reasons to pause (degree below the first job, tools never shown, near-identical bullets); the Skills list is praised only when bullets back most of it, otherwise the most relevant role is named; the confidence timeline is spread across the read instead of climbing about 20 points above the decision and dropping at the end. (4) Certifications are not listed as a strength when their names read like training programs. (5) One award: an Honors line under Education plus its own bullet, not a separate Awards line. (6) Data and analytics fields: a portfolio or GitHub link is optional, not "expected". New checks: (7) wording that may have carried over from another job in a near-identical bullet ("package order" at Fidelity); (8) summary names tools no bullet backs up, leads with years of retail, "across financial services" from one role, more buzzwords (summary score drops with each); (9) a current job written in the past tense; (10) title, employer and location on one line; (11) the same employer and dates listed twice; (12) a project titled like a job ("Analyst | City of Frisco"); (13) every percentage that claims a change with no starting point, plus signs on exact numbers ("186+"), spelled-out numbers; (14) double underscores in the file name, and a quick win to type out the LinkedIn address when the page shows only the word. The Game Plan leads with "Fix the accuracy items" when two or more apply. -->
 <!-- v12.3.42: Recruiter Confidence Timeline, first glance with no summary: "Without a Professional Summary at the top, I'm hunting for direction." (was "Without a clear summary"). -->
 <!-- v12.3.41: Recruiter Review's "Here's What Would Increase My Confidence" says "Add a professional summary" when there is none (it said "Clarify the professional summary", which made no sense on a resume without one). -->
 <!-- v12.3.40: (1) ADDITIONAL EXPERIENCE IN THE REBUILT RESUME. Entries tagged Additional Experience render as their own section (Word, PDF backup and preview) right after Experience, and the main section is titled "Relevant Experience" when that happens. The section is in the editor's "Appears under this section" menu, in the section list (removable), and is added to saved drafts' section order. (2) NO UPGRADED VERBS. Before → After no longer swaps "Assisted with / Helped / Aided" for a lead verb ("Assisted with mascot appearances" became "Organized mascot appearances"); those bullets get the "keep the verb honest, add the result" card instead. -->
@@ -180,7 +187,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.42";
+const BUILD_VERSION = "v12.3.49";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -1453,6 +1460,7 @@ function _parseExperienceEntries(lines) {
     let location = "";
     let bulletStart = 1;
     let headerOrder = "";
+    let inlineHeader = false;
 
     headerText = String(headerText || "").replace(/\|\s*$/, "").trim();
     // v12.3.33: set the title AFTER the trailing pipe is stripped, so
@@ -1472,6 +1480,7 @@ function _parseExperienceEntries(lines) {
         if (parts.length === 1) title = parts[0];
       }
       if (parts.length >= 2) {
+        inlineHeader = true; // v12.3.43: title and employer share one line
         const left = parts[0];
         const right = parts[parts.length - 1];
         const leftIsTitle = _looksLikeJobTitle(left);
@@ -1513,8 +1522,8 @@ function _parseExperienceEntries(lines) {
         const ROLE = /\b(member|president|co-president|vice[\s-]?president|treasurer|secretary|chair|co-chair|officer|captain|founder|co-founder|lead|volunteer|director|mentor|tutor|delegate|ambassador)\b/i;
         const isRole = (x) => x.split(/\s+/).length <= 6 && (_looksLikeJobTitle(x) || ROLE.test(x));
         const rRole = isRole(R), lRole = isRole(L);
-        if (rRole && !lRole) { org = L; title = R; headerOrder = "employer-first"; }
-        else if (lRole && !rRole) { title = L; org = R; headerOrder = "title-first"; }
+        if (rRole && !lRole) { org = L; title = R; headerOrder = "employer-first"; inlineHeader = true; }
+        else if (lRole && !rRole) { title = L; org = R; headerOrder = "title-first"; inlineHeader = true; }
       }
     }
 
@@ -1594,7 +1603,8 @@ function _parseExperienceEntries(lines) {
       start: date ? date.start : "",
       end: date ? date.end : "",
       bullets: bullets.length ? bullets : [""],
-      headerOrder
+      headerOrder,
+      inlineHeader
     };
   }
 
@@ -2210,6 +2220,53 @@ async function extractPdfTextFromFile(file) {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
+    // v12.3.44: load the page's drawing operations once. That resolves the
+    // fonts (so bold and italic can be read from the font names) and shows any
+    // full-width horizontal rule lines.
+    let _fontStyle = {};
+    try {
+      const opList = await page.getOperatorList();
+      const OPS = window.pdfjsLib.OPS || {};
+      const pageW = (page.view || [0, 0, 612, 792])[2] - (page.view || [0, 0, 612, 792])[0];
+      let ctm = [1, 0, 0, 1, 0, 0];
+      const stack = [];
+      const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+      const app = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+      let rules = 0, vlines = 0, boxes = 0, images = 0;
+      const IMG = [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintJpegXObject, OPS.paintImageXObjectRepeat, OPS.paintInlineImageXObjectGroup].filter(v => v != null);
+      for (let i = 0; i < opList.fnArray.length; i++) {
+        const fn = opList.fnArray[i], args = opList.argsArray[i];
+        if (fn === OPS.save) stack.push(ctm.slice());
+        else if (fn === OPS.restore) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+        else if (fn === OPS.transform && args) ctm = mul(ctm, args);
+        else if (fn === OPS.constructPath && args && args[2] && args[2].length >= 4) {
+          const mm = args[2];
+          const a = app(ctm, mm[0], mm[2]), b = app(ctm, mm[1], mm[3]);
+          const w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
+          if (w >= pageW * 0.6 && h <= 3) rules++;
+          else if (w <= 3 && h >= 10) vlines++;                       // table cell borders, sidebars
+          else if (w >= 40 && h >= 12 && w < pageW * 0.95) {           // boxes and shaded blocks (painted, not clip areas)
+            const nx = opList.fnArray[i + 1];
+            if ([OPS.fill, OPS.eoFill, OPS.fillStroke, OPS.eoFillStroke, OPS.stroke, OPS.closeStroke, OPS.closeFillStroke, OPS.closeEOFillStroke].indexOf(nx) >= 0) boxes++;
+          }
+        }
+        else if (IMG.indexOf(fn) >= 0) images++;
+      }
+      layoutRaw.rules = (layoutRaw.rules || 0) + rules;
+      layoutRaw.vlines = (layoutRaw.vlines || 0) + vlines;
+      layoutRaw.boxes = (layoutRaw.boxes || 0) + boxes;
+      layoutRaw.images = (layoutRaw.images || 0) + images;
+      (content.items || []).forEach(it => {
+        const fn = it.fontName;
+        if (!fn || _fontStyle[fn]) return;
+        let nm = "", bold = false, italic = false;
+        try { const f = page.commonObjs.get(fn); nm = String((f && (f.name || f.loadedName)) || ""); bold = !!(f && (f.bold || f.black)); italic = !!(f && f.italic); } catch (e) { /* font not resolved */ }
+        const fam = String(((content.styles || {})[fn] || {}).fontFamily || "");
+        if (/bold|black|heavy|semibold|demi/i.test(nm)) bold = true;
+        if (/italic|oblique/i.test(nm)) italic = true;
+        _fontStyle[fn] = { bold, italic, nm: nm || fam };
+      });
+    } catch (e) { _fontStyle = {}; }
     // PDF.js returns each text run as an item with a transform matrix; index 5 is
     // the Y position and index 4 is X. Text runs on the same visual line share a
     // Y (within a small tolerance). Joining everything with spaces destroys the
@@ -2236,7 +2293,8 @@ async function extractPdfTextFromFile(file) {
       // v12.3.17: keep each run's width and font height so runs can be joined by
       // their real horizontal gap instead of a blanket space (see below).
       const h = Math.abs(it.height || 0) || Math.hypot(tr[2] || 0, tr[3] || 0) || 10;
-      row.runs.push({ x, str: it.str, w: (typeof it.width === "number" ? it.width : -1), h });
+      const fs = _fontStyle[it.fontName] || {};
+      row.runs.push({ x, str: it.str, w: (typeof it.width === "number" ? it.width : -1), h, b: !!fs.bold, i: !!fs.italic, f: fs.nm || "" });
     });
     // Sort rows top-to-bottom (PDF Y increases upward, so descending Y = top-down),
     // then each row left-to-right by X, and join runs into a line.
@@ -2295,7 +2353,25 @@ async function extractPdfTextFromFile(file) {
         const size = real.reduce((m, rn) => Math.max(m, rn.h || 0), 0);
         const x0 = real.reduce((m, rn) => Math.min(m, rn.x), Infinity);
         const x1 = real.reduce((m, rn) => Math.max(m, rn.x + Math.max(rn.w, 0)), 0);
-        layoutRaw.lines.push({ t: text, s: size, x0, x1, y: row.y, p: pageNum });
+        // v12.3.44: the bold and italic text on this line.
+        const boldTxt = row.runs.filter(rn => rn.b).map(rn => rn.str).join("").replace(/\s+/g, " ").trim();
+        const italTxt = row.runs.filter(rn => rn.i).map(rn => rn.str).join("").replace(/\s+/g, " ").trim();
+        // v12.3.48: fonts used, and text split by a wide gap into two columns.
+        layoutRaw.fontChars = layoutRaw.fontChars || {};
+        // Letters and digits only: bullet glyphs and dashes are often drawn from
+        // another font (a "●" in Arial inside a Calibri resume) and don't count.
+        real.forEach(rn => { const fam = pdfFontFamily(rn.f); const an = String(rn.str).replace(/[^A-Za-z0-9]/g, "").length; if (fam && an) layoutRaw.fontChars[fam] = (layoutRaw.fontChars[fam] || 0) + an; });
+        let col = false;
+        const srt = real.slice().sort((a, b) => a.x - b.x);
+        for (let k = 1; k < srt.length; k++) {
+          const pv = srt[k - 1], gap = srt[k].x - (pv.x + Math.max(pv.w, 0));
+          if (pv.w >= 0 && gap >= 28) {
+            const left = srt.slice(0, k).map(r => r.str).join("").trim(), right = srt.slice(k).map(r => r.str).join("").trim();
+            const dateish = /^(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|spring|summer|fall|winter|expected|anticipated)[a-z]*\.?\s*)?(?:19|20)\d{2}|^(?:present|current)$|[A-Z][a-zA-Z .'-]+,\s*[A-Z]{2}$|^remote$/i;
+            if (left.length >= 12 && right.length >= 12 && !dateish.test(right) && !/(?:19|20)\d{2}\s*$/.test(right)) col = true;
+          }
+        }
+        layoutRaw.lines.push({ t: text, s: size, x0, x1, y: row.y, p: pageNum, bt: boldTxt, it: italTxt, bs: row.runs.filter(rn => rn.b && String(rn.str).trim()).map(rn => rn.str.trim()), col });
       });
     } catch (e) { /* layout capture is best-effort */ }
     // v12.3.17: collect clickable link targets (e.g. a "LinkedIn" label whose URL
@@ -3382,7 +3458,7 @@ function analyzeSummaryQuality(data) {
 
   // (1) Buzzword / abstraction density. These read as impressive but say little;
   // the manual audit flags exactly this ("sound impressive but say little concrete").
-  const BUZZWORDS = /\b(proven track record|results?-driven|detail-oriented|team player|hard-working|hardworking|go-getter|self-starter|passionate|dynamic|synergy|leverage|leveraging|cutting-edge|state-of-the-art|world-class|best-in-class|thought leader|game-changer|value-add|move the needle|deep expertise|expert in|seasoned|highly motivated|extensive experience|track record|end-to-end lifecycle|high-availability|production-grade|robust|scalable solutions|real-time solutions)\b/gi;
+  const BUZZWORDS = /\b(problem-solving mindset|comfortable working independently|work(?:s|ing)? independently or (?:across|in|on) teams|stakeholder-ready|proven track record|results?-driven|detail-oriented|team player|hard-working|hardworking|go-getter|self-starter|passionate|dynamic|synergy|leverage|leveraging|cutting-edge|state-of-the-art|world-class|best-in-class|thought leader|game-changer|value-add|move the needle|deep expertise|expert in|seasoned|highly motivated|extensive experience|track record|end-to-end lifecycle|high-availability|production-grade|robust|scalable solutions|real-time solutions)\b/gi;
   const buzzHits = [...new Set((summary.match(BUZZWORDS) || []).map(s => s.toLowerCase()))];
   if (buzzHits.length >= 2) {
     findings.push("Your summary leans on buzzwords that sound impressive but say little concrete: " +
@@ -3433,6 +3509,22 @@ function analyzeSummaryQuality(data) {
     findings.push("This summary is unusually long (" + wordCount + " words) \u2014 that almost always means other sections (Skills, Experience, or Projects) didn\u2019t import under their own headings and got pulled in here. Check that your section headings are on their own lines (a stray space can turn \u201CPROJECTS\u201D into \u201CP ROJECTS\u201D and hide it), then re-import. If the text below really is all summary, cut it to 2\u20133 lines.");
   } else if (wordCount > 70) {
     findings.push("Your summary runs long (" + wordCount + " words). Tighten to 2\u20133 lines so a recruiter absorbs it in one glance.");
+  }
+
+  // v12.3.43: what the manual evaluation catches in a summary beyond length.
+  if (!parseWarning) {
+    // (6) Tools named in the summary that no bullet backs up.
+    const _ci = analyzeContentIntegrity(data);
+    const _esc = x => String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const _named = (_ci.unsupported || []).filter(s => new RegExp("(^|[^A-Za-z0-9+#])" + _esc(String(s).replace(/\s*\(.*\)\s*$/, "")) + "([^A-Za-z0-9+#]|$)", "i").test(summary));
+    if (_named.length) findings.push("Your summary names " + _named.slice(0, 3).join(" and ") + ", but no bullet shows " + (_named.length === 1 ? "it" : "them") + " in use. Name only the tools you back up elsewhere on the page.");
+    // (7) Leads with unrelated experience.
+    const _first = summary.split(/(?<=[.!?])\s+/)[0] || summary;
+    const _lead = _first.match(/\b(?:years?|yrs?)\s+of\s+[^.]{0,40}?\b(retail|restaurant|hospitality|food service|customer service|warehouse|fast-paced retail)\b/i);
+    if (_lead && !/merchandis|retail|hospitality|customer/i.test(String(data.field || ""))) findings.push("Your first fact is years of " + _lead[1].replace(/^fast-paced\s+/i, "") + " experience. For " + (data.field || "your target") + " roles, lead with your degree and most relevant experience, and use those years as supporting evidence.");
+    // (8) "across financial services" with one role in that area.
+    const _across = summary.match(/\bacross\s+(financial services|industries|multiple industries|sectors|the [a-z]+ industry|[a-z]+ services)\b/i);
+    if (_across) findings.push("\u201C" + _across[0] + "\u201D suggests several employers or years. If it comes from one role, name it instead (for example \u201Cat [employer]\u201D).");
   }
 
   if (findings.length && !parseWarning) {
@@ -3492,7 +3584,14 @@ function analyzeVerbChoice(data) {
     else if (/^responsible\s+for\b/i.test(b)) filler.push("Responsible for");
   });
   const repeated = Object.keys(counts).filter(k => counts[k] >= 2 && /(ed|e|s)$/.test(k)).map(k => display[k] + " (" + counts[k] + ")");
+  // v12.3.43: a current job ("– Present") written in the past tense.
+  const pastCurrent = ((data && data.experience) || []).filter(e => e && /present|current/i.test(String(e.end || "")) && e.section !== "additional").filter(e => {
+    const bs = (e.bullets || []).map(clean).filter(b => b.length > 12);
+    const past = bs.filter(b => /^[A-Z][a-z]+ed\b/.test(b)).length;
+    return bs.length >= 2 && past >= Math.ceil(bs.length * 0.67);
+  });
   const findings = [];
+  if (pastCurrent.length) findings.push("Your current job" + (pastCurrent[0].org ? " at " + pastCurrent[0].org : "") + " is written in the past tense. Use the present tense for work you still do (\u201CValidate,\u201D \u201CMonitor\u201D) and keep the past tense for finished results.");
   if (repeated.length) findings.push("Several bullets open with the same verb: " + repeated.slice(0, 4).join(", ") + ". Use a different, specific verb for each bullet, especially within the same job.");
   if (doubles.length) findings.push((doubles.length === 1 ? "One bullet opens" : doubles.length + " bullets open") + " with two verbs (" + doubles.slice(0, 2).map(d => "\u201C" + d + "\u201D").join(", ") + "). One strong verb is cleaner.");
   if (filler.length) findings.push(Array.from(new Set(filler)).slice(0, 2).map(f => "\u201C" + f + "\u201D").join(" and ") + (filler.length === 1 ? " is a filler opener" : " are filler openers") + ". \u201CUsed\u201D or a more specific verb is stronger" + (filler.some(f => /^particip/i.test(f)) ? ", and \u201CParticipate in\u201D reads as passive in a leadership section" : "") + ".");
@@ -3642,7 +3741,16 @@ function analyzeMechanics(data, rawImportText) {
   // one, e.g. "...Security+ in progress Business analyst with...". Limited to
   // words that typically open a summary sentence, to avoid flagging proper nouns.
   const SENTENCE_STARTERS = "Business|Experienced|Proven|Results|Detail|Skilled|Motivated|Dedicated|Passionate|Seeking|Currently|Recent|Certified|Highly|Strong|Accomplished|Analytical|Driven|Former|Versatile|Adept|Bringing|Known|Focused|Targeting";
-  const missingPeriodRe = new RegExp("\\b[a-z][a-z0-9\\+\\)]*\\s+(" + SENTENCE_STARTERS + ")\\s+[a-z]");
+  // v12.3.43: not when the capitalized word starts a title-case name
+  // ("award-winning Business and IT Continuity Planning ...").
+  const missingPeriodRe = new RegExp("\\b[a-z][a-z0-9\\+\\)]*\\s+(" + SENTENCE_STARTERS + ")\\s+(?!(?:and|of|or|for|to|&)\\s+[A-Z])[a-z]");
+  // v12.3.43: "a first-place award-winning in business continuity capstone":
+  // a "-winning" adjective followed straight by a preposition is missing a word
+  // or has words out of order.
+  for (const u of _scan) {
+    const gm = u.match(/\b[a-z]+-winning\s+(?:in|on|at|for|of)\s+[a-z][^.,;]{0,40}/i);
+    if (gm) { add("Grammar", "This phrase is missing a word or has words out of order: \u201C" + gm[0].trim() + "\u201D. Read it aloud and reword it, for example \u201Ca first-place [award name] for a business continuity capstone.\u201D", gm[0].trim()); break; }
+  }
   for (const u of _scan) {
     const m = u.match(missingPeriodRe);
     if (m) {
@@ -3697,6 +3805,11 @@ function analyzeMechanics(data, rawImportText) {
         "Your date ranges mix a hyphen (\u201C" + _seen.hy + "\u201D) and an en dash (\u201C" + _seen.en + "\u201D). Use the en dash (\u2013) with a space on each side in every date range.",
         _seen.hy + " \u2192 " + _seen.hy.replace(/\s*-\s*/, " \u2013 "));
     }
+    // v12.3.43: "186+" / "75+" on exact numbers; spelled-out numbers.
+    const _plus = Array.from(new Set((_raw.match(/\b\d{2,}\+/g) || []).filter(x => parseInt(x, 10) % 10 !== 0)));
+    if (_plus.length) add("Number style", "A plus sign belongs on a round number (\u201C100+\u201D). On an exact number it looks odd: " + _plus.slice(0, 3).map(x => "\u201C" + x + "\u201D").join(", ") + ". State the exact number, or round it and say \u201Cmore than.\u201D", _plus[0] + " \u2192 " + _plus[0].replace("+", ""));
+    const _spelled = Array.from(new Set((_raw.match(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty)[\s-]+(?:[a-z]+\s+)?(?:years?|members?|people|tiers?|teams?|months?|weeks?|days?|cities|projects?|clients?|employees?|students?|semesters?|stores?|sites?|departments?|locations?)\b/gi) || []).map(s => s.trim())));
+    if (_spelled.length && /\b\d+\b/.test(_raw)) add("Number style", "Use digits for every number, including numbers under 10. Digits catch the eye when a resume is skimmed: " + _spelled.slice(0, 3).map(x => "\u201C" + x + "\u201D").join(", ") + ".", _spelled[0]);
     // v12.3.39: seasons instead of months.
     const _sz = _raw.match(/\b(spring|summer|fall|autumn|winter)\s+(?:19|20)\d{2}(?:\s*[-\u2013\u2014]\s*(?:(?:spring|summer|fall|autumn|winter)\s+(?:19|20)\d{2}|present|current))?/i);
     if (_sz) add("Date format", "Use months and years in every date range (\u201CMay 2024 \u2013 August 2024\u201D), not seasons (\u201C" + _sz[0] + "\u201D). An ATS can't place a season on a timeline, and one format reads cleaner.", _sz[0] + " \u2192 Month Year \u2013 Month Year");
@@ -3879,7 +3992,8 @@ function analyzeSectionQuality(data, rawImportText) {
   const hasAwardsSection = (data.awards || []).some(a => String((a && a.name) || "").trim().length > 3);
   if (!hasAwardsSection && awardMention.test(text)) {
     const m = text.match(awardMention);
-    notes.push({ kind: "tip", text: "You mention an honor (\u201C" + (m ? m[0] : "award") + "\u201D) but don't have a dedicated Awards line. A standout award is a genuine differentiator \u2014 give it its own line so it isn't buried." });
+    // v12.3.43: one award doesn't need its own section (Coach Jeff's standard).
+    notes.push({ kind: "tip", text: "You mention an honor (\u201C" + (m ? m[0] : "award") + "\u201D) but never name it. Add an Honors line under your degree in Education with the official award name and who gave it, and give it a bullet of its own where you earned it. A separate Awards & Honors section is for two or more." });
   }
 
   const tips = notes.filter(n => n.kind === "tip");
@@ -3896,7 +4010,7 @@ function analyzeFileNaming(data, importedFileName) {
   const looksGood = /^[A-Z][a-z]+[_ ][A-Z][a-z]+.*resume/i.test(base) || /resume/i.test(base) && /_/.test(base);
   // v12.3.33: draft leftovers ("Resume1", ".docx" inside a PDF name, "(6)")
   // look unfinished to a recruiter even when the name is in the file name.
-  const draftMarks = /\(\d+\)|\.docx?\b|\bresume\s*\d+|\bcopy\b|\bfinal\b|\bv\d+\b|\bdraft\b/i.test(base);
+  const draftMarks = /\(\d+\)|\.docx?\b|\bresume\s*\d+|\bcopy\b|\bfinal\b|\bv\d+\b|\bdraft\b|__|\s{2,}/i.test(base);
   const generic = /^(resume|cv|my ?resume|final|document|untitled|new)\b/i.test(base) || base.length < 4 || draftMarks;
   const first = (String(data.name || "").trim().split(/\s+/)[0] || "FirstName");
   const last = (String(data.name || "").trim().split(/\s+/).slice(-1)[0] || "LastName");
@@ -3923,8 +4037,8 @@ function parserLimitationNote(data) {
     return {
       title: "What this tool can't check (do a 30-second human-eye pass)",
       items: [
-        "Spacing between entries and sections \u2014 about 6pt between entries and 12pt before each section heading.",
-        "Bold, italics and color \u2014 bold only your name, section headings, job titles, degree and skills sub-headers.",
+        "Space between jobs \u2014 6 pt after the last bullet of each job" + ((data.importedLayout.source === "docx") ? "." : ". Spacing from a PDF is estimated, so confirm it in your Word file."),
+        "Color \u2014 keep all text black. (Bold, italics and full-width lines are checked in the Layout Check above.)",
         "Words broken across lines (e.g. a hyphen splitting a term mid-line) \u2014 these only show in the rendered layout."
       ],
       why: "Font sizes, margins and page density were measured from your " + (data.importedLayout.source === "docx" ? "Word file" : "PDF") + " and are in the Layout Check above. These remaining visual details still need a quick look from you."
@@ -3978,12 +4092,15 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
     (expBullets ? 55 + Math.round((expQuant / Math.max(1, expBullets)) * 45) : 60) - metricPenalty - dupPenalty
   );
   const skillsScore = clamp((typeof skills.score === "number" ? skills.score : 75) - unsupportedPenalty);
-  const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75) - structurePenalty);
+  // v12.3.48: the ATS and recruiter basics lower their categories too.
+  const _cl = (integrity.findings || []).map(f => f && f.label);
+  const basicsPenalty = (_cl.includes("References on the resume") ? 3 : 0) + (_cl.includes("High school listed") ? 3 : 0) + (_cl.includes("Personal details") ? 4 : 0);
+  const atsScore = clamp((typeof rs.overall === "number" ? rs.overall : 75) - structurePenalty - basicsPenalty);
   // v12.3.33: closer to the manual evaluation. Verb choice (repeats, double
   // and filler verbs) counts with tense; a section structure that needs
   // reordering scores 45; a missing summary scores 25 (manual: 1 of 5).
   const verbChoice = analyzeVerbChoice(data);
-  const tenseScore = clamp(Math.min(verbTense ? verbTense.score : 100, verbChoice.score));
+  const tenseScore = clamp(Math.min(verbTense ? verbTense.score : 100, verbChoice.score) - (_cl.includes("First-person words") ? 8 : 0));
   const _structure = analyzeStructureAdvice(data);
   const orderScore = clamp(_structure.applies ? 45 : ((order.importedMismatch != null ? order.importedMismatch : order.mismatch) ? 72 : 92));
   const summaryScore = clamp(hasSummary ? Math.min(90, summaryCheck && typeof summaryCheck.score === "number" ? summaryCheck.score : 90) : 25);
@@ -4010,7 +4127,21 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
   // most weight (40%) and the summary and section order are single sections
   // inside larger categories. A plain average let those two swing the total.
   const _W = { "Content & Quantification": 0.30, "Skills Depth & Relevance": 0.15, "ATS Structure & Parsing": 0.15, "Verb / Tense Consistency": 0.10, "Section Ordering": 0.05, "Summary & Positioning": 0.07, "Formatting & Polish": 0.18 };
-  const overall = Math.round(categories.reduce((s, c) => s + c.score * (_W[c.key] || 0), 0) / categories.reduce((s, c) => s + (_W[c.key] || 0), 0));
+  let overall = Math.round(categories.reduce((s, c) => s + c.score * (_W[c.key] || 0), 0) / categories.reduce((s, c) => s + (_W[c.key] || 0), 0));
+  // v12.3.49: a resume is not Market-Ready while it still shows references,
+  // high school or personal details. The overall is held at 79 until they are
+  // removed. Only these text-based items hold the score; layout items read
+  // from a PDF (columns, fonts, symbols) lower Formatting but never cap.
+  let capNote = "";
+  const _capItems = [];
+  if (_cl.includes("Personal details")) _capItems.push("the personal details");
+  if (_cl.includes("References on the resume")) _capItems.push("the references");
+  if (_cl.includes("High school listed")) _capItems.push("high school");
+  if (_capItems.length && overall >= 80) {
+    const _list = _capItems.length === 1 ? _capItems[0] : _capItems.slice(0, -1).join(", ") + " and " + _capItems[_capItems.length - 1];
+    capNote = "Held at 79 (from " + overall + ") until " + _list + (_capItems.length === 1 && !/^the /.test(_capItems[0]) ? " is" : " are") + " removed.";
+    overall = 79;
+  }
   let tier, tierNote;
   // v12.3.33: bands match the manual evaluation's 1-5 scale (4.0 = 80, 3.0 = 60).
   if (overall >= 80) {
@@ -4023,7 +4154,7 @@ function buildResumeScorecard(data, resumeStrength, verbTense, runOn, mechanics,
     tier = "NEEDS-WORK";
     tierNote = "The content is worth building on, but positioning and evidence need work before applying to competitive roles.";
   }
-  return { categories, overall, tier, tierNote };
+  return { categories, overall, tier, tierNote, capNote };
 }
 
 // ---- Resume Risk Flags (manual eval §29) ----
@@ -4553,7 +4684,7 @@ function analyzeSectionOrderAdvice(data) {
     return {
       applies: true,
       headline: "Move Education higher — right after your Summary.",
-      body: "As a " + timingPhrase + ", your degree is a leading credential and entry-level recruiters expect to see it early. Placement is driven by degree, experience, and timing — and your timing (" + (sig.currentStudent || sig.expectedGrad ? "a fresh, in-progress degree" : "a recent degree") + ") plus limited full-time experience both point to Education near the top. Recommended order: Summary → Education → Skills → Experience → Projects." + rebuiltNote + gpaClause,
+      body: "As a " + timingPhrase + ", your degree is a leading credential and entry-level recruiters expect to see it early. Placement is driven by degree, experience, and timing — and your timing (" + (sig.currentStudent || sig.expectedGrad ? "a fresh, in-progress degree" : "a recent degree") + ") plus limited full-time experience both point to Education near the top. Recommended order: " + (function () { const st = analyzeStructureAdvice(data); return st.applies ? st.orderText + ". " + st.steps.filter(x => !/^Move Education right under/.test(x)).join(" ") : "Summary → Education → Skills → Experience → Projects."; })() + rebuiltNote + gpaClause,
       caveat: "Judgment call: this is the safer default for new-grad and internship applications. If you were targeting senior individual-contributor roles where years of hands-on experience dominate the decision, you'd keep Experience higher and drop Education toward the bottom.",
       recommendedTop: ["summary", "education", "skills", "experience", "projects"]
     };
@@ -4641,7 +4772,43 @@ function summarizePdfLayout(raw) {
   const lastP = lines.filter(l => l.p === raw.pages);
   const marginB = inch(Math.min.apply(null, (raw.pages > 1 ? p1 : lastP).map(l => l.y - l.s * 0.2)));
   const words = lines.reduce((n, l) => n + l.t.split(/\s+/).filter(Boolean).length, 0);
-  return { source: "pdf", pages: raw.pages || 1, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words };
+  // v12.3.44: emphasis. Bold segments are kept with their line so they can be
+  // matched to the parsed resume (name, headings, titles, degree, sub-headers).
+  const anyStyle = lines.some(l => l.bt || l.it) || false;
+  const boldSegs = [];
+  lines.forEach((l, idx) => {
+    if (!l.bt) return;
+    // split a line's bold text into contiguous runs separated by non-bold text
+    const segs = [];
+    let cur = "";
+    (l.bs || []).forEach(s => { cur = cur ? cur + " " + s : s; });
+    if (cur) segs.push(cur);
+    segs.forEach(sg => boldSegs.push({ t: sg.slice(0, 90), line: l.t.slice(0, 120), first: idx === 0 && l.p === 1 }));
+  });
+  const italics = lines.filter(l => l.it && l.it.length >= 2).map(l => l.it.slice(0, 60));
+  // v12.3.45: section heading lines and whether the whole heading is bold.
+  const _hk = (s) => { try { const k = _headingKey(s); return k && k !== "ignore" ? k : null; } catch (e) { return null; } };
+  const _hkMain = (s) => { const k = _hk(s); return k && k !== "coursework" ? k : null; };
+  const _headRows = lines.filter(l => l.t.length <= 50 && _hkMain(l.t.trim())).map(l => ({ t: l.t.trim().slice(0, 50), bold: !!l.bt && l.bt.replace(/\s+/g, "").length >= l.t.replace(/\s+/g, "").length * 0.9 }));
+  // v12.3.47: each line tagged with its section, plus the vertical gap to the
+  // line above, for the per-section size, sub-header and spacing checks.
+  let _sec = "top";
+  const parts = lines.map((l, i) => {
+    const tx = l.t.trim();
+    const hk = tx.length <= 50 ? _hk(tx) : null;
+    if (hk) _sec = hk;
+    const prev = lines[i - 1];
+    const gap = prev && prev.p === l.p ? Math.round((prev.y - l.y) * 10) / 10 : null;
+    return { t: tx.slice(0, 80), s: l.s, sec: hk ? "heading" : _sec, head: !!hk, bullet: /^[\u2022\u00b7\u25aa\u25e6\u2023\u25cf\u27a2\u2013\-\*\u25a0\u2756]/.test(tx), gap, bt: l.bt || "" };
+  });
+  const pFirst = p1[0] || null;
+  return { source: "pdf", pages: raw.pages || 1, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words,
+    styleRead: anyStyle || lines.length > 0, boldSegs: boldSegs.slice(0, 80), italics: italics.slice(0, 40), italicLines: italics.length, ruleLines: raw.rules || 0, headLines: _headRows,
+    nameText: pFirst ? pFirst.t.trim().slice(0, 60) : "", nameBold: !!(pFirst && pFirst.bt && pFirst.bt.replace(/\s+/g, "").length >= pFirst.t.replace(/\s+/g, "").length * 0.9),
+    parts,
+    columns: lines.filter(l => l.col).length >= 5 ? 2 : 1, colLines: lines.filter(l => l.col).length,
+    images: raw.images || 0, vlines: raw.vlines || 0, boxes: raw.boxes || 0,
+    fonts: (() => { const fc = raw.fontChars || {}; const tot = Object.values(fc).reduce((a, b) => a + b, 0) || 1; return Object.keys(fc).filter(f => fc[f] >= 8 || SYMBOL_FONT_RE.test(f)).sort((a, b) => fc[b] - fc[a]); })() };
 }
 
 // ---- Word layout measurement (v12.3.31) ----
@@ -4684,6 +4851,16 @@ async function summarizeDocxLayout(arrayBuffer) {
     if (t) return /major/i.test(t) ? (themeMajor || null) : (themeMinor || null);
     return null;
   };
+  // v12.3.44: bold/italic toggles (<w:b/>, <w:b w:val="0"/>) and paragraph borders.
+  const onOff = (el) => { if (!el) return null; const v = att(el, "val"); return !(v === "0" || v === "false" || v === "none"); };
+  const hasBdr = (pPr) => { const b = kid(pPr, "pBdr"); if (!b) return false; return ["top", "bottom"].some(side => { const s = kid(b, side); const v = s ? att(s, "val") : null; return !!(s && v && v !== "nil" && v !== "none"); }); };
+  // v12.3.47: paragraph spacing (before/after in twips, line in 240ths when "auto").
+  const spOf = (pPr) => { const s = kid(pPr, "spacing"); if (!s) return {}; const o = {}; const num = (n) => { const v = att(s, n); return v != null && v !== "" && !isNaN(parseFloat(v)) ? parseFloat(v) : null; };
+    if (num("before") != null) o.before = num("before"); if (num("after") != null) o.after = num("after");
+    if (att(s, "beforeAutospacing") === "1" || att(s, "beforeAutospacing") === "true") o.before = 280;
+    if (att(s, "afterAutospacing") === "1" || att(s, "afterAutospacing") === "true") o.after = 280;
+    if (num("line") != null) { o.line = num("line"); o.rule = att(s, "lineRule") || "auto"; } return o; };
+  let defSp = {};
   const szOf = (rPr) => { const s = kid(rPr, "sz"); const v = s ? parseFloat(att(s, "val")) : NaN; return isNaN(v) ? null : v / 2; };
 
   // Styles with basedOn inheritance
@@ -4693,15 +4870,19 @@ async function summarizeDocxLayout(arrayBuffer) {
   if (stylesXml) {
     const st = parse(stylesXml);
     const dd = all(st, "docDefaults")[0];
-    if (dd) { const r = all(dd, "rPr")[0]; if (r) { defSz = szOf(r); defFont = fontOf(r); } }
+    if (dd) { const r = all(dd, "rPr")[0]; if (r) { defSz = szOf(r); defFont = fontOf(r); } const pd = all(dd, "pPr")[0]; if (pd) defSp = spOf(pd); }
     all(st, "style").forEach(s => {
       const id = att(s, "styleId");
       const r = kid(s, "rPr");
-      styles[id] = { basedOn: att(kid(s, "basedOn"), "val"), sz: r ? szOf(r) : null, font: r ? fontOf(r) : null };
+      const pp = kid(s, "pPr");
+      styles[id] = { basedOn: att(kid(s, "basedOn"), "val"), sz: r ? szOf(r) : null, font: r ? fontOf(r) : null,
+        b: r ? onOff(kid(r, "b")) : null, i: r ? onOff(kid(r, "i")) : null, bdr: pp ? hasBdr(pp) : null, sp: pp ? spOf(pp) : {} };
       if (att(s, "type") === "paragraph" && (att(s, "default") === "1" || att(s, "default") === "true")) defPara = id;
     });
   }
   const styleVal = (id, key) => { for (let i = 0, s = id; s && styles[s] && i < 12; i++, s = styles[s].basedOn) if (styles[s][key]) return styles[s][key]; return null; };
+  const styleSp = (id, key) => { for (let i = 0, s = id; s && styles[s] && i < 12; i++, s = styles[s].basedOn) { const v = (styles[s].sp || {})[key]; if (v != null) return { v, rule: (styles[s].sp || {}).rule }; } return null; };
+  const styleFlag = (id, key) => { for (let i = 0, s = id; s && styles[s] && i < 12; i++, s = styles[s].basedOn) if (styles[s][key] !== null && styles[s][key] !== undefined) return styles[s][key]; return null; };
 
   const body = all(doc, "body")[0];
   if (!body) return null;
@@ -4714,6 +4895,9 @@ async function summarizeDocxLayout(arrayBuffer) {
     const runs = all(p, "r").filter(r => ownerP(r) === p && !inFallback(r));
     let text = "";
     const sized = [];
+    const boldParts = [], italParts = [];
+    let curB = "";
+    const pStyleB = styleFlag(pStyle, "b"), pStyleI = styleFlag(pStyle, "i");
     runs.forEach(r => {
       const rPr = kid(r, "rPr");
       const rStyle = att(kid(rPr, "rStyle"), "val");
@@ -4723,14 +4907,27 @@ async function summarizeDocxLayout(arrayBuffer) {
       const sz = szOf(rPr) || (rStyle && styleVal(rStyle, "sz")) || styleVal(pStyle, "sz") || defSz || 10;
       const font = fontOf(rPr) || (rStyle && styleVal(rStyle, "font")) || styleVal(pStyle, "font") || defFont || themeMinor || "";
       const n = t.replace(/\s/g, "").length;
-      if (font && n) fontChars[font] = (fontChars[font] || 0) + n;
+      const an = t.replace(/[^A-Za-z0-9]/g, "").length;
+      if (font && an) fontChars[font] = (fontChars[font] || 0) + an;
       sized.push({ sz, n });
       text += t;
+      const rb = onOff(kid(rPr, "b")), ri = onOff(kid(rPr, "i"));
+      const isB = rb !== null ? rb : ((rStyle && styleFlag(rStyle, "b")) || !!pStyleB);
+      const isI = ri !== null ? ri : ((rStyle && styleFlag(rStyle, "i")) || !!pStyleI);
+      if (isB && t.trim()) curB += t; else if (t.trim()) { if (curB.trim()) boldParts.push(curB.replace(/\s+/g, " ").trim()); curB = ""; }
+      if (isI && t.trim().length >= 2) italParts.push(t.trim());
     });
+    if (curB.trim()) boldParts.push(curB.replace(/\s+/g, " ").trim());
+    const pBorder = (pPr && hasBdr(pPr)) || !!styleFlag(pStyle, "bdr");
+    const own = pPr ? spOf(pPr) : {};
+    const spGet = (k) => own[k] != null ? own[k] : ((styleSp(pStyle, k) || {}).v != null ? styleSp(pStyle, k).v : (defSp[k] != null ? defSp[k] : (k === "line" ? 240 : 0)));
+    const lineRule = own.line != null ? (own.rule || "auto") : ((styleSp(pStyle, "line") || {}).rule || defSp.rule || "auto");
+    const spacing = { before: spGet("before") / 20, after: spGet("after") / 20, line: lineRule === "auto" ? spGet("line") / 240 : null, lineExact: lineRule !== "auto" ? spGet("line") / 20 : null };
+    const isList = !!(pPr && kid(pPr, "numPr")) || !!(pStyle && /list/i.test(pStyle));
     let inTable = false;
     for (let n = p.parentNode; n && n !== body; n = n.parentNode) if (n.localName === "tbl") { inTable = true; break; }
     const hasDrawing = all(p, "drawing").length > 0 || p.getElementsByTagName("*").length && Array.from(p.getElementsByTagName("*")).some(x => x.localName === "pict");
-    return { text, sized, inTable, hasDrawing };
+    return { text, sized, inTable, hasDrawing, boldParts, italParts, pBorder, spacing, isList };
   });
 
   const half = (n) => Math.round(n * 2) / 2;
@@ -4782,6 +4979,34 @@ async function summarizeDocxLayout(arrayBuffer) {
   const bodyContact = !!contactPara;
   const totalChars = Object.values(fontChars).reduce((a, b) => a + b, 0) || 1;
   const fonts = Object.keys(fontChars).filter(f => !/symbol|wingdings|webdings/i.test(f) && fontChars[f] / totalChars >= 0.03).sort((a, b) => fontChars[b] - fontChars[a]);
+  // v12.3.48: icon fonts typed into the text, and list bullets drawn with
+  // arrow, check, square or star glyphs (from word/numbering.xml).
+  const symbolFonts = Object.keys(fontChars).filter(f => SYMBOL_FONT_RE.test(f) && !/^symbol$/i.test(f));
+  const oddBullets = [];
+  try {
+    const numXml = await read("word/numbering.xml");
+    if (numXml) {
+      const nd = parse(numXml);
+      const absById = {};
+      all(nd, "abstractNum").forEach(a => { absById[att(a, "abstractNumId")] = a; });
+      const numToAbs = {};
+      all(nd, "num").forEach(n => { const an = kid(n, "abstractNumId"); numToAbs[att(n, "numId")] = an ? att(an, "val") : null; });
+      const used = new Set();
+      all(body, "numPr").forEach(np => { const id = att(kid(np, "numId"), "val"); const lv = att(kid(np, "ilvl"), "val") || "0"; if (id && id !== "0") used.add(id + ":" + lv); });
+      used.forEach(key => {
+        const [id, lv] = key.split(":");
+        const abs = absById[numToAbs[id]];
+        if (!abs) return;
+        const lvl = kids(abs, "lvl").find(l => (att(l, "ilvl") || "0") === lv);
+        if (!lvl || att(kid(lvl, "numFmt"), "val") !== "bullet") return;
+        const ch = att(kid(lvl, "lvlText"), "val") || "";
+        const fnt = fontOf(kid(lvl, "rPr")) || "";
+        // Round bullets: Symbol U+F0B7, Wingdings "l" / U+F06C, "•", "●", Courier "o", "◦", "-", "–".
+        const round = /^(?:\uF0B7|\u2022|\u25CF|\u25E6|\u25CB|o|-|\u2013|\u00B7)$/.test(ch) || (/wingdings/i.test(fnt) && /^(?:l|\uF06C|\uF09F)$/.test(ch));
+        if (!round && ch) oddBullets.push(/wingdings|symbol/i.test(fnt) ? "a " + fnt + " symbol" : ch);
+      });
+    }
+  } catch (e) { /* numbering optional */ }
 
   // Page count is NOT taken from the file: the count Word stores goes stale and
   // other editors write their own (tested files claimed 4 and 1 pages and
@@ -4791,6 +5016,19 @@ async function summarizeDocxLayout(arrayBuffer) {
 
   return {
     source: "docx", pages, bodyPt, headingPt, namePt, contactPt, marginL, marginR, marginT, marginB, words,
+    styleRead: true,
+    nameText: filled[0].text.replace(/\s+/g, " ").trim().slice(0, 60),
+    nameBold: filled[0].boldParts.join("").replace(/\s+/g, "").length >= filled[0].text.replace(/\s+/g, "").length * 0.9,
+    parts: (() => { let sec = "top"; return filled.map(pi => { const tx = pi.text.replace(/\s+/g, " ").trim(); let hk = null; try { hk = tx.length <= 50 ? _headingKey(tx) : null; } catch (e) { hk = null; } if (hk === "ignore") hk = null; if (hk) sec = hk;
+      const sz = modeSz([pi]); return { t: tx.slice(0, 80), s: sz, sec: hk ? "heading" : sec, head: !!hk, bullet: pi.isList || /^[\u2022\u00b7\u25aa\u25e6\u2023\u25cf\u27a2\u2013\-\*]/.test(tx), bt: pi.boldParts.join(" "), sp: pi.spacing }; }); })(),
+    headLines: heads.filter(pi => { try { return _headingKey(pi.text.trim()) !== "coursework"; } catch (e) { return true; } }).map(pi => { const tx = pi.text.replace(/\s+/g, " ").trim(); const bl = pi.boldParts.join("").replace(/\s+/g, "").length; return { t: tx.slice(0, 50), bold: bl >= tx.replace(/\s+/g, "").length * 0.9 }; }),
+    boldSegs: filled.flatMap((pi, idx) => pi.boldParts.map(bp => ({ t: bp.slice(0, 90), line: pi.text.replace(/\s+/g, " ").trim().slice(0, 120), first: idx === 0 }))).slice(0, 80),
+    italics: filled.filter(pi => pi.italParts.length).map(pi => pi.italParts.join(" ").slice(0, 60)).slice(0, 40),
+    italicLines: filled.filter(pi => pi.italParts.length).length,
+    // Borders on a paragraph (a "line under the heading") plus drawn horizontal
+    // shapes; an empty bordered paragraph is the usual "insert line" trick.
+    ruleLines: info.filter(pi => pi.pBorder).length + elems.filter(n => n.localName === "hr" || (n.localName === "rect" && /o:hr="t"/.test(new XMLSerializer().serializeToString(n).slice(0, 300)))).length,
+    fonts: Object.keys(fontChars).filter(f => !/symbol|wingdings|webdings/i.test(f) && !SYMBOL_FONT_RE.test(f) && fontChars[f] >= 8).sort((a, b) => fontChars[b] - fontChars[a]), symbolFonts, oddBullets,
     docx: { tables, tableTextParas, textBoxes, images, columns, headerContact, bodyContact, blankLines, spaceAligned, stackedTabs, fonts }
   };
 }
@@ -4840,10 +5078,79 @@ function analyzeLayout(data) {
     if (D.headerContact && !D.bodyContact) add("Contact info location", "In the page header", "In the body, under your name", false, 8, "Move your name and contact line out of the header into the page itself. Some applicant tracking systems ignore headers.");
     if (D.blankLines >= 3) add("Blank lines used for spacing", D.blankLines + " blank lines", "None (use Spacing Before/After)", false, 4, "Delete the blank lines and set paragraph spacing instead: 6 pt between jobs and 12 pt before each section heading.");
     if (D.spaceAligned + D.stackedTabs >= 1) add("Dates lined up with spaces or several tabs", (D.spaceAligned + D.stackedTabs) + ((D.spaceAligned + D.stackedTabs) === 1 ? " line" : " lines"), "One right tab stop", false, 4, "Replace the spaces or extra tabs with one right tab stop near the right margin. Spaces and stacked tabs shift when the font or size changes, so dates end up uneven.");
-    if (D.fonts && D.fonts.length > 2) add("Fonts", D.fonts.slice(0, 4).join(", "), "1 font (2 at most)", false, 3, "Use one font throughout. Mixed fonts look like pieces were pasted in from different files.");
+    // v12.3.48: fonts are checked for Word and PDF together (see "Font" below).
     if (D.images) add("Images or icons", D.images + (D.images === 1 ? " image" : " images"), "None", false, 2, "Remove photos, logos and icons. Applicant tracking systems can't read them, and plain-text contact details work everywhere.");
     if (rows.length === before) rows.push({ item: "Word structure", yours: "No tables, text boxes, columns, or spacer lines", standard: "Plain single-column layout", ok: true, fix: "Meets the standard" });
   }
+  // v12.3.48: the same structure checks for a PDF that a Word file gets
+  // (columns, tables, images or icons, boxes). A PDF has no separate page
+  // header, so that one check stays Word-only.
+  if (!isDocx) {
+    const before = rows.length;
+    if (L.columns > 1) add("Columns", "2 columns (" + L.colLines + " lines split side by side)", "1 column", false, 8, "Use a single column. Two-column layouts are often read straight across, mixing lines from both columns.");
+    if (L.vlines >= 4) add("Tables or grid lines", L.vlines + " vertical lines", "None", false, 8, "Move the text out of tables and line up dates with one right tab stop instead. Many applicant tracking systems read table cells out of order or skip them.");
+    if (L.boxes >= 1) add("Boxes or shaded blocks", L.boxes + (L.boxes === 1 ? " box" : " boxes"), "None", false, 4, "Remove text boxes, shaded bars and sidebars. Keep all text in the body of the page; some applicant tracking systems skip text inside boxes.");
+    if (L.images) add("Images or icons", L.images + (L.images === 1 ? " image" : " images"), "None", false, 2, "Remove photos, logos and icons. Applicant tracking systems can't read them, and plain-text contact details work everywhere.");
+    if (rows.length === before) rows.push({ item: "Page structure", yours: "One column, no tables, boxes or images", standard: "Plain single-column layout", ok: true, fix: "Meets the standard" });
+  }
+  // v12.3.48: one font, from the ATS-friendly list.
+  {
+    // "Calibri Light" headings with "Calibri" body text are one family.
+    const fl = Array.from(new Set((L.fonts || []).filter(f => !SYMBOL_FONT_RE.test(f) && !/^symbol$/i.test(f))
+      .map(f => String(f).replace(/\s+(?:Light|Semibold|SemiBold|Semilight|Medium|Bold|Black|Narrow|Condensed|Display|Text|Book|Regular)$/i, "").trim())));
+    if (fl.length) {
+      const odd = fl.filter(f => !isAtsFont(f));
+      const ok = fl.length === 1 && !odd.length;
+      add("Font", fl.slice(0, 4).join(", "), "One ATS-friendly font (e.g. Calibri, Arial, Times New Roman, Garamond, Georgia)", ok, 3,
+        (fl.length > 1 ? "Use one font throughout; mixed fonts look like pieces were pasted in from different files. " : "") + (odd.length ? "Switch " + odd.join(", ") + " to a standard font such as Calibri or Arial." : ""));
+    }
+  }
+  // v12.3.48: symbol bullets and icons (arrows, checks, stars, phone and email icons).
+  {
+    const ICON = /[\u2190-\u21FF\u2600-\u27BF\u2B00-\u2BFF\uE000-\uF06B\uF06D-\uF0B6\uF0B8-\uF8FF\u25A0-\u25CA\u25CC-\u25CE\u25D0-\u25E5\u25E7-\u25FF]|[\uD83C-\uD83E][\uDC00-\uDFFF]/;
+    const found = [];
+    (L.parts || []).forEach(p => { const m = String(p.t || "").match(ICON); if (m) found.push(m[0]); });
+    const uniq = Array.from(new Set(found));
+    // Bullet characters typed at the start of lines. Wingdings and similar fonts
+    // often come through as Latin letters (Ø for an arrow, § for a square, ü for
+    // a check), so any non-ASCII lead other than a round bullet counts.
+    const ROUND = /^(?:\u2022|\u25CF|\u25E6|\u25CB|\u00B7|\u2013|\u2014|-|\*|\uF0B7|\uF06C|\uF09F|l)$/;
+    const leads = (L.parts || []).map(p => { const m = String(p.t || "").match(/^(\S)\s/); return m ? m[1] : null; }).filter(c => c && (c.charCodeAt(0) >= 0xA0 || c === ">" || c === "l"));
+    const oddLeads = leads.filter(c => !ROUND.test(c) && !ICON.test(c));
+    oddLeads.forEach(c => found.push(c));
+    uniq.push(...Array.from(new Set(oddLeads)).filter(c => uniq.indexOf(c) < 0));
+    // Icon fonts count on their own; Wingdings/Dingbats only when their bullets aren't round.
+    const allSym = Array.from(new Set((L.symbolFonts || []).concat((L.fonts || []).filter(f => SYMBOL_FONT_RE.test(f)))));
+    const dingOnly = (f) => /wingdings|webdings|dingbats/i.test(f);
+    const roundLeadsOnly = leads.length > 0 && leads.every(c => ROUND.test(c));
+    const sym = allSym.filter(f => !dingOnly(f) || (!roundLeadsOnly && !oddLeads.length && !found.length));
+    const bl = L.oddBullets || [];
+    const n = found.length + bl.length;
+    const what = uniq.slice(0, 5).join(" ") + (bl.length ? (uniq.length ? ", " : "") + "list bullets drawn with " + Array.from(new Set(bl)).slice(0, 2).join(", ") : "") + (sym.length && !uniq.length && !bl.length ? "icon font (" + Array.from(new Set(sym)).join(", ") + ")" : "");
+    add("Symbol bullets and icons", n || sym.length ? (what || "icon font") : "None", "Plain round bullets, no icons", !(n || sym.length), 3,
+      "Use plain round bullets (\u2022) and replace arrows, checkmarks, stars and phone/email icons with plain text. Applicant tracking systems may drop these or turn them into stray characters.");
+  }
+  // v12.3.44: emphasis and rule lines (Coach Jeff standard): no italics
+  // anywhere; bold only on the name, section headings, job titles, the degree
+  // and skills sub-headers; no full-width lines.
+  const emph = analyzeEmphasis(data, L);
+  if (emph) {
+    add("Italics", emph.italicLines ? emph.italicLines + (emph.italicLines === 1 ? " line" : " lines") + (emph.italicEx ? " (e.g. \u201c" + emph.italicEx + "\u201d)" : "") : "None", "None", !emph.italicLines, 4,
+      "Remove italics everywhere. Set dates, locations, employers and schools in regular text.");
+    add("Bold text", emph.extraBold.length ? "Also on " + emph.extraBold.map(x => x.kind).filter((v, i, a) => a.indexOf(v) === i).join(", ") + (emph.extraBold[0] ? " (e.g. \u201c" + emph.extraBold[0].t.slice(0, 40) + "\u201d)" : "") : "Standard items only", "Name, section headings, job titles, degree, skills sub-headers",
+      !emph.extraBold.length, 4, "Take bold off everything else (employers, schools, dates, locations, bullet text) so the bold items stand out.");
+    if (emph.lowerHeads.length) add("Section headings in all caps", emph.lowerHeads.length + " not in all caps (e.g. \u201c" + emph.lowerHeads[0] + "\u201d)", "ALL CAPS (e.g. EDUCATION)", false, 3,
+      "Type every section heading in all caps: " + emph.lowerHeads.slice(0, 3).map(h => "\u201c" + h + "\u201d \u2192 \u201c" + h.toUpperCase().replace(/\s+AND\s+/g, " & ") + "\u201d").join(", ") + ".");
+    if (emph.plainHeads.length) add("Bold section headings", emph.plainHeads.length + " not bold (e.g. \u201c" + emph.plainHeads[0] + "\u201d)", "Every section heading bold, 13 pt", false, 4,
+      "Bold every section heading and set it to 13 pt so each section is easy to find.");
+    if (emph.missing.length) add("Bold on name, titles, degree, sub-headers", "Not bold: " + emph.missing.join(", "), "Name, job titles, degree and skills sub-headers in bold", false, 3,
+      "Bold " + emph.missing.map(m => m.replace(/ \(e\.g\..*$/, "")).join(", ") + ". They are what a recruiter scans for first.");
+    add("Full-width lines", emph.rules ? emph.rules + (emph.rules === 1 ? " line" : " lines") : "None", "None", !emph.rules, 3,
+      "Delete the horizontal lines (in Word: select the line, Home \u2192 Borders \u2192 No Border). Bold 13 pt headings already separate the sections.");
+  }
+  // v12.3.47: name in caps, per-section font sizes, line and paragraph spacing.
+  const ts = analyzeTypeAndSpacing(L, emph);
+  ts.forEach(r => add(r.item, r.yours, r.standard, r.ok, r.pts, r.fix));
   const bad = rows.filter(r => !r.ok);
   const _src = isDocx ? "Word file" : "PDF";
   const intro = !bad.length
@@ -4851,6 +5158,172 @@ function analyzeLayout(data) {
     : "Measured from your uploaded " + _src + ": " + bad.length + " of " + rows.length + " layout items fall short of the standard. Small text, tight margins and layout tricks (tables, text boxes, spacer lines) make a resume harder to read and are the most common reason strong content gets skimmed past.";
   return { measured: true, rows, findings: bad, issues: bad.length, score: Math.max(40, 100 - penalty), intro };
 }
+
+// v12.3.47: Coach Jeff format table checks not covered elsewhere. Word files
+// are read exactly (paragraph settings); PDFs are estimated from the gaps
+// between lines and only flagged when clearly off.
+function analyzeTypeAndSpacing(L, emph) {
+  const out = [];
+  if (!L) return out;
+  const r = (item, yours, standard, ok, pts, fix) => out.push({ item, yours, standard, ok, pts, fix });
+  const isDocx = L.source === "docx";
+  const parts = Array.isArray(L.parts) ? L.parts : [];
+  const med = (a) => { const s = a.filter(x => typeof x === "number" && !isNaN(x)).sort((x, y) => x - y); return s.length ? s[Math.floor((s.length - 1) / 2)] : null; };
+  const pct = (a, q) => { const s = a.filter(x => typeof x === "number" && !isNaN(x)).sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * q))] : null; };
+  const fmt = (n) => (Math.round(n * 2) / 2).toString().replace(/\.0$/, "");
+  // 1. Name in all caps
+  if (L.nameText && /[A-Za-z]/.test(L.nameText) && !/@|\d{3}/.test(L.nameText)) {
+    const caps = !/[a-z]/.test(L.nameText);
+    r("Name in all caps", caps ? "Yes" : "\u201c" + L.nameText + "\u201d", "ALL CAPS, bold, 20 pt", caps, 2, "Type your name in all caps: \u201c" + L.nameText.toUpperCase() + "\u201d.");
+  }
+  // 2. Font size by section (the body row uses the most common size only)
+  if (L.bodyPt >= 10.5 && parts.length) {
+    const bySec = {};
+    parts.forEach(p => { if (p.head || p.sec === "top" || p.sec === "heading" || !p.s) return; (bySec[p.sec] = bySec[p.sec] || []).push(p); });
+    const small = [];
+    Object.keys(bySec).forEach(sec => {
+      const w = {}; bySec[sec].forEach(p => { const k = Math.round(p.s * 2) / 2; w[k] = (w[k] || 0) + p.t.length; });
+      const best = parseFloat(Object.keys(w).sort((a, b) => w[b] - w[a])[0]);
+      const tot = Object.values(w).reduce((a, b) => a + b, 0);
+      if (best < 10.5 && tot >= 40) small.push((STANDARD_SECTION_HEADERS[sec] || sec) + " " + fmt(best) + " pt");
+    });
+    r("Font size by section", small.length ? small.join(", ") : "11 pt throughout", "11 pt in every section", !small.length, 4, "Raise " + small.map(s => s.replace(/ [\d.]+ pt$/, "")).join(", ") + " to 11 pt to match the rest of the page.");
+  }
+  if (!parts.length) return out;
+  if (isDocx) {
+    const sp = parts.map(p => p.sp || {});
+    // Line spacing
+    const mults = sp.map(s => s.line).filter(v => v != null);
+    const exacts = sp.map(s => s.lineExact).filter(v => v != null);
+    const m = med(mults);
+    if (mults.length >= exacts.length && m != null) r("Line spacing", m <= 1.02 ? "Single" : "Multiple " + (Math.round(m * 100) / 100), "Single", m <= 1.02, 3, "Select all, then Paragraph \u2192 Line spacing \u2192 Single.");
+    else if (exacts.length) { const e = med(exacts); r("Line spacing", "Exactly " + fmt(e) + " pt", "Single", e <= L.bodyPt * 1.25, 3, "Select all, then Paragraph \u2192 Line spacing \u2192 Single."); }
+    // Space around section headings
+    const before = [], after = [];
+    parts.forEach((p, i) => {
+      if (!p.head) return;
+      // The heading's own Space Before / After settings (what the format table specifies).
+      if (i > 0) before.push((p.sp || {}).before || 0);
+      if (parts[i + 1]) after.push((p.sp || {}).after || 0);
+    });
+    const b = med(before), a = med(after);
+    if (b != null) r("Space before section headings", fmt(b) + " pt", "12 pt", b >= 10 && b <= 14, 2, "Set Spacing Before to 12 pt on each section heading (Paragraph \u2192 Spacing \u2192 Before).");
+    if (a != null) r("Space after section headings", fmt(a) + " pt", "6 pt", a >= 4 && a <= 9, 2, "Set Spacing After to 6 pt on each section heading.");
+    // Space between bullets
+    const bAfter = [];
+    parts.forEach((p, i) => { if (p.bullet && parts[i + 1] && parts[i + 1].bullet) bAfter.push((p.sp || {}).after || 0); });
+    const ba = med(bAfter);
+    if (ba != null && bAfter.length >= 3) r("Space between bullets", fmt(ba) + " pt", "0 pt (6 pt after the last bullet of a job)", ba <= 2, 2, "Set Spacing After to 0 pt on bullets, and 6 pt only after the last bullet of each job.");
+  } else {
+    // PDF: estimate from gaps between baselines.
+    const body = parts.filter((p, i) => !p.head && i > 0 && !parts[i - 1].head && p.gap > 0 && p.gap < L.bodyPt * 3);
+    const pitch = pct(body.map(p => p.gap), 0.25);
+    if (pitch && L.bodyPt) {
+      const ratio = pitch / L.bodyPt;
+      // Single spacing in common fonts puts baselines about 1.15 to 1.25 x the font size apart.
+      r("Line spacing (estimated)", ratio <= 1.42 ? "Single" : "wider than single (about " + (Math.round(ratio / 1.17 * 100) / 100) + ")", "Single", ratio <= 1.42, 2, "Set line spacing to Single (Paragraph \u2192 Line spacing \u2192 Single) in your Word file.");
+      const hp = L.headingPt || L.bodyPt;
+      const hb = [], ha = [];
+      parts.forEach((p, i) => {
+        if (!p.head) return;
+        if (p.gap > 0) hb.push(p.gap - pitch * (hp / L.bodyPt));
+        const nx = parts[i + 1];
+        if (nx && nx.gap > 0) ha.push(nx.gap - pitch);
+      });
+      const b = med(hb), a = med(ha);
+      if (b != null && hb.length >= 2) r("Space before section headings (estimated)", "about " + fmt(Math.max(0, b)) + " pt", "12 pt", b >= 4 && b <= 22, 2, "Set Spacing Before to 12 pt on each section heading in your Word file.");
+      if (a != null && ha.length >= 2) r("Space after section headings (estimated)", "about " + fmt(Math.max(0, a)) + " pt", "6 pt", a >= 1.5 && a <= 12, 2, "Set Spacing After to 6 pt on each section heading in your Word file.");
+      const bb = [];
+      parts.forEach((p, i) => { if (p.bullet && i > 0 && parts[i - 1].bullet && p.gap > 0) bb.push(p.gap - pitch); });
+      const x = med(bb);
+      if (x != null && bb.length >= 3) r("Space between bullets (estimated)", x <= 2.5 ? "None" : "about " + fmt(x) + " pt", "0 pt (6 pt after the last bullet of a job)", x <= 3, 2, "Set Spacing After to 0 pt on bullets in your Word file, and 6 pt only after the last bullet of each job.");
+    }
+  }
+  return out;
+}
+
+// v12.3.44: sorts the bold text found in the uploaded file into the items that
+// may be bold (name, section headings, job titles, degree, skills sub-headers)
+// and everything else, and lists job titles or a degree left plain.
+function analyzeEmphasis(data, L) {
+  if (!L || !L.styleRead || !Array.isArray(L.boldSegs)) return null;
+  const norm = s => String(s || "").toLowerCase().replace(/[\u2013\u2014]/g, "-").replace(/[^a-z0-9+#&\/ -]/g, " ").replace(/\s+/g, " ").trim();
+  const has = (a, b) => { a = norm(a); b = norm(b); return !!a && !!b && (a === b || (b.length >= 4 && a.includes(b)) || (a.length >= 4 && b.includes(a))); };
+  const titles = [], orgs = [], schools = [], degrees = [];
+  (data.experience || []).forEach(e => { if (e.title) titles.push(e.title); if (e.org) orgs.push(e.org); });
+  (data.activities || []).forEach(a => { if (a.role) titles.push(a.role); if (a.org) orgs.push(a.org); });
+  (data.volunteer || []).forEach(v => { if (v.role) titles.push(v.role); if (v.org) orgs.push(v.org); });
+  (data.projects || []).forEach(p => { if (p.name) titles.push(p.name); });
+  (data.education || []).forEach(ed => { if (ed.degree) degrees.push(ed.degree); if (ed.school) schools.push(ed.school); });
+  const DATE = /^(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+)?(?:19|20)\d{2}\s*(?:[-\u2013\u2014]\s*(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+)?(?:19|20)\d{2}|present|current))?$|^(?:spring|summer|fall|winter)\s+(?:19|20)\d{2}/i;
+  const CONTACT = /@|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}|linkedin\.com|https?:/i;
+  const LOC = /^[A-Z][A-Za-z .'-]+,\s*[A-Z]{2}$|^remote$/i;
+  const extraBold = [];
+  const boldText = [];
+  L.boldSegs.forEach(seg => {
+    const s = String(seg.t || "").replace(/[|\u2022\u00b7]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!s || s.length < 2) return;
+    boldText.push(s);
+    const line = String(seg.line || "");
+    if (seg.first || has(s, data.name)) return;                         // name
+    try { if (_headingKey(s) || _headingKey(line)) return; } catch (e) { /* ignore */ }
+    if (/:$/.test(s) && s.split(/\s+/).length <= 5) return;               // skills sub-header
+    if (s.split(/\s+/).length <= 4 && new RegExp("^" + s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:").test(line.trim())) return;
+    // a segment that is a title plus trailing date/location keeps the title part only
+    const pieces = s.split(/\s{2,}|\s+[|,]\s+|\s+[-\u2013\u2014]\s+(?=[A-Z])/).filter(Boolean);
+    pieces.forEach(pc => {
+      if (titles.some(x => has(pc, x)) || degrees.some(x => has(pc, x))) {
+        // a bold run that also swallowed the employer or school
+        const o2 = orgs.find(o => norm(o).length >= 4 && norm(pc).includes(norm(o)) && !titles.some(x => norm(x).includes(norm(o))));
+        if (o2) extraBold.push({ t: o2, kind: "employer names" });
+        return;
+      }
+      if (DATE.test(pc.trim())) extraBold.push({ t: pc, kind: "dates" });
+      else if (CONTACT.test(pc) || (CONTACT.test(line) && /linkedin|github|portfolio|@/i.test(pc + " " + line))) extraBold.push({ t: pc, kind: "contact details" });
+      else if (/\bgpa\b/i.test(pc)) extraBold.push({ t: pc, kind: "GPA" });
+      else if (schools.some(x => has(pc, x))) extraBold.push({ t: pc, kind: "school names" });
+      else if (orgs.some(x => has(pc, x))) extraBold.push({ t: pc, kind: "employer names" });
+      else if (LOC.test(pc.trim())) extraBold.push({ t: pc, kind: "locations" });
+      else if (pc.split(/\s+/).length >= 3 || /\d/.test(pc)) extraBold.push({ t: pc, kind: "text inside bullets or lines" });
+    });
+  });
+  // Plain titles or degree are only reported when the file plainly uses bold
+  // somewhere (otherwise the font styles may not have been readable).
+  const missing = [];
+  if (boldText.length >= 2) {
+    const boldAll = boldText.join(" | ");
+    const plainTitles = (data.experience || []).filter(e => e.title && !has(boldAll, e.title) && !boldText.some(b => has(b, e.title)));
+    if (plainTitles.length && plainTitles.length >= Math.ceil((data.experience || []).filter(e => e.title).length / 2)) missing.push(plainTitles.length === 1 ? "a job title" : "job titles");
+    const plainDeg = (data.education || []).filter(ed => ed.degree && !boldText.some(b => has(b, ed.degree)));
+    if (plainDeg.length) missing.push(plainDeg.length === 1 ? "the degree" : "degrees");
+    // v12.3.47: the name and the skills sub-headers ("Technical:", "Tools:").
+    if (L.nameText && L.nameBold === false) missing.unshift("your name");
+    const labels = (L.parts || []).filter(p => (p.sec === "skills" || p.sec === "skillscerts") && /^[^:]{2,40}:\s*\S/.test(p.t));
+    const plainLabels = labels.filter(p => { const lab = norm(p.t.split(":")[0]); return !norm(p.bt).startsWith(lab.slice(0, Math.min(lab.length, 12))); });
+    if (labels.length && plainLabels.length) missing.push("skills sub-headers (e.g. \u201c" + plainLabels[0].t.split(":")[0] + ":\u201d)");
+  }
+  // Section headings must be bold. Reported only when the file shows bold
+  // somewhere, so a font whose style couldn't be read isn't blamed.
+  const plainHeads = boldText.length && Array.isArray(L.headLines) ? L.headLines.filter(h => !h.bold).map(h => h.t) : [];
+  // v12.3.46: section headings must be in all caps (EDUCATION, not Education).
+  const lowerHeads = Array.isArray(L.headLines) ? L.headLines.map(h => String(h.t || "").replace(/[:\s]+$/, "")).filter(h => /[a-z]/.test(h)) : [];
+  return { plainHeads, lowerHeads, italicLines: L.italicLines || 0, italicEx: (L.italics || [])[0] ? String(L.italics[0]).slice(0, 40) : "", extraBold, missing, rules: L.ruleLines || 0 };
+}
+
+// v12.3.48: font family from a PDF font name ("ABCDEF+Calibri-BoldItalic" -> "Calibri").
+function pdfFontFamily(nm) {
+  let s = String(nm || "").replace(/^[A-Z]{6}\+/, "").trim();
+  if (!s || /^g_d\d|^f\d+$|^T\d/i.test(s) || /^(?:sans-serif|serif|monospace|cursive|fantasy|system-ui)$/i.test(s)) return "";
+  s = s.replace(/[-,](?:Bold|Italic|Oblique|Regular|Roman|Light|Medium|Semibold|SemiBold|Black|Book|Heavy|Demi|Condensed|Narrow)+.*$/i, "")
+       .replace(/(?:Bold|Italic|Oblique|Regular)+$/i, "").replace(/(?:PSMT|PS|MT)$/, "").replace(/[-_,]+$/, "");
+  s = s.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+  return s;
+}
+// Fonts most ATS guides and career centers recommend (plus the free metric
+// clones Google Docs and LibreOffice substitute for them).
+const ATS_FONTS = ["arial", "calibri", "cambria", "garamond", "georgia", "helvetica", "times new roman", "times", "verdana", "tahoma", "aptos", "book antiqua", "trebuchet ms", "trebuchet", "palatino", "palatino linotype", "carlito", "caladea", "arimo", "tinos", "liberation sans", "liberation serif", "lato", "roboto", "open sans", "segoe ui", "century gothic", "gill sans mt", "gill sans"];
+const SYMBOL_FONT_RE = /wingdings|webdings|font ?awesome|material ?icons|ionicons|glyphicons|icomoon|symbola|zapf ?dingbats|dingbats|segoe ui (?:emoji|symbol)|noto (?:color )?emoji|apple color emoji/i;
+function isAtsFont(f) { const s = String(f || "").toLowerCase().replace(/\s+/g, " ").trim(); return !s || ATS_FONTS.some(a => new RegExp("(?:^|\\s)" + a + "(?:\\s|$)").test(s)) || /^symbol/.test(s); }
 
 // ---- Content checks (v12.3.20) ----
 // Three checks a manual audit makes that presence-based scoring cannot:
@@ -4876,7 +5349,7 @@ function analyzeContentIntegrity(data) {
       const shared = A.filter(x => B.has(x));
       const union = new Set(A.concat(flat[j].tk)).size;
       if (shared.length >= 5 && shared.length / Math.max(1, union) >= 0.4) {
-        duplicates.push({ a: flat[i].text, whereA: flat[i].where, b: flat[j].text, whereB: flat[j].where });
+        duplicates.push({ a: flat[i].text, whereA: flat[i].where, b: flat[j].text, whereB: flat[j].where, ei: flat[i].ei, ej: flat[j].ei });
       }
     }
   }
@@ -4954,8 +5427,120 @@ function analyzeContentIntegrity(data) {
     /\b(series|program|course|training|bootcamp|workshop|simulation|virtual experience|job simulation)\b/i.test(c.name) && !/\b(certif|certified|licen[cs]e)/i.test(c.name)
   ).map(c => c.name);
   const findings = [];
+  // v12.3.43: words in the more relevant job's bullet that come from the other
+  // job ("validating package order data" at Fidelity, with "packages" and
+  // "order quality" from Nordstrom). Names the wording that looks carried over.
+  const carried = [];
+  {
+    const _norm = w => w.toLowerCase().replace(/[^a-z]/g, "").replace(/s$/, "");
+    const _GEN = new Set(["data", "system", "report", "reporting", "process", "performance", "workflow", "team", "quality", "improvement", "insight", "stakeholder", "accuracy", "decision", "making", "support", "supporting", "improved", "multiple", "across", "strengthening", "reliability", "daily", "business", "operation", "operational", "high", "volume"]);
+    const _rank = rankEntriesForField(data);
+    duplicates.slice(0, 2).forEach(d => {
+      const eA = entries[d.ei], eB = entries[d.ej];
+      if (!eA || !eB) return;
+      const expA = (data.experience || []).find(x => (x.org || x.title || "Experience") === eA.where);
+      const expB = (data.experience || []).find(x => (x.org || x.title || "Experience") === eB.where);
+      if (!expA || !expB) return;
+      const aFirst = _rank.indexOf(expA) > -1 && (_rank.indexOf(expB) === -1 || _rank.indexOf(expA) < _rank.indexOf(expB));
+      const tgt = aFirst ? { e: eA, b: d.a, other: eB, otherB: d.b } : { e: eB, b: d.b, other: eA, otherB: d.a };
+      const otherWords = new Set(tgt.other.bullets.filter(x => String(x).trim() !== String(tgt.otherB).trim()).join(" ").split(/[\s\/,;:()-]+/).map(_norm).filter(Boolean));
+      const ownElsewhere = new Set(tgt.e.bullets.filter(x => String(x).trim() !== String(tgt.b).trim()).join(" ").split(/[\s\/,;:()-]+/).map(_norm).filter(Boolean));
+      const pairWords = new Set(String(tgt.otherB).split(/[\s\/,;:()-]+/).map(_norm));
+      const words = String(tgt.b).split(/[\s\/,;:()-]+/).filter(w => w.length >= 4).filter(w => { const n = _norm(w); return n.length >= 4 && !_GEN.has(n) && !STOP.has(w.toLowerCase()) && otherWords.has(n) && !ownElsewhere.has(n) && !pairWords.has(n); });
+      if (words.length) carried.push({ where: tgt.e.where, from: tgt.other.where, words: Array.from(new Set(words.map(w => w.toLowerCase()))) });
+    });
+  }
   duplicates.slice(0, 2).forEach(d => findings.push({ label: "Two bullets read almost the same",
     detail: "Under " + d.whereA + ": \u201C" + (d.a.length > 110 ? d.a.slice(0, 107) + "\u2026" : d.a) + "\u201D and under " + d.whereB + ": \u201C" + (d.b.length > 110 ? d.b.slice(0, 107) + "\u2026" : d.b) + "\u201D. A reader may think one was copied from the other. Rewrite each in its own terms, and check that every word fits that employer." }));
+  carried.forEach(c => findings.push({ label: "Wording that may have carried over",
+    detail: "Your " + c.where + " bullet uses \u201C" + c.words.join(" ") + "\u201D, wording that also appears in your " + c.from + " bullets. If it came over from the other job, correct it before an interviewer asks. If it's accurate, add a few words so the reader understands what it means at " + c.where + "." }));
+  // v12.3.43: title, employer and location on one line.
+  const inline = _imported ? _ents.filter(e => e.inlineHeader && e.headerOrder !== "employer-first") : [];
+  if (!employerFirst.length && inline.length) {
+    const ex = inline[0];
+    findings.push({ label: "Title, employer and location on one line",
+      detail: (inline.length === _ents.length ? "Your entries put" : inline.length + " of your entries put") + " the title, employer and location on one line (\u201C" + [ex.title, ex.org, ex.location].filter(Boolean).join(" | ") + "\u201D). Put the title and dates on line one, and the employer and location on line two: \u201C" + (ex.title || "Job Title") + "   " + [ex.start, ex.end].filter(Boolean).join(" \u2013 ") + "\u201D, then \u201C" + (ex.org || "Employer") + " | " + (ex.location || "City, ST") + "\u201D." });
+  }
+  // v12.3.43: the same employer and dates listed twice (an internship and a
+  // leadership role, for example).
+  {
+    const _key = (o, s, e) => String(o || "").toLowerCase().replace(/[^a-z]/g, "") + "|" + String(s || "").toLowerCase() + "|" + String(e || "").toLowerCase();
+    const all = (data.experience || []).filter(e => e && e.org).map(e => ({ k: _key(e.org, e.start, e.end), org: e.org, role: e.title }))
+      .concat((data.activities || []).filter(a => a && a.org).map(a => ({ k: _key(a.org, a.start, a.end), org: a.org, role: a.role })));
+    const seenK = {};
+    all.forEach(x => { if (!x.k.startsWith("|")) (seenK[x.k] = seenK[x.k] || []).push(x); });
+    const dup = Object.values(seenK).find(v => v.length >= 2);
+    if (dup) findings.push({ label: "Same employer and dates listed twice",
+      detail: dup[0].org + " appears twice with the same dates (" + dup.map(x => x.role).filter(Boolean).join("; ") + "). An ATS may count two jobs, and a recruiter may wonder whether you held two positions. If the second role was part of the first, list both under one " + dup[0].org + " entry; if it was separate, add a few words that make the relationship clear." });
+  }
+  // v12.3.43: a project titled like a job ("Analyst | City of Frisco").
+  {
+    const pj = (data.projects || []).find(p => p && p.name && /\|/.test(p.name) && _looksLikeJobTitle(p.name.split("|")[0].trim()));
+    if (pj) {
+      const parts = pj.name.split("|").map(s => s.trim());
+      findings.push({ label: "Project titled like a job",
+        detail: "\u201C" + parts.slice(0, 2).join(" | ") + "\u201D reads like a job title and an employer. Name the project and its client instead, for example \u201C[Project name] Capstone\u201D with \u201C[School] (Client: " + (parts[1] || "client").replace(/\s*[\u2013\u2014-].*$/, "") + ")\u201D on the next line, so no one thinks you're claiming employment there." });
+    }
+  }
+  // v12.3.48: references, high school, first-person words, personal details.
+  {
+    const raw = String(data.importedText || "");
+    const all = raw || [data.name, data.summary].concat((data.experience || []).flatMap(e => [e.title, e.org].concat(e.bullets || []))).concat((data.education || []).flatMap(e => [e.degree, e.school])).join("\n");
+    // References
+    if (/^\s*(?:professional\s+)?references\s*:?\s*$/im.test(all) || /references\s+(?:are\s+)?(?:available\s+)?(?:up)?on\s+request/i.test(all)) {
+      findings.push({ label: "References on the resume", detail: "Take references off the resume, including \u201cReferences available upon request.\u201d Employers assume you have them and ask for a separate list later in the process; the line uses space your experience needs." });
+    }
+    // High school, once there is a college degree
+    const _eps = (() => { try { return educationPlacementSignal(data) || {}; } catch (e) { return {}; } })();
+    // Graduates, and students within 12 months of graduating (career centers
+    // advise dropping high school by junior year).
+    const _finalYear = (() => {
+      const nowM = new Date().getFullYear() * 12 + new Date().getMonth();
+      const ms = (data.education || []).map(ed => { try { return _monthIndex(ed.grad, true); } catch (e) { return null; } }).filter(x => x !== null);
+      if (ms.length) return Math.max(...ms) - nowM <= 12;
+      return _eps.maxYear != null && _eps.maxYear - new Date().getFullYear() <= 1;
+    })();
+    const college = (!_eps.currentStudent || _finalYear) && (data.education || []).some(ed => /\b(?:bachelor|master|associate|doctor|ph\.?d|mba|b\.?s\.?|b\.?a\.?|m\.?s\.?|m\.?a\.?|a\.?a\.?s?|bba|bsc|beng|meng)\b/i.test(String(ed.degree || "")) || /\b(?:university|college|institute)\b/i.test(String(ed.school || "")));
+    // An entry line that starts with the school ("Lincoln High School | Dallas, TX"),
+    // an education entry, or a diploma. A bullet such as "Tutored students at
+    // Lincoln High School" is experience, not high school information.
+    const eduHs = (data.education || []).map(ed => String(ed.school || "") + " " + String(ed.degree || "")).find(s => /high school|secondary school|\bGED\b/i.test(s));
+    const eduLines = (() => { const out = []; let inEdu = false; all.split("\n").forEach(ln => { const s = ln.trim(); let k = null; try { k = s.length <= 50 ? _headingKey(s) : null; } catch (e) { k = null; } if (k && k !== "ignore" && k !== "coursework") inEdu = k === "education"; else if (inEdu) out.push(s); }); return out.join("\n"); })();
+    const hs = (eduHs ? [eduHs.replace(/\s+/g, " ").trim()] : null) || eduLines.match(/^[ \t]*(?:[A-Z][A-Za-z.'&-]*[ \t]+){1,5}High School\b/m) || all.match(/\bHigh School Diploma\b|\bH\.\s?S\.\s+Diploma\b/);
+    if (college && hs) findings.push({ label: "High school listed", detail: "\u201c" + hs[0].trim() + "\u201d is on the resume. " + (_eps.currentStudent ? "You graduate within the year, so remove" : "As a college graduate, remove") + " high school, including its awards and activities, and let your college work carry the Education section." });
+    // First-person words
+    const texts = [data.summary || ""].concat((data.experience || []).flatMap(e => e.bullets || []), (data.projects || []).flatMap(p => p.bullets || []), (data.activities || []).flatMap(a => a.bullets || []), (data.volunteer || []).flatMap(v => v.bullets || []));
+    const PRON = /(?<![A-Z][A-Za-z.]*\s)\bI\b(?![-.\u2013]\d)(?![\/&])|\b(?:me|my|mine|myself|we|our|ours|us|ourselves)\b|\b(?:My|We|Our|Me)\b|\bI(?:'m|'ve|'ll|'d)\b/;
+    const hits = [];
+    texts.forEach(tx => { const s = String(tx || ""); const m = s.match(PRON); if (m) hits.push({ w: m[0], s }); });
+    if (hits.length) {
+      const words = Array.from(new Set(hits.map(h => h.w.toLowerCase() === "i" ? "I" : h.w.toLowerCase()))).slice(0, 4);
+      const ex = hits[0].s.length > 90 ? hits[0].s.slice(0, 90) + "\u2026" : hits[0].s;
+      findings.push({ label: "First-person words", detail: hits.length + (hits.length === 1 ? " line uses " : " lines use ") + words.map(w => "\u201c" + w + "\u201d").join(", ") + " (e.g. \u201c" + ex + "\u201d). A resume is written without pronouns: start each line with the action (\u201cLed\u2026\u201d, not \u201cI led\u2026\u201d) and say \u201cthe team\u201d instead of \u201cwe\u201d or \u201cour team\u201d." });
+    }
+    // Personal details
+    const top = all.split("\n").slice(0, 8).join("\n");
+    const street = top.match(/\b\d{1,6}\s+(?:[NSEW]\.?\s+)?(?:[A-Z0-9][A-Za-z0-9.'-]*\s+){1,4}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Ct|Court|Way|Pl|Place|Pkwy|Parkway|Cir|Circle|Trl|Trail|Hwy|Highway|Ter|Terrace)\b\.?(?:,?\s*(?:Apt|Unit|Suite|#)\s*\w+)?/);
+    const pers = all.match(/\b(?:date of birth|d\.?o\.?b\.?|born on|birthday|marital status|married|single|religion|gender|sex|age)\s*:/i) || all.match(/\bdate of birth\b|\bmarital status\b/i);
+    if (street || pers) {
+      const bits = [];
+      if (street) bits.push("a street address (\u201c" + street[0].trim() + "\u201d)");
+      if (pers) bits.push("personal details (\u201c" + pers[0].replace(/\s*:$/, "") + "\u201d)");
+      findings.push({ label: "Personal details", detail: "The resume shows " + bits.join(" and ") + ". Show only City, ST with your phone, email and LinkedIn. Leave off street address, date of birth, age, marital status, photo and similar details; employers don't need them and some will set aside resumes that include them." });
+    }
+  }
+  // v12.3.43: every percentage that claims a change but gives no starting point.
+  {
+    const pcts = [];
+    flat.forEach(f => {
+      if (/\b(from|baseline|compared|versus|vs\.?|year-over-year)\b|\bto\s+\d/i.test(f.text)) return;
+      const re = /\bby\s+(\d+(?:\.\d+)?%)|\b(\d+(?:\.\d+)?%)\s+(?:increase|improvement|reduction|decrease|growth|gain|adoption|faster|higher|lower|drop|rise)/gi;
+      let m; while ((m = re.exec(f.text)) !== null) pcts.push(m[1] || m[2]);
+    });
+    const u = Array.from(new Set(pcts));
+    if (u.length >= 2) findings.push({ label: "Percentages with no starting point",
+      detail: u.join(", ") + " each describe a change, but none says what was measured, from what to what, or over what period. Expect \u201CHow did you measure that?\u201D Add the baseline or time frame where you have it; if you can't explain a number, replace it with a fact you can (a volume, a frequency, a count)." });
+  }
   if (employerFirst.length || (noLocation.length && noLocation.length === _ents.length)) {
     const _rk = rankEntriesForField(data);
     const ex = _rk.find(e => employerFirst.includes(e)) || _rk[0] || _ents[0];
@@ -5075,7 +5660,7 @@ function analyzeContentIntegrity(data) {
   if (unmeasured.length) findings.push({ label: "Results without a number",
     detail: unmeasured.slice(0, 3).map(x => "“" + x.phrase + "” (" + x.where + ")").join("; ") + (unmeasured.length > 3 ? ", and " + (unmeasured.length - 3) + " more" : "") + ". A result with no number invites “by how much?” in an interview. Add the real number if you know it and can explain where it came from, or cut the result phrase and keep what you did. Don't estimate." });
 
-  return { duplicates, unsupported: unsupported.length >= 2 ? unsupported : [], courseSkills, officeDup, missingFromSkills, employerFirst, noLocation, entryCount: _ents.length, certFlags, longRoles, repeatedPhrases, eduIssues, unmeasured, blankMetric, findings, count: findings.length };
+  return { duplicates, carried, unsupported: unsupported.length >= 2 ? unsupported : [], courseSkills, officeDup, missingFromSkills, employerFirst, noLocation, entryCount: _ents.length, certFlags, longRoles, repeatedPhrases, eduIssues, unmeasured, blankMetric, findings, count: findings.length };
 }
 
 // ---- Top fixes (v12.3.21) ----
@@ -5233,32 +5818,51 @@ function analyzeStructureAdvice(data) {
   const iSk = imported.indexOf("skills");
   const below = ["activities", "volunteer", "awards", "affiliations", "languages"].map(k => imported.indexOf(k)).filter(i => i > -1);
   const skillsLow = iSk > -1 && (iSk === imported.length - 1 || below.some(i => iSk > i));
-  if (!(split.applies || hasCoursework || skillsLow)) return { applies: false };
+  const iEd = imported.indexOf("education");
+  const eduLow = iEd > -1 && ["skills", "experience", "projects", "internships"].some(k => imported.indexOf(k) > -1 && imported.indexOf(k) < iEd);
+  const combinedSkillsCerts = heads.some(h => h && h.mapped === "skills + certifications");
+  if (!(split.applies || hasCoursework || skillsLow || eduLow)) return { applies: false };
   const present = new Set(imported);
-  const keys = ["summary", "education"];
-  // v12.3.39: with Relevant + Additional Experience, the relevant work comes
-  // right after Education, Additional Experience right after it, then Skills.
+  if (combinedSkillsCerts) present.add("certifications");
+  // v12.3.43: two vetted orders for a new or recent graduate (Coach Jeff's
+  // evaluations of Rhea Malhotra and Andrin Chirayath):
+  //  - the other job is unrelated (retail, restaurant): the internships are the
+  //    strongest proof and lead: Education, Internships, Skills, Experience.
+  //  - the other job is a real, related job (Andrin's logistics and data
+  //    validation at Nordstrom): Education, Skills, Experience, Internships,
+  //    with Internships directly below Experience.
+  // Then Projects right after the work history, Certifications, then
+  // Leadership & Activities and the rest.
   const _relAddl = (split.applies && split.kind === "relevant") || heads.some(h => h && h.mapped === "additionalexp");
-  if (_relAddl) { keys.push("experience", "additionalexp"); }
-  else if (split.applies || present.has("internships")) keys.push("internships");
-  if (present.has("skills")) keys.push("skills");
-  // v12.3.39: the rest follows Coach Jeff's approved section order.
-  const _hasAddl = _relAddl;
-  ["experience", "research", "projects", "activities", "volunteer", "publications", "affiliations", "languages", "certifications", "awards"].forEach(k => {
+  const hasInterns = (split.applies && split.kind === "internships") || present.has("internships");
+  const otherJobs = (data.experience || []).filter(e => e && (e.title || e.org) && expSectionOf(e) === "experience" && !isInternEntry(e));
+  const otherIsRelated = otherJobs.length > 0 && otherJobs.every(e => !_RETAIL_TITLE.test(String(e.title || "")));
+  const keys = ["summary", "education"];
+  if (_relAddl) keys.push("experience", "additionalexp", "skills");
+  else if (hasInterns && otherIsRelated) keys.push("skills", "experience", "internships");
+  else if (hasInterns) keys.push("internships", "skills", "experience");
+  else keys.push("skills", "experience");
+  ["research", "projects", "certifications", "activities", "volunteer", "publications", "affiliations", "languages", "awards"].forEach(k => {
     if (present.has(k) && !keys.includes(k)) keys.push(k);
-    if (k === "experience" && _hasAddl && !keys.includes("additionalexp")) keys.push("additionalexp");
   });
-  const names = keys.map(k => k === "additionalexp" ? "Additional Experience" : (k === "experience" && (split.applies && split.kind === "relevant" || _hasAddl)) ? "Relevant Experience" : (STANDARD_SECTION_HEADERS[k] || k));
+  const finalKeys = keys.filter(k => k === "summary" || k === "education" || k === "additionalexp" || k === "internships" || k === "experience" || present.has(k));
+  const names = finalKeys.map(k => k === "additionalexp" ? "Additional Experience" : (k === "experience" && _relAddl) ? "Relevant Experience" : (STANDARD_SECTION_HEADERS[k] || k));
 
   const orderText = names.join(" \u2192 ");
   const steps = [];
   if (!hasSummary) steps.push("Add a Professional Summary at the top.");
+  if (eduLow) steps.push("Move Education right under your Summary. Your degree is your leading credential, and right now a recruiter reaches " + (otherJobs[0] && otherJobs[0].title ? "your " + otherJobs[0].title + " job" : "your work history") + " before it.");
   if (hasCoursework) steps.push("Move Relevant Coursework into Education as one line. It is not a standard section, and on its own it pushes your experience down the page.");
-  if (split.applies && split.kind === "relevant") steps.push("Put " + split.interns.join(", ") + " under Relevant Experience so your best work reads first, and move " + split.others.join(", ") + " to an Additional Experience section near the end. Recruiters read from the top down.");
-  else if (split.applies) steps.push("Give your internships (" + split.interns.join(", ") + ") their own Internships section right after Education. They are your strongest proof that you can do the work, so a recruiter should reach them early. " + split.others.join(", ") + (split.others.length === 1 ? " stays" : " stay") + " under Experience.");
-  if (present.has("skills") && (skillsLow || split.applies)) steps.push("Put Skills right after " + (_relAddl ? "your experience sections" : split.applies ? "your internships" : "Education") + ", so the skills you list sit next to the work that backs them up.");
+  if (_relAddl && split.applies && split.kind === "relevant") steps.push("Put " + split.interns.join(", ") + " under Relevant Experience so your best work reads first, and move " + split.others.join(", ") + " to an Additional Experience section right after it. Recruiters read from the top down.");
+  else if (split.applies && split.kind === "internships" && otherIsRelated) steps.push("Give your internship" + (split.interns.length > 1 ? "s" : "") + " (" + split.interns.join(", ") + ") " + (split.interns.length > 1 ? "their" : "its") + " own Internships section directly below Experience, so the word \u201CInternships\u201D sits right above your most relevant role. " + split.others.join(", ") + (split.others.length === 1 ? " stays" : " stay") + " under Experience.");
+  else if (split.applies && split.kind === "internships") steps.push("Give your internships (" + split.interns.join(", ") + ") their own Internships section right after Education. They are your strongest proof that you can do the work, so a recruiter should reach them early. " + split.others.join(", ") + (split.others.length === 1 ? " stays" : " stay") + " under Experience.");
+  if (present.has("skills")) {
+    if (hasInterns && otherIsRelated && !_relAddl) steps.push("Put Skills right after Education, so the tools recruiters search for are near the top.");
+    else if (skillsLow || split.applies) steps.push("Put Skills right after " + (_relAddl ? "your experience sections" : hasInterns ? "your internships" : "Education") + ", so the skills you list sit next to the work that backs them up.");
+  }
+  if (combinedSkillsCerts) steps.push("Split the combined Skills and Certifications block into two sections.");
   return {
-    applies: true, split, hasCoursework, skillsLow, keys, names, orderText, steps,
+    applies: true, split, hasCoursework, skillsLow, eduLow, keys: finalKeys, names, orderText, steps,
     short: "Use this order: " + names.join(", ") + "." + (hasCoursework ? " Fold Relevant Coursework into Education." : "")
   };
 }
@@ -5443,7 +6047,10 @@ function analyzeSectionHeaders(data) {
     // v12.3.33: one Experience header holding internships and other jobs.
     if (key === "experience" && _split.applies) {
       status = "split";
-      action = _split.kind === "relevant"
+      const _othersRelated = (data.experience || []).filter(e => e && expSectionOf(e) === "experience" && !isInternEntry(e) && (e.title || e.org)).every(e => !_RETAIL_TITLE.test(String(e.title || "")));
+      action = (_split.kind === "internships" && _othersRelated)
+        ? "Rename to \u201CEXPERIENCE\u201D (" + _split.others.join(", ") + ") and add an \u201CINTERNSHIPS\u201D section directly below it (" + _split.interns.join(", ") + ")"
+        : _split.kind === "relevant"
         ? "Split into \u201CRELEVANT EXPERIENCE\u201D (" + _split.interns.join(", ") + ") and \u201CADDITIONAL EXPERIENCE\u201D (" + _split.others.join(", ") + ") so your best work reads first"
         : "Split into \u201CINTERNSHIPS\u201D (" + _split.interns.join(", ") + ") and \u201CEXPERIENCE\u201D (" + _split.others.join(", ") + ") so your internships lead";
     }
@@ -6195,6 +6802,9 @@ function App() {
       volunteer: mapped.volunteer && mapped.volunteer.length ? mapped.volunteer : [emptyVol()],
       // v12.3.20: measured layout of the uploaded PDF (null for DOCX / pasted text).
       importedLayout: importLayout || null,
+      // v12.3.48: the imported text, for checks on lines the builder doesn't keep
+      // (references, high school, personal details).
+      importedText: String(importText || "").slice(0, 40000),
       // v12.3.18: keep the uploaded file's headers for the Section Header check.
       importedHeadings: (mapped.debugHeadings || []).map(h => ({ raw: h.raw, mapped: h.mapped, duplicate: !!h.duplicate })),
       affiliations: mapped.affiliations && mapped.affiliations.length ? mapped.affiliations : [emptyAffil()],
@@ -6426,6 +7036,7 @@ function App() {
         '</table>');
       parts.push(P("Market readiness: " + sc.tier, "font-weight:700;color:#5980a6;"));
       if (sc.tierNote) parts.push(P(sc.tierNote, "color:#475569;"));
+      if (sc.capNote) parts.push(P(sc.capNote, "color:#854d0e;font-weight:700;"));
     }
 
     // 3c. Five Major Areas Review — concise coverage of the five high-level
@@ -6784,7 +7395,7 @@ function App() {
           P.push(xTabRow(p.name || "", p.date || "", { lb: true, after: 0, keepNext: true }));
           const sp = splitProjectLines(p.bullets);
           if (sp.context) P.push(xBody(sp.context, { after: 0, keepNext: true }));
-          if (sp.toolsValue) P.push(xPar([xRun("Technologies: ", { bold: true, size: 11 }), xRun(sp.toolsValue, { size: 11 })], { after: 0, keepNext: true }));
+          if (sp.toolsValue) P.push(xPar([xRun("Technologies: ", { size: 11 }), xRun(sp.toolsValue, { size: 11 })], { after: 0, keepNext: true }));
           // v12.3.27: 6 pt between projects, matching the 6 pt between jobs.
           const pb = sp.accomplishments.filter((b) => b.trim());
           pb.forEach((b, bi) => P.push(xBullet(b, { after: bi === pb.length - 1 && idx < items.length - 1 ? 120 : 0 })));
@@ -7358,6 +7969,14 @@ function App() {
     // v12.3.36: a section structure that buries the strongest work is a recruiter issue too.
     const _stRR = analyzeStructureAdvice(data);
     if (_stRR.applies) addImprove("Put your strongest work where I'll see it", "Reorder your sections: " + _stRR.names.join(", ") + ".", "High");
+    // v12.3.43: real reasons to pause, in the order a recruiter meets them.
+    const _ciRR = analyzeContentIntegrity(data);
+    if (_stRR.applies && _stRR.eduLow) {
+      const _j = (data.experience || []).find(e => e && e.title && expSectionOf(e) === "experience");
+      addConcern("Your degree sits below " + (_j ? "your " + _j.title + " job" : "your work history") + ", so I had to hunt for your leading credential");
+    }
+    if ((_ciRR.unsupported || []).length >= 3) addConcern("Several tools in your Skills list (" + _ciRR.unsupported.slice(0, 3).join(", ") + ") don't show up in any bullet, so I can't tell where you used them");
+    if ((_ciRR.duplicates || []).length) addConcern("Two bullets under different jobs read almost the same, which made me wonder which job the work was done in");
 
     if (leadershipCount) confidence += 4;
     else addImprove("Add leadership or initiative", "Include campus, volunteer, team, mentoring, or project leadership if accurate.", "Low");
@@ -7500,9 +8119,10 @@ function App() {
     const _topEntry = hasExperience ? rankEntriesForField(data)[0] : null;
     const _topIsRelevant = !!(_topEntry && !_RETAIL_TITLE.test(String(_topEntry.title || "")));
     const _topName = _topEntry ? (_topEntry.title && _topEntry.org ? "your " + _topEntry.title + " role at " + _topEntry.org : "your " + (_topEntry.title || _topEntry.org) + " role") : "";
-    if (_wsRR !== "code" && _topIsRelevant) {
+    const _skillsBackedRR = hasSkills && skillCount && (_ciRR.unsupported || []).length <= Math.floor(skillCount / 3);
+    if ((_wsRR !== "code" || !_skillsBackedRR) && _topIsRelevant) {
       confidenceText = "What increased my confidence was " + _topName + ". It's directly relevant to " + (data.field ? data.field + " roles" : "the roles you're targeting") + ", and it's the first thing I'd ask you about in an interview.";
-    } else if (hasSkills && skillCount >= 8) {
+    } else if (hasSkills && skillCount >= 8 && _skillsBackedRR) {
       confidenceText = "The skills section gave me evidence that this candidate has the tools I'd expect for an entry-level " + (_wsRR === "code" ? "technical" : (data.field || "professional")) + " role. That matters because it's something concrete I can picture you talking through in an interview, not just a claim.";
     } else if (hasExperience) {
       confidenceText = "Your work experience increased my confidence because it shows me you've already operated in a real professional setting. That's concrete proof, and it's the kind of thing I'd want to dig into if we talked.";
@@ -7512,22 +8132,30 @@ function App() {
       const confTop0 = finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present";
       confidenceText = "What increased my confidence was that " + confTop0.charAt(0).toLowerCase() + confTop0.slice(1) + ". That gives me a foundation to work from as I read the rest.";
     }
-    const confTop = (_wsRR !== "code" && _topIsRelevant)
+    const confTop = ((_wsRR !== "code" || !_skillsBackedRR) && _topIsRelevant)
       ? "Y" + _topName.slice(1)
       : (finalSignals[0] ? finalSignals[0].replace(/\.$/, "") : "your core sections are present");
 
     const _dropReasons = [];
     { const _ly = analyzeLayout(data); if (_ly.measured && _ly.issues >= 2) _dropReasons.push("text size and margins"); }
-    { const _mc = analyzeMechanics(data, importText); if (_mc.count) _dropReasons.push("date and punctuation slips"); }
+    { const _mc = analyzeMechanics(data, importText); if (_mc.count) _dropReasons.push("small mechanical slips"); }
     { const _ci = analyzeContentIntegrity(data); if ((_ci.unsupported || []).length >= 3) _dropReasons.push("skills I couldn't find in your bullets"); if (_ci.duplicates.length) _dropReasons.push("two bullets that read almost the same"); }
     { const _sh = analyzeSectionHeaders(data); if ((_sh.mustFix || 0) >= 2) _dropReasons.push("non-standard section headers"); }
     // Recruiter Confidence Timeline — 30–60 second thought process, time-based (reuses flags, no new scoring).
     const clampConf = (n) => Math.max(30, Math.min(98, Math.round(n)));
-    const c1 = clampConf(hasSummary ? confidence - 4 : confidence - 14);
-    const c2 = clampConf(hasExperience ? c1 + 12 : c1 - 6);
-    const c3 = clampConf(hasProjects ? c2 + 8 : (_projOptional ? c2 : c2 - 4));
+    const r1 = hasSummary ? confidence - 4 : confidence - 14;
+    const r2 = hasExperience ? r1 + 12 : r1 - 6;
+    const r3 = hasProjects ? r2 + 8 : (_projOptional ? r2 : r2 - 4);
     const _hasInterns = (data.experience || []).some(isInternEntry);
-    const c4 = clampConf((hasSkills && skillCount >= 8) ? c3 + 6 : c3 - 3);
+    const r4 = (hasSkills && skillCount >= 8 && _skillsBackedRR) ? r3 + 6 : r3 - 3;
+    // v12.3.43: the steps used to climb about 20 points above the final
+    // decision and then drop all at once (73, 85, 93, 98, then 77). Spread the
+    // issues across the read so the path ends a few points above the decision.
+    const _shift = Math.max(0, r4 - confidence - 3);
+    const c1 = clampConf(r1 - _shift * 0.55);
+    const c2 = clampConf(r2 - _shift * 0.75);
+    const c3 = clampConf(r3 - _shift * 0.9);
+    const c4 = clampConf(r4 - _shift);
     const c5 = confidence;
     const timeline = [
       {
@@ -7685,6 +8313,18 @@ function App() {
     if (_pagesF) {
       addPlan("Cut to 2 pages", 20, "Your resume runs " + _pagesF.yours + " pages. Keep the bullets that matter most for your target role, then raise the text to 11 pt.");
     }
+    // v12.3.43: accuracy first (the manual evaluation's Priority 1): lines an
+    // interviewer is most likely to question.
+    {
+      const _ciPlan = analyzeContentIntegrity(data);
+      const _mcPlan = analyzeMechanics(data, importText);
+      const _acc = [];
+      if ((_ciPlan.carried || []).length) _acc.push("the wording that may have carried over from another job");
+      if ((_ciPlan.duplicates || []).length) _acc.push("the two bullets that read almost the same");
+      if ((_mcPlan.findings || []).some(f => f.label === "Grammar")) _acc.push("the grammar slip");
+      if ((_ciPlan.certFlags || []).length) _acc.push("the exact names of your certifications or training");
+      if (_acc.length >= 2) addPlan("Fix the accuracy items", 15, "Before your next interview, fix " + _acc.slice(0, -1).join(", ") + " and " + _acc[_acc.length - 1] + ". These are the lines an interviewer is most likely to question.");
+    }
     if (!hasSummary) {
       addPlan("Write a Professional Summary", 15, "Give the recruiter your target role and strongest evidence in the first two lines they read.");
     } else if (!_summaryStrong) {
@@ -7741,7 +8381,8 @@ function App() {
       if (/\b(published|journal|proceedings|conference|presented at|doi|vol\.|pp\.)\b/i.test(nm)) return false;
       return true;
     });
-    if (realCerts.length) addStrength("Certifications", "You list " + realCerts.length + " certification" + (realCerts.length === 1 ? "" : "s") + " — third-party proof of skill that's an easy confidence boost for a screener.");
+    // v12.3.43: not a strength when the names read like training programs.
+    if (realCerts.length && !((_ciW.certFlags || []).length)) addStrength("Certifications", "You list " + realCerts.length + " certification" + (realCerts.length === 1 ? "" : "s") + " — third-party proof of skill that's an easy confidence boost for a screener.");
     // Publications are their own strength — common on strong technical/research resumes and
     // stronger evidence than most certs. Detect them even when the publication is written as a
     // bullet inside Experience/Projects rather than a dedicated Publications section, since that's
@@ -8184,12 +8825,18 @@ function App() {
     const hasGeneralPortfolio = !!String(c.portfolio || "").trim() || /\bportfolio\b/i.test(codeSampleText);
     const hasVisualPortfolio = /\b(behance\.net|dribbble\.com|portfolio|artstation)\b/i.test(codeSampleText);
     if (workSample === "code") {
-      if (!hasCodeSample) quickWins.push("Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
+      // v12.3.43: expected for software roles; optional for data and analytics,
+      // and only worth adding with finished work to show.
+      if (!hasCodeSample) quickWins.push(/data|analytics/i.test(String(data.field || "")) && !/software|\bcs\b|computer science/i.test(String(data.field || ""))
+        ? "Optional: add a portfolio or GitHub link if you have finished work to show (a Power BI or Tableau dashboard, a SQL or Python project). It backs up the tools on your Skills list."
+        : "Add your GitHub (or portfolio) link near the top — for technical roles it's expected.");
     } else if (workSample === "portfolio") {
       if (!hasVisualPortfolio) quickWins.push("If your work is visual (design, content, marketing), add a portfolio link near the top.");
     }
     // (credential fields get no work-sample nudge; LinkedIn below is the relevant link.)
     if (!c.linkedin) quickWins.push("Add your LinkedIn URL so recruiters can verify and connect.");
+    // v12.3.43: the page shows only the word "LinkedIn".
+    else { const _lk = detectProfileLinks(data, importText); if (_lk.linkedInUrlHidden) quickWins.push("Type out your LinkedIn address (linkedin.com/in/yourname) in the contact line. Right now the page shows only the word \u201CLinkedIn,\u201D which is lost when the resume is printed or read by an ATS."); }
     if (expBullets && expQuant < expBullets) quickWins.push("Add one number to a bullet you already have (scope, %, count, or time saved).");
     // v12.3.17: only offer these two when they apply to THIS resume — they used
     // to print for everyone, including resumes with no weak opener at all.
@@ -8202,7 +8849,7 @@ function App() {
     const _weakText = _weakM ? _weakM[1].charAt(0).toUpperCase() + _weakM[1].slice(1).toLowerCase() : "";
     if (sectionHeaders && sectionHeaders.mustFix) quickWins.push("Fix " + sectionHeaders.mustFix + " section header" + (sectionHeaders.mustFix === 1 ? "" : "s") + " so " + (sectionHeaders.mustFix === 1 ? "it uses the standard ATS name" : "they use the standard ATS names") + " (see Section Headers).");
     if (hasWeakOpener) quickWins.push("Swap one weak opener (\u201C" + _weakText + "\u2026\u201D) for a strong action verb.");
-    if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length) quickWins.push("Move your strongest section higher so it's seen first.");
+    if (sectionOrderAdvice && sectionOrderAdvice.applies && sectionOrderAdvice.recommendedTop && sectionOrderAdvice.recommendedTop.length && !analyzeStructureAdvice(data).applies) quickWins.push("Move your strongest section higher so it's seen first.");
     if (!c.email || !c.phone) quickWins.push("Make sure both email and phone are present and easy to find.");
     // Mechanics quick wins — each specific error is its own fast fix.
     // v12.3.36: the same fixes are already listed in Highest-Impact
@@ -8212,7 +8859,8 @@ function App() {
       if (f.example) quickWins.push("Fix a " + f.label.toLowerCase() + " slip: " + f.example + ".");
     });
     // Section-quality tips (ambiguous campus, cert gap, buried award).
-    sectionQuality.tips.slice(0, 2).forEach(t => quickWins.push(t.text));
+    // v12.3.43: shown already under Section-quality opportunities in the report.
+    sectionQuality.tips.slice(0, 2).filter(t => !/never name it/.test(t.text)).forEach(t => quickWins.push(t.text));
     // File-naming convention.
     if (fileNaming && fileNaming.ok === false && fileNaming.suggested) {
       quickWins.push("Rename your file to " + fileNaming.suggested + " so it's easy for a recruiter to file.");
@@ -8229,7 +8877,9 @@ function App() {
         ? { label: "Deepen your strongest GitHub project", why: "You already link to code — now make one repo shine: a clear README, a short demo, and a results/impact note turn a link into a talking point." }
         : hasGeneralPortfolio
           ? { label: "Strengthen your technical portfolio", why: "You already have a portfolio link. Make the strongest technical or analytics project easy to find, with the problem, tools, your contribution, and the result." }
-          : { label: "Build a GitHub or portfolio", why: "One link to real, working technical work can give recruiters evidence beyond the resume itself." });
+          : (/data|analytics/i.test(String(data.field || "")) && !/software|\bcs\b|computer science/i.test(String(data.field || ""))
+            ? { label: "Consider a portfolio (optional)", why: "A finished Power BI or Tableau dashboard, or a small SQL or Python project, gives recruiters evidence for the tools on your Skills list. Add it only when the work is finished and you'd be comfortable walking through it." }
+            : { label: "Build a GitHub or portfolio", why: "One link to real, working technical work can give recruiters evidence beyond the resume itself." }));
     } else if (workSample === "portfolio") {
       bigger.push(hasVisualPortfolio
         ? { label: "Curate your portfolio's best 3 pieces", why: "You already have a portfolio — leading with your three strongest, well-captioned pieces beats a large, unfiltered gallery." }
@@ -8521,6 +9171,9 @@ function App() {
               <div style={{ height: 8, background: "#d6d6d8", borderRadius: 0, overflow: "hidden", marginTop: 8 }}>
                 <div style={{ height: "100%", width: Math.min(100, healthScore) + "%", background: "#5980a6" }}></div>
               </div>
+              {coachReview && coachReview.scorecard && coachReview.scorecard.capNote ? (
+                <div style={{ marginTop: 7, fontSize: 11.5, fontWeight: 700, color: "#854d0e", lineHeight: 1.35 }}>{coachReview.scorecard.capNote}</div>
+              ) : null}
               <div style={{ marginTop: 9, fontSize: 11, color: "#6d7073" }}>Recruiter confidence: {recruiterReview && recruiterReview.confidence != null ? (recruiterReview.confidence + "%" + (recruiterReview.outcome ? " \u2014 " + String(recruiterReview.outcome).replace(/[\u{1F7E2}\u{1F7E1}\u{1F7E0}\u{1F534}]\s*/gu, "").trim() : "")) : "\u2014"}</div>
               <div style={{ marginTop: 4, fontSize: 10.5, color: "#8a8d90", lineHeight: 1.35 }}>Resume Health rates overall resume quality. Recruiter confidence estimates the interview decision after a quick read.</div>
             </div>
