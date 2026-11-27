@@ -4,6 +4,7 @@
      is the source of truth for the footer stamp; these comments
      are documentation only.
      ============================================================ -->
+<!-- v12.3.50: Section Headers table: the middle column is "ATS standard header" and its names are shown the way they should appear on the resume, in bold all caps (e.g. LEADERSHIP & ACTIVITIES), on screen and in the report. -->
 <!-- v12.3.49: MARKET-READY CAP. A resume that still shows references, high school or personal details (street address, date of birth, age, marital status) is held at 79 (Near-Ready) even when its categories add up to 80 or more. A line under Resume Health and in the report says why, e.g. "Held at 79 (from 86) until the references are removed." Layout items read from a PDF (columns, tables, fonts, symbol bullets) lower Formatting & Polish but never trigger the cap, so a misread PDF can't hold back a strong resume. -->
 <!-- v12.3.48: ATS AND RECRUITER BASICS. (1) PDFs now get the structure checks Word files get: Columns (text split side by side on 5+ lines), Tables or grid lines (vertical rules), Boxes or shaded blocks, Images or icons; a clean PDF shows one "Page structure" row. The page-header check stays Word-only (a PDF has no separate header). (2) Font row for Word and PDF: one font, from the ATS-friendly list (Calibri, Arial, Times New Roman, Garamond, Georgia, Cambria, Helvetica, Verdana, Tahoma, Aptos and similar, plus the Google Docs/LibreOffice clones); replaces the Word-only "more than 2 fonts" row. (3) Symbol bullets and icons: arrows, checkmarks, stars, squares, phone/email icons, emoji, icon fonts (Font Awesome, Wingdings) and Word list bullets drawn with non-round glyphs. (4) Font counts use letters and digits only, so a bullet glyph drawn from another font is not a second font; Word list bullets and typed Wingdings bullets (which show as Ø, §, ü) are told apart from round bullets. Citizenship and work-authorization lines are not flagged as personal details; high school is flagged for graduates and for students within 12 months of graduating, and only from education entries, not bullets that mention a high school; "I/O" and "Level I" are not first-person words; a "Relevant Coursework" sub-label is not treated as a section heading. (5) Content Checks: References on the resume (a References section or "available upon request"); High school listed (graduates and students within 12 months of graduating); First-person words (I, me, my, we, our, us) in the summary and bullets; Personal details (street address in the contact area, date of birth, age, marital status and similar). References, high school and personal details lower ATS Structure & Parsing (3, 3 and 4 points); first-person words lower Verb / Tense Consistency (8 points). Page length is unchanged: 2 pages stays acceptable when the content warrants it. -->
 <!-- v12.3.47: LAYOUT CHECK COVERS THE FULL FORMAT TABLE. New rows: Name in all caps; Font size by section (flags a section below 11 pt even when most of the page is 11 pt); Line spacing (Single); Space before section headings (12 pt) and after (6 pt); Space between bullets (0 pt). Word files are read exactly from paragraph settings (styles and defaults included); PDFs are estimated from the gaps between lines, labelled "(estimated)", and only flagged when clearly off. The bold row now also flags a plain name and plain skills sub-headers ("Bold on name, titles, degree, sub-headers"). -->
@@ -187,7 +188,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // Build stamp — shown in the report footer so every export self-identifies the
 // exact version that produced it. Bump this whenever logic changes.
-const BUILD_VERSION = "v12.3.49";
+const BUILD_VERSION = "v12.3.50";
 
 const NAVY = "5980A6";
 const GRAY = "595959";
@@ -7150,8 +7151,8 @@ function App() {
       parts.push(P(sh.intro, "color:#475569;"));
       const thS = 'text-align:left;padding:4pt 8pt;font-size:9.5pt;color:#6d7073;text-transform:uppercase;letter-spacing:.5pt;border-bottom:1pt solid #5980a6;';
       const tdS = 'padding:4pt 8pt;font-size:10.5pt;color:#1d1f20;border-bottom:0.5pt solid #d6d6d8;vertical-align:top;';
-      parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thS + '">Your header</th><th style="' + thS + '">Standard header</th><th style="' + thS + '">What to do</th></tr>' +
-        sh.rows.map(r => '<tr><td style="' + tdS + '">' + esc(r.raw) + '</td><td style="' + tdS + '">' + esc(r.standard) + '</td><td style="' + tdS + (r.status === "standard" ? 'color:#166534;' : (r.status === "variant" ? 'color:#6d7073;' : 'color:#b45309;font-weight:700;')) + '">' + esc(r.action) + '</td></tr>').join("") +
+      parts.push('<table style="border-collapse:collapse;width:100%;margin:0 0 10pt 0;"><tr><th style="' + thS + '">Your header</th><th style="' + thS + '">ATS standard header</th><th style="' + thS + '">What to do</th></tr>' +
+        sh.rows.map(r => '<tr><td style="' + tdS + '">' + esc(r.raw) + '</td><td style="' + tdS + 'font-weight:700;">' + esc(String(r.standard || "").toUpperCase()) + '</td><td style="' + tdS + (r.status === "standard" ? 'color:#166534;' : (r.status === "variant" ? 'color:#6d7073;' : 'color:#b45309;font-weight:700;')) + '">' + esc(r.action) + '</td></tr>').join("") +
         '</table>');
     }
 
@@ -9571,12 +9572,12 @@ function App() {
                 <p style={{ fontSize: 12.5, color: "#6d7073", margin: "0 0 12px" }}>{sh.intro}</p>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                    <thead><tr><th style={th}>Your header</th><th style={th}>Standard header</th><th style={th}>What to do</th></tr></thead>
+                    <thead><tr><th style={th}>Your header</th><th style={th}>ATS standard header</th><th style={th}>What to do</th></tr></thead>
                     <tbody>
                       {sh.rows.map((r, i) => (
                         <tr key={i}>
                           <td style={td}>{r.raw}</td>
-                          <td style={td}>{r.standard}</td>
+                          <td style={{ ...td, fontWeight: 700 }}>{String(r.standard || "").toUpperCase()}</td>
                           <td style={{ ...td, color: r.status === "standard" ? "#166534" : (r.status === "variant" ? "#6d7073" : "#b45309"), fontWeight: (r.status === "standard" || r.status === "variant") ? 400 : 700 }}>{r.action}</td>
                         </tr>
                       ))}
